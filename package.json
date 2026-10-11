@@ -1,22 +1,29 @@
 {
-  "name": "coptic",
+  "name": "coptic-ios",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "dev:lan": "next dev --hostname 0.0.0.0",
-    "build": "next build",
-    "start": "next start",
-    "start:lan": "next start --hostname 0.0.0.0",
-    "preview:phone": "next build && next start --hostname 0.0.0.0",
-    "lint": "next lint"
+    "build": "next build --webpack",
+    "start": "serve out --listen 3000",
+    "start:lan": "npm run start",
+    "preview:phone": "npm run build && serve out --listen 3000",
+    "ios:sync": "npm run build && cap sync ios",
+    "ios:open": "cap open ios",
+    "test": "node --test tests/*.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "test:mobile": "node scripts/mobile-smoke.mjs"
   },
   "dependencies": {
+    "@capacitor/cli": "7.6.9",
+    "@capacitor/core": "7.6.9",
+    "@capacitor/ios": "7.6.9",
     "@supabase/supabase-js": "latest",
     "cheerio": "^1.2.0",
     "fast-xml-parser": "^5.4.2",
     "fuse.js": "^7.1.0",
-    "next": "latest",
+    "next": "16.1.6",
     "react": "^18",
     "react-dom": "^18",
     "unzipper": "^0.12.3",
@@ -28,7 +35,9 @@
     "autoprefixer": "^10",
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.2.0",
+    "playwright": "1.64.0",
     "postcss": "^8",
+    "serve": "14.2.6",
     "tailwindcss": "^3",
     "typescript": "^5"
   }

@@ -105,7 +105,7 @@ function shouldHideDock(pathname: string) {
 }
 
 export default function MobileChinDock() {
-  const pathname = usePathname();
+  const pathname = usePathname().replace(/\/$/, "") || "/";
 
   if (shouldHideDock(pathname)) {
     return null;

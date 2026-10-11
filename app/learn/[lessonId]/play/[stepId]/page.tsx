@@ -1,6 +1,16 @@
 import Link from "next/link";
 import { lessons } from "@/lib/lesson";
-import LessonClient from "../../LessonClient";
+import PlayLessonClient from "../../../PlayLessonClient";
+
+export const dynamicParams = false;
+export function generateStaticParams() {
+  return lessons.flatMap((lesson) =>
+    (lesson.progressionGroups ?? []).flatMap((group) =>
+      (group.reviewStep ? [...group.lessons, group.reviewStep] : group.lessons)
+        .map((step) => ({ lessonId: lesson.id, stepId: step.id }))
+    )
+  );
+}
 
 export default async function PlayLessonPage({
   params,
@@ -45,5 +55,5 @@ export default async function PlayLessonPage({
     );
   }
 
-  return <LessonClient lesson={lesson} step={step} />;
+  return <PlayLessonClient lesson={lesson} step={step} />;
 }

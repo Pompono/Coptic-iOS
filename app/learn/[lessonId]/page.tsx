@@ -2,6 +2,11 @@ import Link from "next/link";
 import { lessons } from "@/lib/lesson";
 import UnitProgressClient from "./UnitProgressClient";
 
+export const dynamicParams = false;
+export function generateStaticParams() {
+  return lessons.map((lesson) => ({ lessonId: lesson.id }));
+}
+
 export default async function UnitPage({
   params,
 }: {

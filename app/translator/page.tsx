@@ -1,5 +1,7 @@
 "use client";
 
+import { translationRequest } from "@/lib/translationService";
+
 import { type FormEvent as ReactFormEvent, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type TouchEvent as ReactTouchEvent, useEffect, useRef, useState } from "react";
 import {
   isCopticKeyboardEnabled,
@@ -375,7 +377,7 @@ export default function TranslatorPage() {
     setTranslationError("");
 
     try {
-      const res = await fetch("/api/translate", {
+      const res = await translationRequest("/api/translate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -400,11 +402,11 @@ export default function TranslatorPage() {
       setTranslationOutput(top);
       setConfidence(typeof payload.confidence === "number" ? payload.confidence : null);
       setTranslationState("idle");
-    } catch {
+    } catch (error) {
       setTranslationOutput("");
       setConfidence(null);
       setTranslationState("error");
-      setTranslationError("Could not reach translation service.");
+      setTranslationError(error instanceof Error ? error.message : "Could not reach translation service.");
     }
   };
 
@@ -422,7 +424,7 @@ export default function TranslatorPage() {
     setEnglishError("");
 
     try {
-      const res = await fetch("/api/translate/en-coptic", {
+      const res = await translationRequest("/api/translate/en-coptic", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, dialect: translatorDialect, includeConfidence: true }),
@@ -443,11 +445,11 @@ export default function TranslatorPage() {
       setEnglishOutput(top);
       setEnglishConfidence(typeof payload.confidence === "number" ? payload.confidence : null);
       setEnglishState("idle");
-    } catch {
+    } catch (error) {
       setEnglishOutput("");
       setEnglishConfidence(null);
       setEnglishState("error");
-      setEnglishError("Could not reach translation service.");
+        setEnglishError(error instanceof Error ? error.message : "Could not reach translation service.");
     }
   };
 
@@ -488,7 +490,7 @@ export default function TranslatorPage() {
       >
         <h1 className="text-4xl font-semibold tracking-tight">Coptic Translator (Beta)</h1>
          <p className="mt-2 text-[var(--text-muted)]">
-          {isCopticToEnglish ? "Coptic → English translator (local model)" : "English → Coptic translator (local model)"}
+          {isCopticToEnglish ? "Coptic → English translator" : "English → Coptic translator"}
         </p>
 
         <div className="mt-5 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-1)] p-4">
