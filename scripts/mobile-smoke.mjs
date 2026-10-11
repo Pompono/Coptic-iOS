@@ -38,6 +38,7 @@ try {
   for (const route of ['/', '/learn/', unit, unit + 'play/lesson-1-a-o-d/', '/dictionary/', '/dictionary/entry/?lemma=%E2%B2%81', '/settings/', '/translator/']) {
     const response = await page.goto(base + route);
     assert.equal(response.status(), 200, route);
+    await page.waitForLoadState('networkidle');
     if (route.includes('/play/')) {
       await page.getByRole('button', { name: 'Check', exact: true }).waitFor();
       assert.equal(await page.getByRole('navigation', { name: 'Mobile navigation' }).count(), 0);
@@ -58,18 +59,24 @@ try {
       const key = 'coptic-unit-progress:section-1-unit-01-pair-letters-and-sounds';
       assert.ok(JSON.parse(await page.evaluate(key => localStorage.getItem(key), key)).includes('lesson-1-a-o-d'));
       await page.goto(base + unit);
+      await page.waitForLoadState('networkidle');
       await page.reload();
+      await page.waitForLoadState('networkidle');
       assert.ok(JSON.parse(await page.evaluate(key => localStorage.getItem(key), key)).includes('lesson-1-a-o-d'));
     }
     if (route === '/dictionary/') await page.getByText(/shown.*total/).waitFor();
     if (route === '/settings/') {
       await page.getByRole('button', { name: 'Dark', exact: true }).click();
+      await page.waitForLoadState('networkidle');
       await page.reload();
+      await page.waitForLoadState('networkidle');
       await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark');
       assert.equal(await page.evaluate(() => localStorage.getItem('theme-mode')), 'dark');
       await page.getByRole('button', { name: 'Light', exact: true }).click();
     }
-    await page.waitForTimeout(250);
+    // WebKit reports aborted speculative fetches as page errors if a test
+    // tears down the document while Next's link prefetches are still running.
+    await page.waitForLoadState('networkidle');
   }
   const localModel = await access('out/models/coptic-english/manifest.json').then(() => true).catch(() => false);
   if (localModel) {
