@@ -1,11 +1,11 @@
-import { chromium } from 'playwright';
+import { chromium, webkit } from 'playwright';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import path from 'node:path';
-import { readFile } from 'node:fs/promises';
+import { readFile, access } from 'node:fs/promises';
 
 const root = path.resolve('out');
-const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg', '.ttf': 'font/ttf' };
+const types = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.wasm': 'application/wasm', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg', '.ttf': 'font/ttf' };
 const server = http.createServer(async (request, response) => {
   try {
     const pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
@@ -22,9 +22,15 @@ await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const base = `http://127.0.0.1:${server.address().port}`;
 let browser;
 try {
-  browser = await chromium.launch({ headless: true });
+  const engine = process.env.COPTIC_BROWSER === 'webkit' ? webkit : chromium;
+  browser = await engine.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
-  await context.route('**/*', route => route.request().url().startsWith(base + '/') ? route.continue() : route.abort());
+  const externalRequests = [];
+  await context.route('**/*', route => {
+    if (route.request().url().startsWith(base + '/')) return route.continue();
+    externalRequests.push(route.request().url());
+    return route.abort();
+  });
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', error => errors.push(`${page.url()}: ${error.message}`));
@@ -65,9 +71,21 @@ try {
     }
     await page.waitForTimeout(250);
   }
+  const localModel = await access('out/models/coptic-english/manifest.json').then(() => true).catch(() => false);
+  if (localModel) {
+    await page.evaluate(() => Object.defineProperty(navigator, 'onLine', { get: () => false }));
+  }
   await page.locator('input').first().fill('ⲡⲉⲛⲛⲟⲩϯ');
   await page.getByRole('button', { name: 'Translate', exact: true }).click();
-  if (!process.env.NEXT_PUBLIC_TRANSLATION_API_URL) {
+  if (localModel) {
+    await page.getByRole('button', { name: 'Translate', exact: true }).waitFor({ timeout: 180000 });
+    assert.match(await page.locator('body').innerText(), /our God/i);
+    await page.locator('input').first().fill('ⲓⲏⲥ ⲡⲭⲥ');
+    await page.getByRole('button', { name: 'Translate', exact: true }).click();
+    await page.getByRole('button', { name: 'Translate', exact: true }).waitFor({ timeout: 180000 });
+    assert.match(await page.locator('body').innerText(), /Jesus Christ/i);
+    console.log('PASS: both model translations ran with navigator.onLine=false and external requests blocked.');
+  } else if (!process.env.NEXT_PUBLIC_TRANSLATION_API_URL) {
     await page.getByText(/Translation is not configured yet/).waitFor();
   }
   const audio = await page.request.get(base + '/audio/learn/shared/a.mp3');
@@ -82,6 +100,7 @@ try {
   });
   assert.ok(duration > 0, 'Bundled pronunciation audio decodes successfully');
   assert.deepEqual(errors, []);
+  assert.deepEqual(externalRequests, [], 'No external requests are needed for bundled features');
   console.log('PASS: mobile pages, full lesson completion, saved progress/settings, dictionary, audio decoding, and translation configuration with external networking blocked.');
 } finally {
   await browser?.close();

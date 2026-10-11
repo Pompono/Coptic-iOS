@@ -1,0 +1,67 @@
+name: Build offline translation IPA
+env:
+  ONNXRUNTIME_NODE_INSTALL_CUDA: skip
+on:
+  workflow_dispatch:
+jobs:
+  model:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      HF_HUB_DISABLE_XET: '1'
+      OMP_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+      - run: pip install -r scripts/local-translation/requirements.txt
+      - run: python scripts/local-translation/export.py
+      - run: npm ci
+      - run: node scripts/local-translation/check-tokenizer.mjs
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:mobile
+      - uses: actions/upload-artifact@v4
+        with:
+          name: offline-translation-model
+          path: public/models
+          retention-days: 7
+  ipa:
+    needs: model
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/download-artifact@v4
+        with:
+          name: offline-translation-model
+          path: public/models
+      - run: npm ci
+      - run: npm run ios:sync
+      - run: npx playwright install webkit
+      - run: npm run test:mobile
+        env:
+          COPTIC_BROWSER: webkit
+      - run: xcodebuild -project ios/App/App.xcodeproj -scheme App -destination 'generic/platform=iOS' -archivePath /tmp/Coptic.xcarchive CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO archive
+      - name: Package unsigned device IPA
+        run: |
+          mkdir -p /tmp/coptic-ipa/Payload
+          cp -R /tmp/Coptic.xcarchive/Products/Applications/App.app /tmp/coptic-ipa/Payload/
+          cd /tmp/coptic-ipa
+          zip -qr /tmp/Coptic-offline-unsigned.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Coptic-offline-unsigned-IPA
+          path: /tmp/Coptic-offline-unsigned.ipa
+          retention-days: 7

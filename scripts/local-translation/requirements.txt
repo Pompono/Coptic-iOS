@@ -1,0 +1,7 @@
+# Install torch==2.6.0 from https://download.pytorch.org/whl/cpu first.
+transformers==4.48.3
+optimum[onnxruntime]==1.24.0
+sentencepiece==0.2.2
+onnx==1.23.2
+onnxruntime==1.31.0
+protobuf==7.36.2

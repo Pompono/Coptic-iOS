@@ -52,3 +52,10 @@ ios/App/Pods/
 ios/App/DerivedData/
 *.xcuserstate
 **/xcuserdata/
+
+# Generated local translation weights and WASM runtime
+/.model-export/
+/public/models/
+/public/local-runtime/
+
+/.venv-local-model/

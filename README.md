@@ -5,7 +5,9 @@ The original repository remains independent. This repository retains its source 
 
 Lessons, pronunciation audio, fonts, dictionary data, and the interface are bundled
 inside the app. Progress and preferences remain in the app's local WebView storage.
-Translation requires internet access to the separate Python-backed server in `backend/`.
+The offline translation build runs Coptic → English on the device. English → Coptic
+still uses the separate Python-backed server in `backend/`. Standard builds without
+the model files use that server for both directions.
 No hosted website is required to open the app or use its learning content.
 
 ## Build and open on a Mac
@@ -40,10 +42,56 @@ and App Store distribution require an Apple Developer membership. This repositor
 contains the native project, not a signed IPA. Replace the generated placeholder
 app icon and launch artwork before distributing a release.
 
+## Offline Coptic → English and a Sideloadly IPA
+
+In GitHub, open **Actions → Build offline translation IPA → Run workflow**.
+The workflow exports and quantizes the pinned upstream model, checks tokenizer
+parity, tests actual offline translations, and builds an unsigned **device** IPA
+on a hosted Mac. Download the `Coptic-offline-unsigned-IPA` artifact from the
+completed run, extract `Coptic-offline-unsigned.ipa`, and use Sideloadly to sign and
+install it with your Apple ID. No Mac of your own is needed. Artifacts expire after
+seven days; rerun the workflow to rebuild them.
+
+The model adds about 145 MB of weights plus the bundled WebAssembly runtime. It
+requires a browser/WebView with WebAssembly SIMD support (use iOS 16.4 or newer).
+It runs in a worker using one CPU thread, with no remote requests or model download
+after installation. Leaving the translator releases its worker and model memory.
+The interface indicates when on-device translation is available. A local inference
+failure is shown to the user; it does not silently send the input to a server.
+
+This initial version uses greedy decoding and 8-bit quantization, so output can
+differ from the original server's beam-search translations. It accepts short
+passages (up to 1,200 characters and 512 model tokens) and generates up to 64 tokens.
+It does not present an uncalibrated confidence score. English → Coptic remains a
+server feature. iPhone speed, memory limits, and translation quality beyond the
+test examples still require device validation.
+
+Model files are generated, not committed to Git. To export them yourself on a
+machine with Python 3.12, run from the repository root:
+
+```sh
+python3 -m venv .venv-local-model
+# Activate the venv using your platform's command, then:
+pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+pip install -r scripts/local-translation/requirements.txt
+python scripts/local-translation/export.py
+# On Linux set ONNXRUNTIME_NODE_INSTALL_CUDA=skip for npm ci.
+npm ci
+node scripts/local-translation/check-tokenizer.mjs
+npm run ios:sync
+```
+
+The exporter pins model revision `c5ccdb3aabb93c9962a0ae6d7305abfe8895d91d`, preserves
+source-only SentencePiece scores, quantizes the merged decoder subgraphs, and writes
+a manifest with file sizes and SHA-256 hashes. Converted model weights retain the
+upstream **AGPL-3.0** license; its notice, license text, and source links are bundled.
+The original model is at [megalaa/coptic-english-translator](https://huggingface.co/megalaa/coptic-english-translator).
+
 ## Translation server
 
-The default app build has no translation server configured. It explains this when
-a translation is requested; learning and dictionary features remain available.
+A standard build without generated model files has no translation service
+configured by default. The offline workflow bundles Coptic → English; use a server
+for English → Coptic or for builds without the local model.
 To enable translation, host `backend/` on a service that can run both Node.js and
 Python with enough memory for the Hugging Face models:
 

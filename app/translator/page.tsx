@@ -1,6 +1,7 @@
 "use client";
 
 import { translationRequest } from "@/lib/translationService";
+import { hasLocalTranslator, disposeLocalTranslator } from "@/lib/localTranslation/client";
 
 import { type FormEvent as ReactFormEvent, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type TouchEvent as ReactTouchEvent, useEffect, useRef, useState } from "react";
 import {
@@ -106,6 +107,11 @@ const KB_SYMBOLS: KeyDef[][] = [
 ];
 
 export default function TranslatorPage() {
+  const [localTranslationEnabled, setLocalTranslationEnabled] = useState(false);
+  useEffect(() => {
+    void hasLocalTranslator().then(setLocalTranslationEnabled);
+    return disposeLocalTranslator;
+  }, []);
   const [direction, setDirection] = useState<TranslationDirection>("copticToEnglish");
   const [translationInput, setTranslationInput] = useState("");
   const [translatorDialect, setTranslatorDialect] = useState<"sahidic" | "bohairic">("bohairic");
@@ -492,6 +498,12 @@ export default function TranslatorPage() {
          <p className="mt-2 text-[var(--text-muted)]">
           {isCopticToEnglish ? "Coptic → English translator" : "English → Coptic translator"}
         </p>
+
+        {isCopticToEnglish && localTranslationEnabled ? (
+          <p className="mt-2 text-sm text-[var(--text-muted)]">
+            Translates on this device, including offline. Short passages work best; the first translation may take longer.
+          </p>
+        ) : null}
 
         <div className="mt-5 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-1)] p-4">
           <div className="flex items-center gap-3">
