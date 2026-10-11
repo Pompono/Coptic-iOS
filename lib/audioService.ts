@@ -178,6 +178,14 @@ class AudioService {
 
     this.activeSources.clear();
   }
+
+  async pause() {
+    this.stopAll();
+    this.unlockPromise = null;
+    if (this.ctx?.state === "running") {
+      await this.ctx.suspend();
+    }
+  }
 }
 
 export const audioService = new AudioService();

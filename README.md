@@ -93,7 +93,7 @@ remote translation server.
 
 For the mobile browser smoke check, run `npx playwright install chromium` once,
 then `npm run test:mobile` after building. It blocks external networking while
-checking bundled pages, lesson rendering, dictionary data, and audio.
+checking bundled pages, full lesson completion, saved progress/settings, dictionary data, and audio decoding.
 
 GitHub Actions validates the web export and backend build, and compiles the iOS
 project for a simulator on macOS without signing secrets. A simulator compile is
@@ -108,6 +108,7 @@ not a signed device build. The workflow does not publish or distribute the app.
 - Python translation routes and wrappers have moved to the independent `backend/`.
 - Existing lesson content and later placeholder units are inherited from upstream.
 - Local progress is device-specific and does not sync between the website and app.
+- Pronunciation playback and speech prompts stop when the app becomes hidden; the next playback resumes the audio context.
 
 The web export, Capacitor sync, backend build, and mobile browser smoke checks were
 validated in Linux. Xcode compilation, iPhone keyboard/audio behaviour, interruption

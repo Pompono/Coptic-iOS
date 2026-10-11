@@ -34,7 +34,21 @@ export default function AudioUnlock() {
     window.addEventListener("click", handleUnlock, { passive: true });
     window.addEventListener("keydown", handleUnlock);
 
-    return removeListeners;
+    const pauseAudio = () => {
+      void audioService.pause().catch(() => {});
+      window.speechSynthesis?.cancel();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") pauseAudio();
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pagehide", pauseAudio);
+
+    return () => {
+      removeListeners();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pagehide", pauseAudio);
+    };
   }, []);
 
   return null;
