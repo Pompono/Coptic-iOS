@@ -73,6 +73,8 @@ jobs:
           cp -R /tmp/Coptic.xcarchive/Products/Applications/App.app /tmp/coptic-ipa/Payload/
           cd /tmp/coptic-ipa
           zip -qr /tmp/Coptic-offline-unsigned.ipa Payload
+      - name: Verify scanner and translation assets in IPA
+        run: python3 scripts/scanner/verify-ipa.py /tmp/Coptic-offline-unsigned.ipa
       - uses: actions/upload-artifact@v4
         with:
           name: Coptic-offline-unsigned-IPA

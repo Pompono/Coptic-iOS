@@ -57,5 +57,6 @@ ios/App/DerivedData/
 /.model-export/
 /public/models/
 /public/local-runtime/
+/public/ocr/
 
 /.venv-local-model/

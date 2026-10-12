@@ -10,6 +10,41 @@ still uses the separate Python-backed server in `backend/`. Standard builds with
 the model files use that server for both directions.
 No hosted website is required to open the app or use its learning content.
 
+## Experimental photo scanner
+
+Open **Translator → Scan a Coptic photo**. Take a photo or choose one, rotate or
+crop it if needed, then press **Read Coptic**. Tap a numbered block to check and
+correct the recognised text. **Translate block** displays English over its original
+position; **Translate remaining blocks** processes the remaining regions in order.
+Tap a bubble to read the full translation below the image. **Show original** reveals
+the photographed text again. The offline-model IPA is required for translation.
+
+Recognition and translation run locally. Photos are not uploaded, saved to the
+photo library, or persisted by the scanner. Recognition scales photos to a maximum
+2048-pixel edge and uses a separate worker, released before translation. Cropping,
+rotation, edits, and dialect changes invalidate affected results. OCR is limited to
+the first 24 text regions; crop a smaller part of dense pages. There is no live
+camera recognition yet.
+
+The pinned experimental model is
+[Shreeshrii/tessdata_coptic](https://github.com/Shreeshrii/tessdata_coptic), listed in
+Tesseract's contributed-language documentation. It adds about 8 MB plus its runtime.
+The upstream repository does not specify a model licence: clarify redistribution
+rights before public distribution. The bundled model source notice does not infer
+a licence; Tesseract.js and its core include their own licence files.
+
+Initial evaluation recognised a scanned printed page and a synthetic two-phrase
+fixture in the app's existing Coptic font. The synthetic fixture had one substitution
+in 15 characters (initial iota recognised as a bracket). This is a small development
+check, not a real-photo accuracy benchmark. Recognition errors, unfamiliar fonts,
+handwriting, camera glare, and manuscript pages need further evaluation. Automated
+tests also check corrected offline translations, overlay positions, and crop/rotate
+behavior. Camera permissions and performance still require testing on an iPhone.
+
+`npm run build` copies the OCR worker/runtime from installed packages and fetches
+the pinned model on the build machine if absent, checking its SHA-256. The installed
+app needs no model download. Generated assets stay out of Git.
+
 ## Build and open on a Mac
 
 Requirements: Node.js 22, Xcode 16 or newer with its command-line tools installed.

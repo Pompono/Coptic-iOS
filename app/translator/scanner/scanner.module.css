@@ -1,0 +1,39 @@
+.page { min-height: 100vh; background: var(--bg-color); color: var(--text-color); }
+.shell { max-width: 960px; margin: auto; padding: 28px 20px 40px; }
+.back { color: var(--text-muted); font-size: 14px; }
+.heading { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 20px; }
+.heading h1 { font-size: 32px; font-weight: 650; letter-spacing: -.03em; }
+.badge { border: 1px solid var(--border-color); border-radius: 20px; padding: 4px 10px; font-size: 12px; color: var(--text-muted); }
+.muted { color: var(--text-muted); margin-top: 8px; }
+.note { font-size: 13px; line-height: 1.6; color: var(--text-muted); margin: 12px 0; }
+.shell button { border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 14px; background: var(--surface-1); color: var(--text-color); font-size: 14px; }
+.shell button:disabled { opacity: .5; cursor: default; }
+.shell button:focus-visible, .shell select:focus-visible, .shell textarea:focus-visible { outline: 3px solid var(--accent-color); outline-offset: 3px; }
+.shell button.primary { background: var(--accent-color); color: var(--accent-contrast-color); border-color: var(--accent-color); font-weight: 600; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; }
+.toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+.file { display: none; }
+.photo { position: relative; overflow: hidden; border-radius: 16px; border: 1px solid var(--border-color); background: #ece7df; }
+.photo img { display: block; width: 100%; height: auto; user-select: none; }
+.photo button.region { position: absolute; border: 1px solid #527a86; border-radius: 4px; padding: 0; background: rgba(60, 145, 155, .08); opacity: 1; text-align: left; }
+.photo button.region.selected { border: 2px solid #025c79; box-shadow: 0 0 0 2px rgba(255,255,255,.85); z-index: 2; }
+.marker { display: inline-flex; position: absolute; left: 0; top: 0; padding: 2px 7px; border-radius: 3px; background: #025c79; color: white; font-size: 12px; line-height: 18px; }
+.photo button.translated { color: #242020; }
+.bubble { position: absolute; left: 0; top: 0; width: max-content; min-width: 110px; max-width: min(240px, 65vw); padding: 6px 9px; background: #fff3e4; border: 1px solid #b3a696; border-radius: 6px; box-shadow: 0 2px 6px #0002; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-family: system-ui, sans-serif; font-size: 13px; line-height: 1.4; }
+.cropping { touch-action: none; cursor: crosshair; }
+.cropBox { position: absolute; pointer-events: none; border: 2px solid #fff; box-shadow: 0 0 0 9999px rgba(0,0,0,.45); }
+.status { font-size: 14px; margin-top: 14px; min-height: 20px; color: var(--text-muted); }
+.error { border: 1px solid #b34b40; color: var(--text-color); border-radius: 12px; padding: 12px; margin: 12px 0; }
+.editor { margin-top: 22px; padding: 18px; background: var(--surface-1); border: 1px solid var(--border-color); border-radius: 18px; scroll-margin-bottom: 90px; }
+.editor h2 { font-size: 18px; font-weight: 600; }
+.dialect { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+.dialect select { padding: 7px; background: var(--surface-2); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 8px; }
+.blockPicker { display: flex; gap: 8px; overflow-x: auto; margin: 16px 0; padding-bottom: 5px; }
+.blockPicker button { white-space: nowrap; }
+.blockPicker button[aria-pressed=true] { border-color: var(--accent-color); }
+.editor label { font-size: 13px; }
+.editor textarea { display: block; margin-top: 8px; padding: 12px; width: 100%; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-2); color: var(--text-color); font-size: 21px; line-height: 1.6; resize: vertical; }
+.output { padding: 14px; border: 1px solid var(--border-color); background: var(--surface-2); border-radius: 12px; }
+.output h3 { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+.output p { font-size: 18px; line-height: 1.6; overflow-wrap: anywhere; }
+.clear { margin-top: 18px; }

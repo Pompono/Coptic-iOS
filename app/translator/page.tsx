@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { translationRequest } from "@/lib/translationService";
 import { hasLocalTranslator, disposeLocalTranslator } from "@/lib/localTranslation/client";
 
@@ -495,6 +497,7 @@ export default function TranslatorPage() {
         }}
       >
         <h1 className="text-4xl font-semibold tracking-tight">Coptic Translator (Beta)</h1>
+        <Link href="/translator/scanner/" className="mt-4 inline-flex rounded-xl border border-[var(--border-color)] bg-[var(--surface-1)] px-4 py-3 text-sm font-semibold">Scan a Coptic photo →</Link>
          <p className="mt-2 text-[var(--text-muted)]">
           {isCopticToEnglish ? "Coptic → English translator" : "English → Coptic translator"}
         </p>
