@@ -28,7 +28,10 @@ try {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const externalRequests = [];
   await context.route('**/*', route => {
-    if (route.request().url().startsWith(base + '/')) return route.continue();
+    const url = route.request().url();
+    // WebKit can route local blob images; those are in-memory photo assets,
+    // not external network requests. Chromium doesn't expose them here.
+    if (url.startsWith(base + '/') || url.startsWith('blob:') || url.startsWith('data:')) return route.continue();
     externalRequests.push(route.request().url());
     return route.abort();
   });
@@ -97,7 +100,13 @@ try {
     await page.getByText(/Translation is not configured yet/).waitFor();
   }
   await page.waitForLoadState('networkidle');
-  await checkScanner(page, base, localModel);
+  try { await checkScanner(page, base, localModel); }
+  catch (failure) {
+    console.error('Scanner failure snapshot:', (await page.locator('body').innerText()).slice(0, 3000));
+    console.error('Page errors:', errors);
+    console.error('Blocked external requests:', externalRequests);
+    throw failure;
+  }
   // Warm asset caches made async startup race HTML parsing intermittently.
   // Exercise full document startup on the routes that exposed that race.
   for (let pass = 0; pass < 4; pass++) {
