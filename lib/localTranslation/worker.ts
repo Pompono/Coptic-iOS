@@ -1,6 +1,7 @@
 import { env, pipeline } from '@huggingface/transformers';
 import { prepareCoptic } from './preprocess.mjs';
 import { checkTranslationInput, checkTranslationOutput } from './quality.mjs';
+import { decodeTranslation } from './decode.mjs';
 
 env.allowLocalModels = true;
 env.allowRemoteModels = false;
@@ -25,12 +26,7 @@ self.onmessage = async (event) => {
     const input = prepareCoptic(text, dialect);
     translator ??= pipeline('text2text-generation', 'coptic-english', { device: 'wasm', dtype: 'q8', local_files_only: true });
     const translate = await translator;
-    const encoded = translate.tokenizer(input, { return_tensor: false });
-    if (encoded.input_ids.length > 512) {
-      throw new Error('This passage is too long for the local model. Split it into shorter passages.');
-    }
-    const output = await translate(input, { max_new_tokens: 64, num_beams: 1, do_sample: false });
-    const translation = output[0]?.generated_text?.trim();
+    const translation = await decodeTranslation(translate, input);
     if (!translation) throw new Error('The local model did not return a translation.');
     checkTranslationOutput(translation);
     self.postMessage({ id, translation, dialect });

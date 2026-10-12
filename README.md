@@ -279,3 +279,9 @@ Numbers, brackets, missing-character boxes and repeated five-word output loops
 now cause an explicit error instead of an accepted English result. These checks
 cannot detect all semantic hallucinations. They do not infer missing Coptic
 letters or substitute a memorized translation for the user's passage.
+
+The offline worker now uses a separate four-hypothesis beam-search decoder,
+with source encoding reuse and a decoder cache per hypothesis. It improves the
+short daughter/Son regression and refuses unfinished generations, but longer
+hymns still contain semantic errors. See [engine comparison](docs/translation-engine.md)
+for inputs, outputs, limitations, and the reproducible comparison command.

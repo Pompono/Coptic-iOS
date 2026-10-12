@@ -1,0 +1,5 @@
+{"input":"ⲡⲉⲛⲛⲟⲩϯ","expected":"our God","greedy":"O our God,","beam":"O our God,","beamMs":5384}
+{"input":"ⲓⲏⲥ ⲡⲭⲥ","expected":"Jesus Christ","greedy":"Jesus Christ.","beam":"Jesus Christ.","beamMs":3015}
+{"input":"ⲛⲑⲟ ⲧⲉ ⲧϣⲉⲣⲓ","expected":"You are the daughter","greedy":"You are the Son.","beam":"You are the daughter.","beamMs":2555}
+{"input":"ⲛⲑⲟ ⲧⲉ ⲧϣⲉⲣⲓ: ⲛ̀ⲧⲉ ⲡⲓⲑⲙⲏⲓⲛⲟⲩϯ: ⲑⲏⲉⲧⲁⲥϥⲓⲣⲓ ⲉ̀ⲃⲟⲗ: ϧⲉⲛ ⲑⲛⲟⲩⲛⲓ ⲛ̀ⲓⲉⲥⲥⲉ.","greedy":"Thou art the daughter of the righteous God, who has cried to the Lord, out of the lowest deep.","beam":"Thou art the daughter of the righteous God, who has cried out in the root of Jesse.","beamMs":3067}
+{"input":"ⲭⲉⲣⲉ ⲛⲉ ⲙⲁⲣⲓⲁ: ⲑⲃ ⲣⲱⲙⲡⲓ ⲉⲑⲛⲉⲥⲱⲥ: ⲑⲏⲉⲧⲁⲥⲙⲓⲥⲓ ⲛⲁⲛ: ⲙ̀ⲫϯ ⲡⲓⲗⲟⲅⲟⲥ.","greedy":"Hail to you Mary, the twelve beautiful years, that was born for us, the Mother of God the Word.","beam":"Hail to you Mary, the twelve good years, she who gave birth to us, the Word of God.","beamMs":2870}

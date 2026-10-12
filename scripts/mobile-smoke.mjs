@@ -100,6 +100,12 @@ try {
     await page.getByRole('button', { name: 'Translate', exact: true }).waitFor({ timeout: 180000 });
     assert.match(await page.locator('body').innerText(), /Jesus Christ/i);
     console.log('PASS: both model translations ran with navigator.onLine=false and external requests blocked.');
+    await page.locator('input').first().fill('ⲛⲑⲟ ⲧⲉ ⲧϣⲉⲣⲓ');
+    await page.getByRole('button', { name: 'Translate', exact: true }).click();
+    await page.getByRole('button', { name: 'Translate', exact: true }).waitFor({ timeout: 180000 });
+    assert.match(await page.locator('body').innerText(), /You are the daughter/i);
+    console.log('PASS: beam decoder preserves daughter rather than the old greedy Son output.');
+
     await page.locator('input').first().fill('ⲉ 4 ⲙⲁⲣⲓⲁ: ⲍ □ ⲛⲁⲛ');
     await page.getByRole('button', { name: 'Translate', exact: true }).click();
     await page.getByText(/Correct the Coptic text before translating/).waitFor();
