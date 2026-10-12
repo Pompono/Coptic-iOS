@@ -60,6 +60,23 @@ rotation, edits, and dialect changes invalidate affected results. OCR is limited
 the first 24 text regions; crop a smaller part of dense pages. There is no live
 camera recognition yet.
 
+**Inspect marks in the photo** magnifies each OCR-marked word from the original
+image and gives an experimental shape hint. It uses adaptive ink thresholding and
+connected components to compare a mark's length and slope with the letter bodies
+and OCR baseline. Long flat spanning bars and short slanted marks get different
+hints; short horizontal/connected/blurred marks remain uncertain. A small set of
+common sacred-name abbreviation patterns is also kept uncertain. This is geometry
+and context assistance, not a trained mark classifier or an accuracy guarantee.
+Nothing is rewritten automatically. Word-specific correction preserves other words;
+edits that invalidate OCR text positions disable these correction actions.
+
+Page height now accounts for the safe areas and dock instead of adding those on
+top of a full-screen minimum. Short pages have no artificial blank scrolling range;
+long pages keep their normal scrolling. The native bridge disables rubber-band
+scrolling beyond content bounds, and a backdrop protects the status-bar area.
+Browser tests check short-page geometry, while the Mac workflow launches an iPhone
+simulator to check the native scroll controller initializes successfully.
+
 OCR preserves its original text for each block. **Change overlines to jinkem** is
 an explicit correction for misread macron/overline marks; it is never applied
 automatically because genuine abbreviation bars must remain distinguishable.

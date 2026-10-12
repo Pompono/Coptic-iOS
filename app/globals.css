@@ -11,6 +11,7 @@
 }
 
 :root {
+  --page-content-height: 100svh;
   --coptic-font-family: "Noto Sans Coptic", "Segoe UI Symbol", "Arial Unicode MS", serif;
 
   /* Light theme (default) */
@@ -84,7 +85,8 @@ button.coptic-text {
 
 html,
 body {
-  height: 100%;
+  min-height: 100%;
+  overscroll-behavior: none;
 }
 
 body {
@@ -105,14 +107,18 @@ button, a, input, textarea, select { touch-action: manipulation; }
 }
 
 .mobile-chin-page-shell {
-  min-height: 100%;
+  min-height: 100svh;
 }
+.mobile-chin-page-shell .min-h-screen { min-height: var(--page-content-height); }
+.status-bar-backdrop { display: none; }
 
 .mobile-chin-dock {
   display: none;
 }
 
 @media (max-width: 768px) {
+  :root { --page-content-height: calc(100svh - env(safe-area-inset-top, 0px) - 96px - env(safe-area-inset-bottom, 0px)); }
+  .status-bar-backdrop { display: block; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); background: var(--bg-color); z-index: 100; pointer-events: none; }
   .mobile-chin-page-shell {
     padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));

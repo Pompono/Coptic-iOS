@@ -24,6 +24,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body>
+        <div className="status-bar-backdrop" aria-hidden="true" />
         <AudioUnlock />
         <CopticFontPreference />
         <ThemePreference />

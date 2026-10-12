@@ -110,6 +110,26 @@ export async function checkScanner(page, base, localModel) {
     `Crop matches the 80% gesture within CSS pixel rounding: ${JSON.stringify(cropped)}`);
   await page.getByRole('button', { name: 'Clear photo', exact: true }).click();
   assert.equal(await page.getByAltText('Selected Coptic page').count(), 0);
+  const markedFixture = await page.evaluate(() => {
+    const canvas = document.createElement('canvas'); canvas.width = 1200; canvas.height = 300;
+    const context = canvas.getContext('2d'); context.fillStyle = '#fff'; context.fillRect(0, 0, 1200, 300);
+    context.fillStyle = '#111'; context.font = '60px ScannerFixture';
+    context.fillText('ⲙ̄ⲙⲟⲓ ⲛ̄ⲥⲁ ⲡⲉⲛⲛⲟⲩϯ', 80, 160);
+    return canvas.toDataURL('image/png').split(',')[1];
+  });
+  await page.getByLabel('Choose a Coptic photo', { exact: true }).setInputFiles({ name: 'marked-coptic.png', mimeType: 'image/png', buffer: Buffer.from(markedFixture, 'base64') });
+  await page.getByRole('button', { name: 'Read Coptic', exact: true }).click();
+  await page.getByLabel('Recognised Coptic text', { exact: true }).waitFor({ timeout: 120000 });
+  await page.getByText(/Inspect marks in the photo/).click();
+  await page.getByAltText('Magnified original photographed word and its marks').waitFor();
+  const markedInput = page.getByLabel('Recognised Coptic text', { exact: true });
+  const before = await markedInput.inputValue();
+  const word = (await page.getByLabel('Marked word to inspect').locator('option').first().innerText()).replace(/^\d+\.\s/, '');
+  await page.getByRole('button', { name: 'Use jinkem for this word', exact: true }).click();
+  assert.equal(await markedInput.inputValue(), before.replace(word, word.replace(/[\u0304\u0305]/gu, '\u0300')));
+  await page.getByRole('button', { name: 'Restore recognised text', exact: true }).click();
+  assert.equal(await markedInput.inputValue(), before);
+  console.log('PASS: original-photo mark inspection and single-word correction preserve other text.');
   console.log('PASS: actual Coptic photo OCR, editable text, aligned overlays, rotate/crop/clear, and offline translation bubbles.');
   await page.waitForLoadState('networkidle');
 }

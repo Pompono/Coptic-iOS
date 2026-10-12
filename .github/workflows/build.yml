@@ -35,6 +35,7 @@ jobs:
       - run: npm ci
       - run: npm run ios:sync
       - run: xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/coptic-derived CODE_SIGNING_ALLOWED=NO build
+      - run: bash scripts/native-startup-smoke.sh
   backend:
     runs-on: ubuntu-latest
     defaults:

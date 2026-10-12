@@ -12,6 +12,7 @@ import { isBohairicOnlyEnabled } from '@/app/BohairicPreference';
 import styles from './scanner.module.css';
 import { scrollToSection } from '@/lib/scrollToSection';
 import { hasOverline, overlinesToJinkem } from '@/lib/scanner/marks.mjs';
+import MarkReview from './MarkReview';
 
 type Busy = 'photo' | 'recognition' | 'translation' | null;
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : String(error);
@@ -288,6 +289,9 @@ export default function ScannerPage() {
                 ? { ...region, text: region.originalText, translation: undefined } : region))}>Restore recognised text</button>
             </div>
             <p className={styles.note}>Use the jinkem correction only when that is the mark in the photo. Abbreviations may have real overlines. Restore recognised text also undoes manual edits in this block.</p>
+            {image && <MarkReview key={selected.id} image={image} region={selected} disabled={!!busy}
+              onCorrect={(start, length, replacement) => setRegions(previous => previous.map(region => region.id === selected.id
+                ? { ...region, text: region.text.slice(0, start) + replacement + region.text.slice(start + length), translation: undefined } : region))} />}
             <div className={styles.actions}>
               <button className={styles.primary} disabled={!!busy || !local || !selected.text.trim()} onClick={() => void translate(false)}>Translate block</button>
               <button disabled={!!busy || !local || !regions.some(region => region.text.trim() && !region.translation)} onClick={() => void translate(true)}>Translate remaining blocks</button>

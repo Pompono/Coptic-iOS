@@ -6,7 +6,7 @@ export default function Page() {
   const startLearningHref = firstUnit ? `/learn/${firstUnit.id}` : "/learn";
 
   return (
-    <main style={{ padding: 24, maxWidth: 900, margin: "0 auto", minHeight: "100vh" }}>
+    <main style={{ padding: 24, maxWidth: 900, margin: "0 auto", minHeight: "var(--page-content-height)" }}>
       <h1 style={{ fontSize: 40, fontWeight: 800, marginBottom: 10 }}>Coptic</h1>
 
       <p style={{ opacity: 0.85, marginBottom: 24 }}>

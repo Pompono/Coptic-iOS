@@ -205,7 +205,7 @@ export default function SettingsPage() {
         padding: 24,
         maxWidth: 900,
         margin: "0 auto",
-        minHeight: "100vh",
+        minHeight: "var(--page-content-height)",
         display: "grid",
         alignContent: "start",
         gap: 20,
