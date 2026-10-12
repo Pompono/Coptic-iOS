@@ -100,6 +100,14 @@ try {
     await page.getByRole('button', { name: 'Translate', exact: true }).waitFor({ timeout: 180000 });
     assert.match(await page.locator('body').innerText(), /Jesus Christ/i);
     console.log('PASS: both model translations ran with navigator.onLine=false and external requests blocked.');
+    await page.locator('input').first().fill('ⲉ 4 ⲙⲁⲣⲓⲁ: ⲍ □ ⲛⲁⲛ');
+    await page.getByRole('button', { name: 'Translate', exact: true }).click();
+    await page.getByText(/Correct the Coptic text before translating/).waitFor();
+    await page.locator('input').first().fill('ⲛⲑⲟ ⲧⲉ ⲧϣⲏⲣⲓ: ⲛ̀ⲧⲉ ⲡⲓⲑⲙⲏⲓⲛⲟⲩϯ: ⲑⲏⲉⲧⲁⲥϥⲓⲣⲓ ⲉ̀ⲃⲟⲗ: ϧⲉⲛ ⲑⲛⲟⲩⲛⲓ ⲛ̀ⲓⲉⲥⲥⲉ.');
+    await page.getByRole('button', { name: 'Translate', exact: true }).click();
+    await page.getByRole('button', { name: 'Translate', exact: true }).waitFor({ timeout: 180000 });
+    console.log('Photo passage with manually transcribed Coptic:', await page.locator('body').innerText());
+
   } else if (!process.env.NEXT_PUBLIC_TRANSLATION_API_URL) {
     await page.getByText(/Translation is not configured yet/).waitFor();
   }

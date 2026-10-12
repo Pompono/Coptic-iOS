@@ -266,3 +266,16 @@ The web export, Capacitor sync, backend build, and mobile browser smoke checks w
 validated in Linux. Xcode compilation, iPhone keyboard/audio behaviour, interruption
 and resume behaviour, signing, and live model translations still need validation
 on a Mac/iPhone and a provisioned translation server.
+
+### Translation quality findings
+
+A user-supplied Bohairic hymn photo exposed both missing OCR characters and
+incorrect fluent English. A manually transcribed stanza still produced incorrect
+English, so recognition is not the only cause. The bundled model is not a reliable
+liturgical translator. Existing short-phrase smoke checks establish execution,
+not general translation accuracy.
+
+Numbers, brackets, missing-character boxes and repeated five-word output loops
+now cause an explicit error instead of an accepted English result. These checks
+cannot detect all semantic hallucinations. They do not infer missing Coptic
+letters or substitute a memorized translation for the user's passage.

@@ -1,5 +1,6 @@
 import { env, pipeline } from '@huggingface/transformers';
 import { prepareCoptic } from './preprocess.mjs';
+import { checkTranslationInput, checkTranslationOutput } from './quality.mjs';
 
 env.allowLocalModels = true;
 env.allowRemoteModels = false;
@@ -20,6 +21,7 @@ self.onmessage = async (event) => {
   if (busy) { self.postMessage({ id, error: 'Wait for the current translation to finish.' }); return; }
   busy = true;
   try {
+    checkTranslationInput(text);
     const input = prepareCoptic(text, dialect);
     translator ??= pipeline('text2text-generation', 'coptic-english', { device: 'wasm', dtype: 'q8', local_files_only: true });
     const translate = await translator;
@@ -30,6 +32,7 @@ self.onmessage = async (event) => {
     const output = await translate(input, { max_new_tokens: 64, num_beams: 1, do_sample: false });
     const translation = output[0]?.generated_text?.trim();
     if (!translation) throw new Error('The local model did not return a translation.');
+    checkTranslationOutput(translation);
     self.postMessage({ id, translation, dialect });
   } catch (error) {
     self.postMessage({ id, error: error instanceof Error ? error.message : 'On-device translation failed.' });
