@@ -65,6 +65,13 @@ export async function checkScanner(page, base, localModel) {
   assert.equal(await input.inputValue(), 'ⲙ̀');
   await page.getByRole('button', { name: 'Restore recognised text', exact: true }).click();
   assert.equal(await input.inputValue(), texts[0]);
+  await input.fill('ⲡϪⲥ');
+  await input.evaluate(element => element.setSelectionRange(1, 2));
+  await page.getByRole('button', { name: 'Insert Ⲭ', exact: true }).click();
+  assert.equal(await input.inputValue(), 'ⲡⲬⲥ');
+  await input.evaluate(element => element.setSelectionRange(1, 2));
+  await page.getByRole('button', { name: 'Insert ⲭ', exact: true }).click();
+  assert.equal(await input.inputValue(), 'ⲡⲭⲥ');
   await input.fill('ⲡⲉⲛⲛⲟⲩϯ');
   if (localModel) {
     await page.getByRole('button', { name: 'Translate block', exact: true }).click();

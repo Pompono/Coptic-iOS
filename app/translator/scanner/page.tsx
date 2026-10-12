@@ -34,6 +34,7 @@ export default function ScannerPage() {
   const fileInput = useRef<HTMLInputElement>(null);
   const cameraInput = useRef<HTMLInputElement>(null);
   const editor = useRef<HTMLDivElement>(null);
+  const textInput = useRef<HTMLTextAreaElement>(null);
   const operation = useRef(0);
   const busyRef = useRef<Busy>(null);
   const cancelRecognition = useRef<(() => void) | null>(null);
@@ -184,6 +185,17 @@ export default function ScannerPage() {
     setSelectedId(id);
     if (scroll) scrollToSection(editor.current);
   }
+  function insertCharacter(character: string) {
+    if (!selected || busyRef.current) return;
+    const input = textInput.current;
+    const start = input?.selectionStart ?? selected.text.length;
+    const end = input?.selectionEnd ?? start;
+    const text = selected.text.slice(0, start) + character + selected.text.slice(end);
+    if (text.length > 1200) { setError('Keep this block under 1,200 characters.'); return; }
+    input?.setRangeText(character, start, end, 'end');
+    input?.focus({ preventScroll: true });
+    setRegions(previous => previous.map(region => region.id === selected.id ? { ...region, text, translation: undefined } : region));
+  }
 
   return (
     <main className={styles.page}>
@@ -260,9 +272,15 @@ export default function ScannerPage() {
           {selected && <>
             <label htmlFor="recognised-text">Coptic text · block {regions.indexOf(selected) + 1}</label>
             {selected.confidence < 80 && <p className={styles.note}>Some characters were difficult to read. Check this block carefully.</p>}
-            <textarea id="recognised-text" aria-label="Recognised Coptic text" className="coptic-text" value={selected.text}
+            <textarea ref={textInput} id="recognised-text" aria-label="Recognised Coptic text" className="coptic-text" value={selected.text}
               maxLength={1200} disabled={!!busy} spellCheck={false} rows={4}
               onChange={event => { const text = event.target.value; setRegions(previous => previous.map(region => region.id === selected.id ? { ...region, text, translation: undefined } : region)); }} />
+            <div className={styles.actions}>
+              <button disabled={!!busy} onPointerDown={event => event.preventDefault()} onClick={() => insertCharacter('Ⲭ')}>Insert <span className="coptic-text">Ⲭ</span></button>
+              <button disabled={!!busy} onPointerDown={event => event.preventDefault()} onClick={() => insertCharacter('ⲭ')}>Insert <span className="coptic-text">ⲭ</span></button>
+              <button disabled={!!busy} onPointerDown={event => event.preventDefault()} onClick={() => insertCharacter('\u0300')}>Insert jinkem</button>
+            </div>
+            <p className={styles.note}>Place the cursor where a letter is missing, or select the wrong letter, then insert its replacement. Chi can be confused with Ϫ; check the photo before changing it.</p>
             <div className={styles.actions}>
               <button disabled={!!busy || !hasOverline(selected.text)} onClick={() => setRegions(previous => previous.map(region => region.id === selected.id
                 ? { ...region, text: overlinesToJinkem(region.text), translation: undefined } : region))}>Change overlines to jinkem</button>

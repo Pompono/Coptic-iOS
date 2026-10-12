@@ -63,6 +63,11 @@ camera recognition yet.
 OCR preserves its original text for each block. **Change overlines to jinkem** is
 an explicit correction for misread macron/overline marks; it is never applied
 automatically because genuine abbreviation bars must remain distinguishable.
+**Insert Ⲭ/ⲭ** replaces selected text or inserts at the cursor for omitted chi.
+**Insert jinkem** allows a single mark correction without changing a whole block.
+A synthetic Avva Shenouda-font probe reproduced uppercase Ⲭ being read as Ϫ in
+a repeated-letter sequence. This is a known model confusion, not a safe automatic
+replacement rule. Real photo examples are needed to evaluate font-specific errors.
 **Restore recognised text** undoes all edits in the selected block. The larger
 photo limit retains more detail for small marks; accuracy on real camera images
 still needs evaluation. Word and image taps select content without automatic page
