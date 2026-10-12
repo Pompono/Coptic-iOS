@@ -12,5 +12,12 @@ export async function checkScrollBounds(page, base) {
   await page.evaluate(() => scrollTo(0, 100000));
   const bottom = await page.evaluate(() => ({ y: scrollY, maximum: document.documentElement.scrollHeight - innerHeight }));
   assert.ok(bottom.y <= Math.max(0, bottom.maximum) + 1, 'Longer pages stop at their actual content bound');
+  await page.goto(base + '/read/'); await page.waitForLoadState('networkidle');
+  await page.getByRole('button', { name: /Look up/, exact: false }).first().click();
+  await page.evaluate(() => scrollTo(0, 100000));
+  await page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: 'Settings', exact: true }).click();
+  await page.waitForURL(url => url.pathname.replace(/\/$/, '') === '/settings');
+  await page.waitForFunction(() => scrollY === 0);
+  assert.ok((await page.getByRole('heading', { name: 'Settings', exact: true }).boundingBox()).y >= 0, 'Forward tab navigation starts at the top');
   console.log('PASS: short-page scroll bounds and real-content scrolling.');
 }

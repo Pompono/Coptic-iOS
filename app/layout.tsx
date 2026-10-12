@@ -5,6 +5,7 @@ import AudioUnlock from "./AudioUnlock";
 import CopticFontPreference from "./CopticFontPreference";
 import MobileChinDock from "./MobileChinDock";
 import ThemePreference, { themeInitScript } from "./ThemePreference";
+import NavigationScrollReset from './NavigationScrollReset';
 
 export const metadata: Metadata = {
   title: "Coptic",
@@ -28,6 +29,7 @@ export default function RootLayout({
         <AudioUnlock />
         <CopticFontPreference />
         <ThemePreference />
+        <NavigationScrollReset />
         <div className="mobile-chin-page-shell">{children}</div>
         <MobileChinDock />
       </body>

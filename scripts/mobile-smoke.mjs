@@ -2,18 +2,19 @@ import { chromium, webkit } from 'playwright';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import path from 'node:path';
-import { readFile, access } from 'node:fs/promises';
+import { readFile, access, stat } from 'node:fs/promises';
 import { checkScanner } from './scanner/smoke.mjs';
 import { checkReading } from './reading-smoke.mjs';
 import { checkScrollBounds } from './scroll-smoke.mjs';
 
 const root = path.resolve('out');
-const types = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.wasm': 'application/wasm', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg', '.ttf': 'font/ttf' };
+const types = { '.txt': 'text/plain', '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.wasm': 'application/wasm', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg', '.ttf': 'font/ttf' };
 const server = http.createServer(async (request, response) => {
   try {
     const pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
-    const file = path.resolve(root, '.' + pathname + (pathname.endsWith('/') ? 'index.html' : ''));
+    let file = path.resolve(root, '.' + pathname + (pathname.endsWith('/') ? 'index.html' : ''));
     if (!file.startsWith(root + path.sep)) throw new Error('Invalid path');
+    if ((await stat(file)).isDirectory()) file = path.join(file, 'index.html');
     const data = await readFile(file);
     response.writeHead(200, { 'Content-Type': types[path.extname(file)] ?? 'application/octet-stream' });
     response.end(data);

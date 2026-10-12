@@ -74,6 +74,8 @@ Page height now accounts for the safe areas and dock instead of adding those on
 top of a full-screen minimum. Short pages have no artificial blank scrolling range;
 long pages keep their normal scrolling. The native bridge disables rubber-band
 scrolling beyond content bounds, and a backdrop protects the status-bar area.
+Normal forward links/tab changes reset the destination to the top after the new
+page commits; browser Back retains the framework's history restoration behavior.
 Browser tests check short-page geometry, while the Mac workflow launches an iPhone
 simulator to check the native scroll controller initializes successfully.
 

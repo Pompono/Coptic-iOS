@@ -1,5 +1,6 @@
 import Capacitor
 import UIKit
+import Darwin
 
 class AppViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
@@ -10,6 +11,7 @@ class AppViewController: CAPBridgeViewController {
         webView?.scrollView.alwaysBounceHorizontal = false
         #if DEBUG
         print("COPTIC_SCROLL_BOUNDS_READY")
+        fflush(stdout)
         #endif
     }
 }
