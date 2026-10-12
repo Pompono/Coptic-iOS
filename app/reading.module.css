@@ -1,0 +1,21 @@
+.shell { max-width: 880px; margin: auto; padding: 28px 20px 50px; color: var(--text-color); }
+.shell h1 { font-size: 32px; font-weight: 700; margin: 14px 0; }
+.shell h2 { font-size: 20px; font-weight: 650; margin: 12px 0; }
+.shell h3 { font-size: 16px; font-weight: 650; margin: 8px 0; }
+.shell p { line-height: 1.7; margin: 8px 0; }
+.muted { color: var(--text-muted); font-size: 14px; }
+.actions { display: flex; gap: 9px; flex-wrap: wrap; align-items: center; margin: 14px 0; }
+.shell button, .link { padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-1); color: var(--text-color); }
+.shell button:disabled { opacity: .5; }
+.shell button[aria-pressed=true], .shell .primary { border-color: var(--accent-color); background: var(--accent-color); color: var(--accent-contrast-color); }
+.shell button:focus-visible, .shell textarea:focus-visible { outline: 3px solid var(--accent-color); outline-offset: 3px; }
+.panel { padding: 18px; margin: 18px 0; border: 1px solid var(--border-color); border-radius: 18px; background: var(--surface-1); }
+.shell textarea { width: 100%; min-height: 125px; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; background: var(--surface-2); color: var(--text-color); font-size: 22px; line-height: 1.7; }
+.passage { font-size: 29px; line-height: 2; white-space: pre-wrap; overflow-wrap: anywhere; }
+.passage button { font: inherit; padding: 1px 4px; border-radius: 5px; border-color: transparent; border-bottom-color: var(--border-color); background: transparent; }
+.source { font-size: 12px; line-height: 1.6; color: var(--text-muted); overflow-wrap: anywhere; }
+.error { border: 1px solid #b34b40; padding: 12px; border-radius: 12px; }
+.word { font-size: 29px; }
+.answer { font-size: 19px; }
+.shell details { margin: 14px 0; }
+.shell summary { cursor: pointer; padding: 8px 0; }

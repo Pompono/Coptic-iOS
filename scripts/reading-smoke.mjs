@@ -1,0 +1,63 @@
+import assert from 'node:assert/strict';
+
+export async function checkReading(page, base) {
+  await page.goto(base + '/read/');
+  await page.waitForLoadState('networkidle');
+  await page.evaluate(() => Object.defineProperty(navigator, 'onLine', { get: () => false }));
+  await page.getByRole('button', { name: 'Look up ⲡⲓⲣⲱⲙⲓ', exact: true }).click();
+  await page.getByRole('heading', { name: 'Possible article + noun', exact: true }).waitFor();
+  assert.match(await page.getByRole('region', { name: 'Word explanation' }).innerText(), /Man, human being/);
+  if (process.env.COPTIC_READING_SCREENSHOT) await page.screenshot({ path: process.env.COPTIC_READING_SCREENSHOT, fullPage: true });
+  await page.getByRole('button', { name: 'Save word for review', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Saved for review', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Look up ⲡⲓⲣⲁⲛ', exact: true }).click();
+  await page.getByRole('button', { name: 'Save word for review', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Saved for review', exact: true }).waitFor();
+  const key = 'coptic-vocabulary:v1';
+  assert.equal(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).cards.length, key), 2);
+  await page.waitForLoadState('networkidle');
+  await page.reload(); await page.waitForLoadState('networkidle');
+  await page.getByRole('button', { name: 'Look up ⲡⲓⲣⲁⲛ', exact: true }).click();
+  assert.equal(await page.getByRole('button', { name: 'Saved for review', exact: true }).isDisabled(), true);
+  await page.getByText('An article can be attached to a noun', { exact: true }).click();
+  assert.match(await page.locator('body').innerText(), /masculine singular definite noun/);
+  await page.getByText('Read your own passage', { exact: true }).click();
+  await page.getByLabel('Paste Coptic text (up to 6,000 characters)').fill('ⲣⲉⲛ ⲝⲝⲝ');
+  await page.getByRole('button', { name: 'Open passage', exact: true }).click();
+  await page.getByRole('button', { name: 'Look up ⲣⲉⲛ', exact: true }).click();
+  assert.match(await page.getByRole('region', { name: 'Word explanation' }).innerText(), /Dictionary lemma: ⲣⲁⲛ/);
+  await page.getByRole('button', { name: 'Look up ⲝⲝⲝ', exact: true }).click();
+  await page.getByText(/No supported dictionary match found/).waitFor();
+
+  await page.goto(base + '/vocabulary/'); await page.waitForLoadState('networkidle');
+  await page.getByRole('button', { name: 'Meaning quiz', exact: true }).click();
+  const review = page.getByRole('region', { name: 'Vocabulary review' });
+  const word = await review.getByRole('heading').innerText();
+  const data = await page.evaluate(key => JSON.parse(localStorage.getItem(key)).cards, key);
+  const correct = data.find(card => card.word === word).meaning;
+  const wrong = data.find(card => card.word !== word).meaning;
+  await review.getByRole('button', { name: wrong, exact: true }).click();
+  await page.getByText(`Not quite. ${correct}`, { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Save result & continue', exact: true }).click();
+  const failed = await page.evaluate(key => JSON.parse(localStorage.getItem(key)).cards.find(card => card.lapses === 1), key);
+  assert.equal(failed.word, word);
+  assert.ok(failed.dueAt > Date.now() && failed.dueAt < Date.now() + 610000);
+  await page.getByRole('button', { name: 'Recall', exact: true }).click();
+  await page.getByRole('button', { name: 'Reveal meaning', exact: true }).click();
+  await page.getByRole('button', { name: 'Good', exact: true }).click();
+  await page.getByRole('heading', { name: 'Nothing due right now', exact: true }).waitFor();
+  await page.reload(); await page.waitForLoadState('networkidle');
+  await page.getByRole('heading', { name: 'Nothing due right now', exact: true }).waitFor();
+  const final = await page.evaluate(key => JSON.parse(localStorage.getItem(key)).cards, key);
+  assert.equal(final.reduce((sum, card) => sum + card.reviews, 0), 2);
+  assert.equal(final.find(card => card.word !== word).intervalDays, 1);
+
+  await page.goto(base + '/dictionary/entry/?lemma=' + encodeURIComponent('ⲣⲁⲛ'));
+  await page.waitForLoadState('networkidle');
+  await page.getByRole('button', { name: 'Saved for review', exact: true }).waitFor();
+  assert.equal(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).cards.length, key), 2, 'Dictionary and reader share card identities');
+  await page.goto(base + '/read/'); await page.waitForLoadState('networkidle');
+  await page.getByRole('button', { name: 'Look up ⲣⲉⲛ', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Look up ⲝⲝⲝ', exact: true }).waitFor();
+  console.log('PASS: offline passage lookup, bound forms, grammar notes, word saving/deduplication, quiz mistakes, recall scheduling, and persistence.');
+}

@@ -4,6 +4,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { readFile, access } from 'node:fs/promises';
 import { checkScanner } from './scanner/smoke.mjs';
+import { checkReading } from './reading-smoke.mjs';
 
 const root = path.resolve('out');
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.wasm': 'application/wasm', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg', '.ttf': 'font/ttf' };
@@ -108,6 +109,7 @@ try {
     throw failure;
   }
   // Warm asset caches made async startup race HTML parsing intermittently.
+  await checkReading(page, base);
   // Exercise full document startup on the routes that exposed that race.
   for (let pass = 0; pass < 4; pass++) {
     for (const route of ['/learn/', unit, '/dictionary/entry/?lemma=%E2%B2%81']) {

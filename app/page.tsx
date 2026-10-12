@@ -10,10 +10,15 @@ export default function Page() {
       <h1 style={{ fontSize: 40, fontWeight: 800, marginBottom: 10 }}>Coptic</h1>
 
       <p style={{ opacity: 0.85, marginBottom: 24 }}>
-        A real learning flow: lessons → practice → progress.
+        Read, understand, and remember Coptic.
       </p>
 
-      <div style={{ display: "flex", gap: 12 }}>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 18 }}>
+        <Link href="/read/" className="rounded-xl bg-[var(--accent-color)] px-5 py-3 font-semibold text-[var(--accent-contrast-color)]">Read Coptic →</Link>
+        <Link href="/vocabulary/" className="rounded-xl border border-[var(--border-color)] px-5 py-3 font-semibold">Vocabulary & review →</Link>
+      </div>
+
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
         <Link
           href={startLearningHref}
           style={{

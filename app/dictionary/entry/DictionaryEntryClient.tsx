@@ -2,6 +2,8 @@
 
 import Link from "@/lib/AppLink";
 import { useEffect, useMemo, useState } from "react";
+import SaveWord from "@/app/SaveWord";
+import { resolveLessonAudio } from "@/lib/lessonAudio";
 
 type BohExample = { sentence: string; translation: string; source?: string };
 type BohairicEntryRaw = {
@@ -196,7 +198,7 @@ export default function DictionaryEntryClient({ lemma }: { lemma: string }) {
                     <div className="mt-2 text-sm text-[var(--text-muted)]">
                       {e.tag ? <span className="mr-3">Tag: {e.tag}</span> : null}
                       {e.greek ? <span>Greek: {e.greek}</span> : null}
-                      {e.entryUrl ? (
+                      {e.entryUrl?.startsWith('crum:') ? <span>Crum {e.entryUrl.slice(5)}</span> : /^https?:\/\//.test(e.entryUrl ?? '') ? (
                         <a
                           href={e.entryUrl}
                           className="ml-3 text-[var(--text-muted)] underline decoration-[var(--text-muted)] underline-offset-4 hover:text-white"
@@ -221,6 +223,14 @@ export default function DictionaryEntryClient({ lemma }: { lemma: string }) {
                     <div className="text-sm text-[var(--text-muted)]">No gloss.</div>
                   )}
                 </div>
+
+                {e.gloss.length > 0 && e.pos !== "Cross-reference" && <div className="mt-4 rounded-xl border border-[var(--border-color)] p-3">
+                  <SaveWord word={e.lemma} meaning={e.gloss.join('; ')} pos={e.pos}
+                    dialect={e.dialect === 'boh' ? 'bohairic' : 'unknown'}
+                    source={e.entryUrl?.startsWith('crum:') ? `Crum ${e.entryUrl.slice(5)}` : 'Bundled dictionary'}
+                    audio={resolveLessonAudio('', e.lemma)?.src} />
+                  <Link href="/vocabulary/" className="mt-2 inline-block text-sm underline">Open vocabulary & review</Link>
+                </div>}
 
                 {e.examples && e.examples.length > 0 ? (
                   <div className="mt-5">

@@ -10,6 +10,40 @@ still uses the separate Python-backed server in `backend/`. Standard builds with
 the model files use that server for both directions.
 No hosted website is required to open the app or use its learning content.
 
+## Reading, vocabulary, and grammar
+
+**Home → Read Coptic** opens a reader with introductory Bohairic practice phrases
+and a field for your own passage. Opening a custom passage saves it locally so you
+can return after reviewing words. Tap words for dictionary meanings, lemmas, listed
+forms, grammatical labels, and sources. Bound-form notation and optional matches
+without combining marks are handled explicitly; the photographed/pasted spelling
+is not silently rewritten. Supported Bohairic article + noun patterns are offered
+as possibilities when a dictionary noun supports the analysis. Other unmatched
+words are reported as unsupported rather than guessed.
+
+Grammar notes explain articles, dictionary forms, noun phrases, and why a tense
+marker needs context. They cite the bundled dictionary and distinguish editorial
+explanations from dictionary evidence. This is not a full morphology/sentence parser
+or an etymological root analyser. Starter content is labelled as app-composed
+practice phrases, not historical quotations. Existing recordings are offered only
+when available for the exact selected word/phrase; no pronunciation is synthesized.
+
+Save a dictionary sense from the reader or a dictionary entry, then open
+**Vocabulary & review** from Home or Learn. Recall cards offer Again/Hard/Good/Easy
+ratings; a meaning quiz is available when at least two different saved meanings
+exist. Missed quiz answers become Again reviews when you save the result.
+Again returns in 10 minutes; initial Good in one day and Easy in four days. Repeated
+successes increase intervals. Due words with more recorded lapses are prioritised.
+Saving the same sense again preserves its schedule and does not create a duplicate.
+Different dictionary meanings can be saved separately.
+
+Vocabulary uses a separate versioned local store and does not overwrite lesson
+progress. Words, context, and review history remain on the device; no account or
+server is required. This initial version has no cloud sync or vocabulary backup.
+Malformed/unsupported stored decks are reported and left untouched. Unit tests
+cover lookup and scheduling, and browser tests exercise saving, reload persistence,
+quiz failures, and recall with external requests blocked.
+
 ## Experimental photo scanner
 
 Open **Translator → Scan a Coptic photo**. Take a photo or choose one, rotate or
