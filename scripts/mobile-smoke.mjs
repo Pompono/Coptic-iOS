@@ -49,6 +49,7 @@ try {
     if (route.includes('/play/')) {
       await page.getByRole('button', { name: 'Check', exact: true }).waitFor();
       assert.equal(await page.getByRole('navigation', { name: 'Mobile navigation' }).count(), 0);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 2), 'Full-screen exercises do not reserve extra dock space');
       // Complete the introductory a/o/d lesson as a learner would. Answer
       // buttons are located by text because their positions are randomized.
       const answers = ['ⲁ', 'a', 'a', 'dha', 'dha', 'ⲇⲁ', 'o', 'o', 'ⲟ', 'dho', 'ⲇⲟ', 'dhad', 'dho', 'ⲇⲁⲇ', 'dhod', 'dhod', 'ⲇⲟⲇ', 'dhad', 'dha'];

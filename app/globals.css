@@ -11,7 +11,7 @@
 }
 
 :root {
-  --page-content-height: 100svh;
+  --page-content-height: calc(100svh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   --coptic-font-family: "Noto Sans Coptic", "Segoe UI Symbol", "Arial Unicode MS", serif;
 
   /* Light theme (default) */
@@ -108,9 +108,13 @@ button, a, input, textarea, select { touch-action: manipulation; }
 
 .mobile-chin-page-shell {
   min-height: 100svh;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 .mobile-chin-page-shell .min-h-screen { min-height: var(--page-content-height); }
-.status-bar-backdrop { display: none; }
+.status-bar-backdrop { display: block; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); background: var(--bg-color); z-index: 100; pointer-events: none; }
 
 .mobile-chin-dock {
   display: none;
@@ -122,6 +126,10 @@ button, a, input, textarea, select { touch-action: manipulation; }
   .mobile-chin-page-shell {
     padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  }
+  .mobile-chin-page-shell[data-exercise="true"] {
+    --page-content-height: calc(100svh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   .mobile-chin-dock {

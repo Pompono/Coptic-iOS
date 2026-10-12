@@ -513,7 +513,7 @@ function LessonOutcomeCelebration({
 
       <style jsx global>{`
         .lesson-outcome-screen {
-          min-height: 100dvh;
+          min-height: var(--page-content-height);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1384,8 +1384,8 @@ export default function Section1Unit2Lesson1Client({
     <main
       onPointerDownCapture={unlockAudio}
       style={{
-        height: compactPhone ? "100dvh" : "auto",
-        minHeight: "100dvh",
+        height: compactPhone ? "var(--page-content-height)" : "auto",
+        minHeight: "var(--page-content-height)",
         background: `linear-gradient(180deg, ${LESSON_THEME.bgTop} 0%, ${LESSON_THEME.bgBottom} 100%)`,
         color: LESSON_THEME.textPrimary,
         padding: shellPadding,

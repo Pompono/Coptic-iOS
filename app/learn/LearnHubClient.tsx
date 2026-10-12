@@ -384,7 +384,7 @@ export default function LearnHubClient() {
 
       <style jsx global>{`
         .learn-map-page {
-          min-height: 100dvh;
+          min-height: var(--page-content-height);
           margin: 0 -24px -24px;
           padding: 0 16px 48px;
           background: linear-gradient(180deg, ${LEARN_THEME.bgTop} 0%, ${LEARN_THEME.bgBottom} 100%);

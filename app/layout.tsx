@@ -6,6 +6,7 @@ import CopticFontPreference from "./CopticFontPreference";
 import MobileChinDock from "./MobileChinDock";
 import ThemePreference, { themeInitScript } from "./ThemePreference";
 import NavigationScrollReset from './NavigationScrollReset';
+import AppViewport from './AppViewport';
 
 export const metadata: Metadata = {
   title: "Coptic",
@@ -30,7 +31,7 @@ export default function RootLayout({
         <CopticFontPreference />
         <ThemePreference />
         <NavigationScrollReset />
-        <div className="mobile-chin-page-shell">{children}</div>
+        <AppViewport>{children}</AppViewport>
         <MobileChinDock />
       </body>
     </html>

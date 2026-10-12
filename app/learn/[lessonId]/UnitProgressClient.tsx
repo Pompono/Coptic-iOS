@@ -934,7 +934,7 @@ export default function UnitProgressClient({ focusLessonId = null }: { focusLess
 
       <style jsx global>{`
         .unit-map-page {
-          min-height: 100dvh;
+          min-height: var(--page-content-height);
           background: linear-gradient(180deg, ${UNIT_SURFACE.bgTop} 0%, ${UNIT_SURFACE.bgBottom} 100%);
           color: ${UNIT_SURFACE.textPrimary};
           padding: 16px 16px 48px;
@@ -1018,7 +1018,7 @@ export default function UnitProgressClient({ focusLessonId = null }: { focusLess
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          min-height: calc(100dvh - 260px);
+          min-height: calc(var(--page-content-height) - 260px);
           gap: 22px;
         }
 
