@@ -10,6 +10,7 @@ import type { DictionaryEntry } from '@/lib/dictionary';
 import { resolveLessonAudio } from '@/lib/lessonAudio';
 import { audioService } from '@/lib/audioService';
 import styles from '../reading.module.css';
+import { scrollToSection } from '@/lib/scrollToSection';
 
 export default function ReaderPage() {
   const [entries, setEntries] = useState<DictionaryEntry[]>([]);
@@ -23,9 +24,6 @@ export default function ReaderPage() {
   const [bohairicOnly, setBohairicOnly] = useState(true);
   const detail = useRef<HTMLDivElement>(null);
   const passagePanel = useRef<HTMLElement>(null);
-  useEffect(() => {
-    if (selected) detail.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [selected?.id]);
   useEffect(() => {
     let mounted = true;
     setBohairicOnly(isBohairicOnlyEnabled());
@@ -91,13 +89,18 @@ export default function ReaderPage() {
         <button key={token.id} disabled={loading} aria-pressed={selected?.id === token.id}
           aria-label={`Look up ${token.text}`} onClick={() => setSelected(token)}>{token.text}</button>
         : <span key={token.id}>{token.text}</span>)}</div>
+      {selected && result && <div className={styles.selectionPreview} aria-live="polite">
+        <span className="coptic-text">{selected.text}</span>
+        <p>{result.matches[0]?.gloss[0] ?? result.analyses[0]?.entries[0]?.gloss[0] ?? 'No supported dictionary match.'}</p>
+        <button onClick={() => scrollToSection(detail.current)}>View word details ↓</button>
+      </div>}
       {passage && <><button aria-expanded={showMeaning} onClick={() => setShowMeaning(!showMeaning)}>{showMeaning ? 'Hide phrase meanings' : 'Show phrase meanings'}</button>
         {showMeaning && <p>{passage.translation}</p>}<p className={styles.source}>{passage.source}</p></>}
       {loading && <p role="status">Loading the bundled dictionary…</p>}
     </section>
     <div ref={detail}>
       {selected && result && <section aria-label="Word explanation">
-        <button onClick={() => passagePanel.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>↑ Back to passage</button>
+        <button onClick={() => scrollToSection(passagePanel.current)}>↑ Back to passage</button>
         <h2 className="coptic-text">{selected.text}</h2>
         {recording?.src ? <button onClick={() => void audioService.play(recording.id, recording.src).catch(() => setError('This recording could not be played.'))}>Listen to selected word or phrase</button>
           : <p className={styles.muted}>No recording for this exact word yet.</p>}

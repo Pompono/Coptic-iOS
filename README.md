@@ -55,10 +55,20 @@ the photographed text again. The offline-model IPA is required for translation.
 
 Recognition and translation run locally. Photos are not uploaded, saved to the
 photo library, or persisted by the scanner. Recognition scales photos to a maximum
-2048-pixel edge and uses a separate worker, released before translation. Cropping,
+3072-pixel edge and uses a separate worker, released before translation. Cropping,
 rotation, edits, and dialect changes invalidate affected results. OCR is limited to
 the first 24 text regions; crop a smaller part of dense pages. There is no live
 camera recognition yet.
+
+OCR preserves its original text for each block. **Change overlines to jinkem** is
+an explicit correction for misread macron/overline marks; it is never applied
+automatically because genuine abbreviation bars must remain distinguishable.
+**Restore recognised text** undoes all edits in the selected block. The larger
+photo limit retains more detail for small marks; accuracy on real camera images
+still needs evaluation. Word and image taps select content without automatic page
+jumps; dedicated buttons open details/editors. Mobile inputs avoid focus zoom,
+native page zoom is disabled, safe-area padding is handled once, and the dock hides
+when the software keyboard takes up the viewport. Browser pinch zoom remains available.
 
 The pinned experimental model is
 [Shreeshrii/tessdata_coptic](https://github.com/Shreeshrii/tessdata_coptic), listed in

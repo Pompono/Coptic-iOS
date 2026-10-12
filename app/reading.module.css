@@ -14,6 +14,7 @@
 .passage { font-size: 29px; line-height: 2; white-space: pre-wrap; overflow-wrap: anywhere; }
 .passage button { font: inherit; padding: 1px 4px; border-radius: 5px; border-color: transparent; border-bottom-color: var(--border-color); background: transparent; }
 .source { font-size: 12px; line-height: 1.6; color: var(--text-muted); overflow-wrap: anywhere; }
+.selectionPreview { margin: 12px 0; padding: 12px; border-left: 3px solid var(--accent-color); background: var(--surface-2); border-radius: 8px; }
 .error { border: 1px solid #b34b40; padding: 12px; border-radius: 12px; }
 .word { font-size: 29px; }
 .answer { font-size: 19px; }

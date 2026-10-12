@@ -2,7 +2,7 @@
 
 import Link from "@/lib/AppLink";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 type DockItem = {
   id: string;
@@ -106,8 +106,28 @@ function shouldHideDock(pathname: string) {
 
 export default function MobileChinDock() {
   const pathname = usePathname().replace(/\/$/, "") || "/";
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    let restingHeight = window.innerHeight;
+    const update = () => {
+      const active = document.activeElement;
+      const editing = active instanceof HTMLTextAreaElement || active instanceof HTMLInputElement;
+      if (!editing) restingHeight = window.innerHeight;
+      setKeyboardOpen(editing && Math.max(restingHeight, window.innerHeight) - viewport.height > 120 && viewport.scale <= 1.05);
+    };
+    viewport.addEventListener('resize', update);
+    document.addEventListener('focusin', update);
+    document.addEventListener('focusout', update);
+    return () => {
+      viewport.removeEventListener('resize', update);
+      document.removeEventListener('focusin', update);
+      document.removeEventListener('focusout', update);
+    };
+  }, []);
 
-  if (shouldHideDock(pathname)) {
+  if (shouldHideDock(pathname) || keyboardOpen) {
     return null;
   }
 

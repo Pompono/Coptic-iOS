@@ -90,6 +90,18 @@ body {
 body {
   background: var(--bg-color);
   color: var(--text-color);
+  -webkit-text-size-adjust: 100%;
+  overflow-x: clip;
+}
+
+button, a, input, textarea, select { touch-action: manipulation; }
+@media (max-width: 768px) {
+  /* Prevent Safari's automatic focus zoom without disabling browser pinch zoom. */
+  input:not([type="checkbox"]):not([type="radio"]), textarea, select { font-size: max(16px, 1em) !important; }
+  input.coptic-text, textarea.coptic-text { font-size: 20px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; }
 }
 
 .mobile-chin-page-shell {
@@ -102,6 +114,7 @@ body {
 
 @media (max-width: 768px) {
   .mobile-chin-page-shell {
+    padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   }
 
@@ -135,7 +148,8 @@ body {
       0 20px 45px rgba(28, 37, 55, 0.2),
       0 10px 20px rgba(28, 37, 55, 0.12),
       inset 0 1px 0 rgba(255, 255, 255, 0.22);
-    backdrop-filter: blur(14px);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     pointer-events: auto;
   }
 

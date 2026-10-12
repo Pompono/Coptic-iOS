@@ -19,7 +19,7 @@ function finish(canvas: HTMLCanvasElement): ScanImage {
 export async function prepareImage(url: string): Promise<ScanImage> {
   const image = await loadImage(url);
   if (!image.naturalWidth || !image.naturalHeight) throw new Error('The image is empty.');
-  const scale = Math.min(1, 2048 / Math.max(image.naturalWidth, image.naturalHeight));
+  const scale = Math.min(1, 3072 / Math.max(image.naturalWidth, image.naturalHeight));
   const canvas = document.createElement('canvas');
   canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
   canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));

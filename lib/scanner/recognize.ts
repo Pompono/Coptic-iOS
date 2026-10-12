@@ -2,7 +2,7 @@ import { textRegions } from './regions.mjs';
 import type { ScanImage } from './images';
 
 export type ScanRegion = {
-  id: string; text: string; confidence: number;
+  id: string; text: string; originalText: string; confidence: number;
   box: { x: number; y: number; width: number; height: number };
   translation?: string; error?: string;
 };

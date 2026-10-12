@@ -10,6 +10,8 @@ import { editImage, prepareImage, type Box, type ScanImage } from '@/lib/scanner
 import { cropBox } from '@/lib/scanner/regions.mjs';
 import { isBohairicOnlyEnabled } from '@/app/BohairicPreference';
 import styles from './scanner.module.css';
+import { scrollToSection } from '@/lib/scrollToSection';
+import { hasOverline, overlinesToJinkem } from '@/lib/scanner/marks.mjs';
 
 type Busy = 'photo' | 'recognition' | 'translation' | null;
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : String(error);
@@ -83,7 +85,7 @@ export default function ScannerPage() {
     try {
       const photo = await Camera.getPhoto({
         source, resultType: CameraResultType.Uri, quality: 95,
-        width: 2048, height: 2048, correctOrientation: true, saveToGallery: false,
+        width: 3072, height: 3072, correctOrientation: true, saveToGallery: false,
       });
       if (!photo.webPath) throw new Error('The photo could not be opened.');
       const prepared = await prepareImage(photo.webPath);
@@ -178,9 +180,9 @@ export default function ScannerPage() {
       y: (event.clientY - bounds.top - event.currentTarget.clientTop) / event.currentTarget.clientHeight,
     };
   }
-  function selectRegion(id: string, scroll = true) {
+  function selectRegion(id: string, scroll = false) {
     setSelectedId(id);
-    if (scroll) editor.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (scroll) scrollToSection(editor.current);
   }
 
   return (
@@ -208,6 +210,7 @@ export default function ScannerPage() {
             </div>
             {!!regions.length && <button disabled={!!busy} aria-pressed={showEnglish} onClick={() => setShowEnglish(!showEnglish)}>{showEnglish ? 'Show original' : 'Show English'}</button>}
           </div>
+          {selected && !cropping && <button disabled={!!busy} onClick={() => scrollToSection(editor.current)}>Edit selected text block ↓</button>}
           {cropping && <p className={styles.note}>Drag a rectangle around the text, then apply the crop. Cropping removes previous recognition results.</p>}
           <div className={`${styles.photo} ${cropping ? styles.cropping : ''}`}
             onPointerDown={event => {
@@ -260,6 +263,13 @@ export default function ScannerPage() {
             <textarea id="recognised-text" aria-label="Recognised Coptic text" className="coptic-text" value={selected.text}
               maxLength={1200} disabled={!!busy} spellCheck={false} rows={4}
               onChange={event => { const text = event.target.value; setRegions(previous => previous.map(region => region.id === selected.id ? { ...region, text, translation: undefined } : region)); }} />
+            <div className={styles.actions}>
+              <button disabled={!!busy || !hasOverline(selected.text)} onClick={() => setRegions(previous => previous.map(region => region.id === selected.id
+                ? { ...region, text: overlinesToJinkem(region.text), translation: undefined } : region))}>Change overlines to jinkem</button>
+              <button disabled={!!busy || selected.text === selected.originalText} onClick={() => setRegions(previous => previous.map(region => region.id === selected.id
+                ? { ...region, text: region.originalText, translation: undefined } : region))}>Restore recognised text</button>
+            </div>
+            <p className={styles.note}>Use the jinkem correction only when that is the mark in the photo. Abbreviations may have real overlines. Restore recognised text also undoes manual edits in this block.</p>
             <div className={styles.actions}>
               <button className={styles.primary} disabled={!!busy || !local || !selected.text.trim()} onClick={() => void translate(false)}>Translate block</button>
               <button disabled={!!busy || !local || !regions.some(region => region.text.trim() && !region.translation)} onClick={() => void translate(true)}>Translate remaining blocks</button>

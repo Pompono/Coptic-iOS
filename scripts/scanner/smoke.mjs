@@ -60,6 +60,11 @@ export async function checkScanner(page, base, localModel) {
 
   await blocks.first().click();
   const input = page.getByLabel('Recognised Coptic text', { exact: true });
+  await input.fill('ⲙ̄');
+  await page.getByRole('button', { name: 'Change overlines to jinkem', exact: true }).click();
+  assert.equal(await input.inputValue(), 'ⲙ̀');
+  await page.getByRole('button', { name: 'Restore recognised text', exact: true }).click();
+  assert.equal(await input.inputValue(), texts[0]);
   await input.fill('ⲡⲉⲛⲛⲟⲩϯ');
   if (localModel) {
     await page.getByRole('button', { name: 'Translate block', exact: true }).click();

@@ -4,7 +4,7 @@ const config: CapacitorConfig = {
   appId: 'com.pompono.coptic',
   appName: 'Coptic',
   webDir: 'out',
-  ios: { contentInset: 'automatic' },
+  ios: { contentInset: 'never', zoomEnabled: false },
 };
 
 export default config;

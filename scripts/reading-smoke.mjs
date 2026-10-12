@@ -5,6 +5,8 @@ export async function checkReading(page, base) {
   await page.waitForLoadState('networkidle');
   await page.evaluate(() => Object.defineProperty(navigator, 'onLine', { get: () => false }));
   await page.getByRole('button', { name: 'Look up ⲡⲓⲣⲱⲙⲓ', exact: true }).click();
+  await page.waitForTimeout(500);
+  assert.ok(await page.evaluate(() => window.scrollY < 40), 'A word tap does not unexpectedly scroll away from the passage');
   await page.getByRole('heading', { name: 'Possible article + noun', exact: true }).waitFor();
   assert.match(await page.getByRole('region', { name: 'Word explanation' }).innerText(), /Man, human being/);
   if (process.env.COPTIC_READING_SCREENSHOT) await page.screenshot({ path: process.env.COPTIC_READING_SCREENSHOT, fullPage: true });
@@ -22,6 +24,7 @@ export async function checkReading(page, base) {
   await page.getByText('An article can be attached to a noun', { exact: true }).click();
   assert.match(await page.locator('body').innerText(), /masculine singular definite noun/);
   await page.getByText('Read your own passage', { exact: true }).click();
+  assert.ok(await page.getByLabel('Paste Coptic text (up to 6,000 characters)').evaluate(element => parseFloat(getComputedStyle(element).fontSize) >= 16), 'Coptic input avoids automatic iOS focus zoom');
   await page.getByLabel('Paste Coptic text (up to 6,000 characters)').fill('ⲣⲉⲛ ⲝⲝⲝ');
   await page.getByRole('button', { name: 'Open passage', exact: true }).click();
   await page.getByRole('button', { name: 'Look up ⲣⲉⲛ', exact: true }).click();
