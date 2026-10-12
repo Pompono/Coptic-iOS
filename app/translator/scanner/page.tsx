@@ -1,6 +1,6 @@
 "use client";
 
-import Link from 'next/link';
+import Link from '@/lib/AppLink';
 import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';

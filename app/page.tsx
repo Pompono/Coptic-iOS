@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/lib/AppLink";
 import { lessons } from "@/lib/lesson";
 
 export default function Page() {

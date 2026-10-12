@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/lib/AppLink";
 import { type CSSProperties, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { lessonSections, lessons, type Lesson, type UnitLessonStep, type UnitProgressGroup } from "@/lib/lesson";
 import { readCompletedSteps, readFailedSteps } from "../progress";

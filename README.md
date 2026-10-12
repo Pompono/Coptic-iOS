@@ -35,7 +35,8 @@ a licence; Tesseract.js and its core include their own licence files.
 
 Initial evaluation recognised a scanned printed page and a synthetic two-phrase
 fixture in the app's existing Coptic font. The synthetic fixture had one substitution
-in 15 characters (initial iota recognised as a bracket). This is a small development
+in 15 characters (initial iota recognised as a bracket on Chromium and uppercase
+iota on WebKit). This is a small development
 check, not a real-photo accuracy benchmark. Recognition errors, unfamiliar fonts,
 handwriting, camera glare, and manuscript pages need further evaluation. Automated
 tests also check corrected offline translations, overlay positions, and crop/rotate

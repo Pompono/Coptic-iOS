@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/lib/AppLink";
 import { useEffect, useMemo, useState } from "react";
 
 type BohExample = { sentence: string; translation: string; source?: string };

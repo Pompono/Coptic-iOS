@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/lib/AppLink";
 
 import { translationRequest } from "@/lib/translationService";
 import { hasLocalTranslator, disposeLocalTranslator } from "@/lib/localTranslation/client";

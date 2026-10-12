@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/lib/AppLink";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { lessonSections, lessons } from "@/lib/lesson";

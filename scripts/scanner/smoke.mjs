@@ -82,13 +82,20 @@ export async function checkScanner(page, base, localModel) {
   await page.waitForFunction(() => document.querySelector('img[alt="Selected Coptic page"]')?.naturalWidth === 500);
   assert.equal(await page.getByRole('button', { name: /^Review text block/ }).count(), 0, 'Rotating clears old coordinates and translations');
   await page.getByRole('button', { name: 'Crop photo', exact: true }).click();
+  await page.getByAltText('Selected Coptic page').scrollIntoViewIfNeeded();
   const photo = await page.getByAltText('Selected Coptic page').boundingBox();
   await page.mouse.move(photo.x + photo.width * .1, photo.y + photo.height * .1);
   await page.mouse.down();
   await page.mouse.move(photo.x + photo.width * .9, photo.y + photo.height * .9, { steps: 4 });
   await page.mouse.up();
   await page.getByRole('button', { name: 'Apply crop', exact: true }).click();
-  await page.waitForFunction(() => document.querySelector('img[alt="Selected Coptic page"]')?.naturalWidth === 400);
+  await page.waitForFunction(() => {
+    const image = document.querySelector('img[alt="Selected Coptic page"]');
+    return image?.naturalWidth > 0 && image.naturalWidth < 500;
+  });
+  const cropped = await page.getByAltText('Selected Coptic page').evaluate(image => ({ width: image.naturalWidth, height: image.naturalHeight }));
+  assert.ok(Math.abs(cropped.width - 400) <= 2 && Math.abs(cropped.height - 960) <= 4,
+    `Crop matches the 80% gesture within CSS pixel rounding: ${JSON.stringify(cropped)}`);
   await page.getByRole('button', { name: 'Clear photo', exact: true }).click();
   assert.equal(await page.getByAltText('Selected Coptic page').count(), 0);
   console.log('PASS: actual Coptic photo OCR, editable text, aligned overlays, rotate/crop/clear, and offline translation bubbles.');
