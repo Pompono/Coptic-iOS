@@ -1,0 +1,19 @@
+{
+  "dataset": "megalaa/coptic-corpora",
+  "revision": "5b836707150687b46667fc5a0a596e9f4b3cd11d",
+  "license": "CC-BY-4.0",
+  "attribution": "megalaa, Coptic Corpora; source field Tasbeha",
+  "sources": [
+    {
+      "file": "tasbeha_train.csv",
+      "sha256": "ab164a9b75be572b87b3bcbe1193d9b30faa2228db84dbe581815f7482188f1b",
+      "url": "https://huggingface.co/datasets/megalaa/coptic-corpora/resolve/5b836707150687b46667fc5a0a596e9f4b3cd11d/tasbeha_train.csv"
+    },
+    {
+      "file": "tasbeha_test.csv",
+      "sha256": "eb1cddf915d3d1b8eb2937d89832db1bbcebd80b0292a668d570671d7c25f9a5",
+      "url": "https://huggingface.co/datasets/megalaa/coptic-corpora/resolve/5b836707150687b46667fc5a0a596e9f4b3cd11d/tasbeha_test.csv"
+    }
+  ],
+  "notes": "Published aligned text, not an independently certified translation. Both original training/test splits are used as a reference library, not as evaluation or new model training."
+}

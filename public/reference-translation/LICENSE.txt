@@ -1,0 +1,5 @@
+Coptic Corpora by megalaa, source field Tasbeha.
+Dataset: https://huggingface.co/datasets/megalaa/coptic-corpora
+Licensed under Creative Commons Attribution 4.0 International.
+https://creativecommons.org/licenses/by/4.0/
+Changes: selected Coptic/English rows, retained source row identifiers; packaged as JSON.

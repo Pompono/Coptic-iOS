@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "@/lib/AppLink";
+import ReferenceDetails from "./ReferenceDetails";
 
 import { translationRequest } from "@/lib/translationService";
 import { hasLocalTranslator, disposeLocalTranslator } from "@/lib/localTranslation/client";
@@ -20,6 +21,9 @@ type TranslationPayload = {
   dialect?: "sahidic" | "bohairic";
   error?: string;
   details?: string;
+  method?: string;
+  matchedText?: string;
+  sourceRow?: string;
 };
 
 type SpecialKey =
@@ -115,6 +119,9 @@ export default function TranslatorPage() {
     return disposeLocalTranslator;
   }, []);
   const [direction, setDirection] = useState<TranslationDirection>("copticToEnglish");
+  const [translationMethod, setTranslationMethod] = useState<'published' | 'experimental'>('published');
+  const [outputMethod, setOutputMethod] = useState('');
+  const [referenceDetails, setReferenceDetails] = useState<{ text?: string; row?: string }>({});
   const [translationInput, setTranslationInput] = useState("");
   const [translatorDialect, setTranslatorDialect] = useState<"sahidic" | "bohairic">("bohairic");
   const [bohairicOnlyEnabled, setGlobalBohairicOnlyEnabled] = useState(true);
@@ -392,6 +399,7 @@ export default function TranslatorPage() {
           text,
           dialect: translatorDialect,
           includeConfidence: true,
+          method: translationMethod,
         }),
       });
 
@@ -408,6 +416,8 @@ export default function TranslatorPage() {
 
       const top = typeof payload.translation === "string" ? payload.translation.trim() : "";
       setTranslationOutput(top);
+      setOutputMethod(payload.method || "");
+      setReferenceDetails({ text: payload.matchedText, row: payload.sourceRow });
       setConfidence(typeof payload.confidence === "number" ? payload.confidence : null);
       setTranslationState("idle");
     } catch (error) {
@@ -491,7 +501,7 @@ export default function TranslatorPage() {
       }}
     >
       <div
-        className="mx-auto max-w-5xl px-5 py-8"
+        className="mx-auto max-w-5xl px-5 py-6"
         style={{
           paddingBottom: isMobileViewport && showKeyboard ? "calc(24px + env(safe-area-inset-bottom, 0px))" : undefined,
         }}
@@ -504,9 +514,18 @@ export default function TranslatorPage() {
 
         {isCopticToEnglish && localTranslationEnabled ? (
           <p className="mt-2 text-sm text-[var(--text-muted)]">
-            Translates on this device, including offline. Short passages work best; the first translation may take longer.
+            Translates on this device, including offline. Published-text matches work offline; AI drafts remain experimental.
           </p>
         ) : null}
+
+        {isCopticToEnglish && localTranslationEnabled && <label className="mt-4 block">Translation method
+          <select aria-label="Translation method" value={translationMethod} disabled={currentState === 'loading'}
+            onChange={event => { setTranslationMethod(event.target.value as typeof translationMethod); setTranslationOutput(''); setTranslationError(''); }}
+            className="ml-2 rounded-xl border border-[var(--border-color)] bg-[var(--surface-1)] p-2">
+            <option value="published">Published text</option><option value="experimental">Experimental AI draft</option>
+          </select>
+          <p className="mt-2 text-sm text-[var(--text-muted)]">Published text returns an existing translation when the letters match a supported passage. It does not guess missing text. AI drafts can contain wrong meanings.</p>
+        </label>}
 
         <div className="mt-5 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-1)] p-4">
           <div className="flex items-center gap-3">
@@ -584,10 +603,11 @@ export default function TranslatorPage() {
           ) : null}
 
           <div className="mt-4 rounded-xl border border-[var(--border-color)] bg-[var(--surface-2)] p-4">
-            <p className="text-xs text-[var(--text-muted)]">Output</p>
+            <p className="text-xs text-[var(--text-muted)]">{isCopticToEnglish && currentOutput ? outputMethod === "published" ? "Published translation · Coptic Corpora / Tasbeha" : "Unverified AI draft" : "Output"}</p>
             <p className={`mt-2 text-lg text-[var(--text-color)] ${!isCopticToEnglish && currentOutput ? "coptic-text" : ""}`}>
               {currentOutput || "Translation will appear here."}
             </p>
+            {isCopticToEnglish && currentOutput && outputMethod === "published" && <ReferenceDetails {...referenceDetails} />}
             {currentConfidence !== null ? (
               <p className="mt-2 text-xs text-[var(--text-muted)]">
                 Confidence: {(currentConfidence * 100).toFixed(1)}%

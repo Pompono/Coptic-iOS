@@ -285,3 +285,11 @@ with source encoding reuse and a decoder cache per hypothesis. It improves the
 short daughter/Son regression and refuses unfinished generations, but longer
 hymns still contain semantic errors. See [engine comparison](docs/translation-engine.md)
 for inputs, outputs, limitations, and the reproducible comparison command.
+
+**Published text is now the default translation method.** It returns existing
+English for supported Bohairic passages with matching letters and exposes the
+source text and row. It refuses damaged/unmatched text rather than generating
+English. The offline library includes the Mary/dove, flower/incense/Jesse, and
+Aaron's rod stanzas in the supplied photo. Experimental AI drafts require an
+explicit method choice and still contain semantic errors. See
+[published-text coverage and matching rules](docs/published-translations.md).

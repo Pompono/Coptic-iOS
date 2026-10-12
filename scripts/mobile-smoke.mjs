@@ -90,6 +90,18 @@ try {
   if (localModel) {
     await page.evaluate(() => Object.defineProperty(navigator, 'onLine', { get: () => false }));
   }
+  if (localModel) {
+    await page.locator('input').first().fill('ⲛⲑⲟ ⲧⲉ ϯϩⲣⲏⲣⲓ: ⲛ̀ⲧⲉ ⲡⲓⲥⲑⲟⲓⲛⲟⲩϥⲓ: ⲑⲏⲉⲧⲁⲥⲫⲓⲣⲓ ⲉ̀ⲃⲟⲗ: ϧⲉⲛ ⲑⲛⲟⲩⲛⲓ ⲛ̀ⲓⲉⲥⲥⲉ.');
+    await page.getByRole('button', { name: 'Translate', exact: true }).click();
+    await page.getByText('You are the flower, of incense, that has blossomed, from the root of Jesse.').waitFor();
+    await page.getByText(/Published translation · Coptic Corpora/).waitFor();
+    await page.locator('input').first().fill('[[ⲑⲟ ⲧⲉ ϯϩⲣⲏⲣⲓ');
+    await page.getByRole('button', { name: 'Translate', exact: true }).click();
+    await page.getByText(/No unambiguous published translation/).waitFor();
+    assert.equal(await page.getByText('You are the flower, of incense, that has blossomed, from the root of Jesse.').count(), 0);
+    await page.getByLabel('Translation method').selectOption('experimental');
+    console.log('PASS: source-matched flower/incense/Jesse stanza and explicit refusal of damaged OCR.');
+  }
   await page.locator('input').first().fill('ⲡⲉⲛⲛⲟⲩϯ');
   await page.getByRole('button', { name: 'Translate', exact: true }).click();
   if (localModel) {

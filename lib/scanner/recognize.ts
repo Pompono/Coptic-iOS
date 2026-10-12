@@ -6,7 +6,7 @@ export type ScanRegion = {
   id: string; text: string; originalText: string; confidence: number;
   markedWords?: MarkedWord[];
   box: { x: number; y: number; width: number; height: number };
-  translation?: string; error?: string;
+  translation?: string; translationMethod?: string; referenceText?: string; referenceRow?: string; error?: string;
 };
 
 // Use the pinned Tesseract.js 6 worker protocol directly. Its createWorker()

@@ -29,7 +29,7 @@ self.onmessage = async (event) => {
     const translation = await decodeTranslation(translate, input);
     if (!translation) throw new Error('The local model did not return a translation.');
     checkTranslationOutput(translation);
-    self.postMessage({ id, translation, dialect });
+    self.postMessage({ id, translation, dialect, method: 'experimental' });
   } catch (error) {
     self.postMessage({ id, error: error instanceof Error ? error.message : 'On-device translation failed.' });
     // Failed model initialization must be retryable.

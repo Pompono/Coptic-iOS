@@ -1,3 +1,5 @@
+import { publishedTranslation } from './referenceClient';
+export type TranslationMethod = 'published' | 'experimental';
 let worker: Worker | null = null;
 let sequence = 0;
 let active = false;
@@ -8,11 +10,22 @@ export function hasLocalTranslator(): Promise<boolean> {
     .then(async response => response.ok && (await response.json()).model === 'megalaa/coptic-english-translator')
     .catch(() => false);
 }
-export async function translateLocally(text: string, dialect: string) {
+export async function translateLocally(text: string, dialect: string, method: TranslationMethod = 'published') {
   if (active) throw new Error('Wait for the current translation to finish.');
   active = true;
-  return new Promise<{ translation: string; dialect: string }>((resolve, reject) => {
-    const id = ++sequence;
+  const id = ++sequence;
+  try {
+    const reference = await publishedTranslation(text, dialect);
+    if (id !== sequence) throw new Error("Translation was cancelled.");
+    if (reference) { active = false; return reference; }
+    if (method !== 'experimental') {
+      throw new Error(dialect === 'bohairic'
+        ? 'No unambiguous published translation matches these letters. Check the scanned Coptic against the photo. Unmatched text has not been translated.'
+        : 'Published-text matching currently covers Bohairic. No published Sahidic translation has been returned.');
+    }
+  } catch (error) { if (id === sequence) active = false; throw error; }
+
+  return new Promise<{ translation: string; dialect: string; method?: string; source?: string; sourceUrl?: string; matchedText?: string; sourceRow?: string }>((resolve, reject) => {
     try { worker ??= new Worker(new URL('./worker.ts', import.meta.url)); }
     catch {
       active = false;
@@ -39,6 +52,8 @@ export async function translateLocally(text: string, dialect: string) {
 }
 
 export function disposeLocalTranslator() {
+  sequence++;
+  active = false;
   cancel?.();
   worker?.terminate();
   worker = null;

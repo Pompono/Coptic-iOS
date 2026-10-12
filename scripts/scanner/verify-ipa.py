@@ -14,6 +14,14 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
     archive.getinfo(assets + 'vocabulary/index.html')
     archive.getinfo(assets + 'bohairic_dictionary.json')
     archive.getinfo(assets + 'translator/scanner/index.html')
+    reference_bytes = archive.read(assets + 'reference-translation/bohairic.json')
+    reference = json.loads(reference_bytes)
+    assert reference['version'] == 1 and len(reference['rows']) >= 17000
+    source = json.loads(archive.read(assets + 'reference-translation/SOURCE.json'))
+    assert source['license'] == 'CC-BY-4.0'
+    assert source['revision'] == reference['revision']
+    archive.getinfo(assets + 'reference-translation/LICENSE.txt')
+
     archive.getinfo(assets + 'ocr/worker.min.js')
     archive.getinfo(assets + 'ocr/tesseract-core-simd-lstm.wasm.js')
     manifest = json.loads(archive.read(assets + 'ocr/manifest.json'))
@@ -24,4 +32,4 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
         data = archive.read(assets + 'models/coptic-english/' + name)
         assert len(data) == details['bytes'], name
         assert hashlib.sha256(data).hexdigest() == details['sha256'], name
-    print('PASS: IPA contains an arm64 app, reader, vocabulary reviews, dictionary, scanner, and verified offline models.')
+    print('PASS: IPA contains an arm64 app, reader, vocabulary reviews, dictionary, scanner, published-text references, and verified offline models.')

@@ -4,8 +4,8 @@ import { hasLocalTranslator, translateLocally } from './localTranslation/client'
 
 export async function translationRequest(endpoint: string, options: RequestInit): Promise<Response> {
   if (endpoint === '/api/translate' && await hasLocalTranslator()) {
-    const { text, dialect = 'bohairic' } = JSON.parse(String(options.body));
-    const result = await translateLocally(text, dialect);
+    const { text, dialect = 'bohairic', method = 'published' } = JSON.parse(String(options.body));
+    const result = await translateLocally(text, dialect, method);
     return new Response(JSON.stringify(result), {
       status: 200, headers: { 'Content-Type': 'application/json' },
     });

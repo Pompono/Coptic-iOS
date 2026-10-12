@@ -13,6 +13,7 @@ import styles from './scanner.module.css';
 import { scrollToSection } from '@/lib/scrollToSection';
 import { hasOverline, overlinesToJinkem } from '@/lib/scanner/marks.mjs';
 import MarkReview from './MarkReview';
+import ReferenceDetails from '../ReferenceDetails';
 
 type Busy = 'photo' | 'recognition' | 'translation' | null;
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : String(error);
@@ -27,6 +28,7 @@ export default function ScannerPage() {
   const [omitted, setOmitted] = useState(0);
   const [showEnglish, setShowEnglish] = useState(true);
   const [local, setLocal] = useState<boolean | null>(null);
+  const [translationMethod, setTranslationMethod] = useState<'published' | 'experimental'>('published');
   const [dialect, setDialect] = useState<'bohairic' | 'sahidic'>('bohairic');
   const [bohairicOnly, setBohairicOnly] = useState(true);
   const [cropping, setCropping] = useState(false);
@@ -161,10 +163,10 @@ export default function ScannerPage() {
       for (const [index, region] of targets.entries()) {
         if (operation.current !== id) break;
         setStatus(`Translating block ${index + 1} of ${targets.length}…`);
-        const result = await translateLocally(region.text, dialect);
+        const result = await translateLocally(region.text, dialect, translationMethod);
         if (operation.current !== id) break;
         setRegions(previous => previous.map(item => item.id === region.id
-          ? { ...item, translation: result.translation, error: undefined } : item));
+          ? { ...item, translation: result.translation, translationMethod: result.method, referenceText: result.matchedText, referenceRow: result.sourceRow, error: undefined } : item));
       }
       if (operation.current === id) { setShowEnglish(true); setStatus('Translation ready. Tap a bubble to review the full text.'); }
     } catch (failure) {
@@ -258,6 +260,12 @@ export default function ScannerPage() {
         {!!regions.length && <div ref={editor} className={styles.editor}>
           <div className={styles.toolbar}>
             <h2>Review recognised text</h2>
+            <label className={styles.dialect}>Translation method
+              <select aria-label="Translation method" value={translationMethod} disabled={!!busy} onChange={event => {
+                setTranslationMethod(event.target.value as typeof translationMethod); setError('');
+                setRegions(previous => previous.map(region => ({ ...region, translation: undefined })));
+              }}><option value="published">Published text</option><option value="experimental">Experimental AI draft</option></select>
+            </label>
             <label className={styles.dialect}>Dialect
               <select aria-label="Scanner dialect" disabled={!!busy || bohairicOnly} value={dialect}
                 onChange={event => { setDialect(event.target.value as typeof dialect); setRegions(previous => previous.map(region => ({ ...region, translation: undefined }))); }}>
@@ -296,10 +304,10 @@ export default function ScannerPage() {
               <button className={styles.primary} disabled={!!busy || !local || !selected.text.trim()} onClick={() => void translate(false)}>Translate block</button>
               <button disabled={!!busy || !local || !regions.some(region => region.text.trim() && !region.translation)} onClick={() => void translate(true)}>Translate remaining blocks</button>
             </div>
-            {selected.translation && <div className={styles.output}><h3>English</h3><p>{selected.translation}</p></div>}
+            {selected.translation && <div className={styles.output}><h3>{selected.translationMethod === "published" ? "Published translation · Coptic Corpora / Tasbeha" : "Unverified AI draft"}</h3><p>{selected.translation}</p>{selected.translationMethod === "published" && <ReferenceDetails text={selected.referenceText} row={selected.referenceRow} />}</div>}
           </>}
           {local === false && <p className={styles.note}>Photo recognition is available. Translation needs the offline-model IPA build.</p>}
-          {local === true && <p className={styles.note}>Coptic → English runs offline. Translation is experimental; recognition mistakes can change the meaning.</p>}
+          {local === true && <p className={styles.note}>Coptic → English runs offline. Published text requires a match to a supported passage. Check the recognised letters; unmatched text is left unresolved. AI drafts can contain wrong meanings.</p>}
         </div>}
         {image && <button disabled={!!busy} className={styles.clear} onClick={() => { resetRegions(); setImage(null); setError(''); }}>Clear photo</button>}
       </div>

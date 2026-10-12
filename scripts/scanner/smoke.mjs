@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 
 export async function checkScanner(page, base, localModel) {
   await page.goto(base + '/translator/scanner/');
+  // Synthetic short OCR fixtures are deliberately outside published coverage.
+  // Select AI drafts explicitly for the existing worker-execution checks.
+
   await page.waitForLoadState('networkidle');
   await page.evaluate(() => Object.defineProperty(navigator, 'onLine', { get: () => false }));
   const fixture = await page.evaluate(async () => {
@@ -74,6 +77,7 @@ export async function checkScanner(page, base, localModel) {
   assert.equal(await input.inputValue(), 'ⲡⲭⲥ');
   await input.fill('ⲡⲉⲛⲛⲟⲩϯ');
   if (localModel) {
+    await page.getByLabel('Translation method').selectOption('experimental');
     await page.getByRole('button', { name: 'Translate block', exact: true }).click();
     await page.getByRole('button', { name: 'Translate block', exact: true }).waitFor({ state: 'visible', timeout: 180000 });
     await page.waitForFunction(() => [...document.querySelectorAll('button')].some(button => button.textContent === 'Translate block' && !button.disabled), null, { timeout: 180000 });
@@ -83,6 +87,12 @@ export async function checkScanner(page, base, localModel) {
     await page.getByRole('button', { name: 'Translate block', exact: true }).click();
     await page.waitForFunction(() => [...document.querySelectorAll('button')].some(button => button.textContent === 'Translate block' && !button.disabled), null, { timeout: 180000 });
     assert.match(await page.getByRole('button', { name: 'Review text block 1', exact: true }).innerText(), /Jesus Christ/i);
+    await page.getByLabel('Translation method').selectOption('published');
+    await input.fill('ⲡⲓϣⲃⲱⲧ ⲛ̀ⲧⲉ ⲁⲁⲣⲱⲛ: ⲉⲧⲁϥⲫⲓⲣⲓ ⲉ̀ⲃⲟⲗ: ⲭⲱⲣⲓⲥ ϭⲟ ⲛⲉⲙ ⲧⲥⲟ: ϥⲟⲓ ⲛ̀ⲧⲩⲡⲟⲥ ⲛⲉ.');
+    await page.getByRole('button', { name: 'Translate block', exact: true }).click();
+    await page.getByText('The rod of Aaron, which blossomed, without planting or watering, resembles you.').first().waitFor();
+    await page.getByText('Matched Coptic and source', { exact: true }).click();
+    await page.getByText(/CC-BY-4.0/).waitFor();
     if (process.env.COPTIC_SCANNER_SCREENSHOT) await page.screenshot({ path: process.env.COPTIC_SCANNER_SCREENSHOT, fullPage: true });
     await page.getByRole('button', { name: 'Show original', exact: true }).click();
     assert.doesNotMatch(await page.getByRole('button', { name: 'Review text block 1', exact: true }).innerText(), /Jesus Christ/i);
