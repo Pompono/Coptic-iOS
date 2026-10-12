@@ -293,3 +293,9 @@ English. The offline library includes the Mary/dove, flower/incense/Jesse, and
 Aaron's rod stanzas in the supplied photo. Experimental AI drafts require an
 explicit method choice and still contain semantic errors. See
 [published-text coverage and matching rules](docs/published-translations.md).
+
+Scanner letter review now offers up to three possible published passages with
+the original photo and highlighted text differences. Applying a suggestion
+requires explicit photo confirmation, preserves the original OCR for undo, and
+never translates automatically. Optional recognition-only contrast adjustment
+keeps the original color photo intact.

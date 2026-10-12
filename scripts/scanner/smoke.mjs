@@ -22,6 +22,7 @@ export async function checkScanner(page, base, localModel) {
   await page.getByLabel('Choose a Coptic photo', { exact: true }).setInputFiles({
     name: 'printed-coptic.png', mimeType: 'image/png', buffer: Buffer.from(fixture, 'base64'),
   });
+  await page.getByLabel('Improve contrast before reading').check();
   await page.getByRole('button', { name: 'Read Coptic', exact: true }).click();
   await page.getByRole('button', { name: 'Stop', exact: true }).click();
   assert.equal(await page.getByRole('button', { name: /^Review text block/ }).count(), 0);
@@ -87,6 +88,19 @@ export async function checkScanner(page, base, localModel) {
     await page.getByRole('button', { name: 'Translate block', exact: true }).click();
     await page.waitForFunction(() => [...document.querySelectorAll('button')].some(button => button.textContent === 'Translate block' && !button.disabled), null, { timeout: 180000 });
     assert.match(await page.getByRole('button', { name: 'Review text block 1', exact: true }).innerText(), /Jesus Christ/i);
+    const damagedMary = 'ⲉⲣⲉ ⲛⲉ ⲙⲁⲣⲓⲁ: ϯϭⲣⲟⲙⲡⲓ ⲉⲑⲛⲉⲥⲱⲥ: ⲑⲏⲉⲧⲁⲥⲙⲓⲥⲓ ⲛⲁⲛ: ⲙⲫⲛⲟⲩϯ ⲡⲓⲗⲟⲅⲟⲥ □';
+    await input.fill(damagedMary);
+    await page.getByText('Find a published passage to check these letters', { exact: true }).click();
+    await page.getByLabel('Possible published passage').waitFor();
+    await page.getByAltText('Original photographed block for checking suggested letters').waitFor();
+    assert.equal(await input.inputValue(), damagedMary, 'Suggestions never edit the scan automatically');
+    const useSource = page.getByRole('button', { name: 'Use this published Coptic text', exact: true });
+    assert.equal(await useSource.isDisabled(), true, 'Source correction requires explicit photo confirmation');
+    await page.getByLabel('I checked this passage against the photo').check();
+    await useSource.click();
+    assert.match(await input.inputValue(), /^ⲭⲉⲣⲉ ⲛⲉ ⲙⲁⲣⲓⲁ/);
+    await page.getByRole('button', { name: 'Restore recognised text', exact: true }).click();
+    assert.equal(await input.inputValue(), texts[0], 'Original OCR survives accepting a source suggestion');
     await page.getByLabel('Translation method').selectOption('published');
     await input.fill('ⲡⲓϣⲃⲱⲧ ⲛ̀ⲧⲉ ⲁⲁⲣⲱⲛ: ⲉⲧⲁϥⲫⲓⲣⲓ ⲉ̀ⲃⲟⲗ: ⲭⲱⲣⲓⲥ ϭⲟ ⲛⲉⲙ ⲧⲥⲟ: ϥⲟⲓ ⲛ̀ⲧⲩⲡⲟⲥ ⲛⲉ.');
     await page.getByRole('button', { name: 'Translate block', exact: true }).click();

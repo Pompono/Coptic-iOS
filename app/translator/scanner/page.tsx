@@ -13,6 +13,7 @@ import styles from './scanner.module.css';
 import { scrollToSection } from '@/lib/scrollToSection';
 import { hasOverline, overlinesToJinkem } from '@/lib/scanner/marks.mjs';
 import MarkReview from './MarkReview';
+import SourceReview from './SourceReview';
 import ReferenceDetails from '../ReferenceDetails';
 
 type Busy = 'photo' | 'recognition' | 'translation' | null;
@@ -28,6 +29,7 @@ export default function ScannerPage() {
   const [omitted, setOmitted] = useState(0);
   const [showEnglish, setShowEnglish] = useState(true);
   const [local, setLocal] = useState<boolean | null>(null);
+  const [enhanceContrast, setEnhanceContrast] = useState(false);
   const [translationMethod, setTranslationMethod] = useState<'published' | 'experimental'>('published');
   const [dialect, setDialect] = useState<'bohairic' | 'sahidic'>('bohairic');
   const [bohairicOnly, setBohairicOnly] = useState(true);
@@ -137,7 +139,7 @@ export default function ScannerPage() {
     const id = start('recognition');
     const task = recognizePhoto(image, message => {
       if (operation.current === id) setStatus(message);
-    });
+    }, enhanceContrast);
     cancelRecognition.current = task.cancel;
     try {
       const result = await task.result;
@@ -225,6 +227,9 @@ export default function ScannerPage() {
             </div>
             {!!regions.length && <button disabled={!!busy} aria-pressed={showEnglish} onClick={() => setShowEnglish(!showEnglish)}>{showEnglish ? 'Show original' : 'Show English'}</button>}
           </div>
+          <label className={styles.reviewConfirmation}><input type="checkbox" checked={enhanceContrast} disabled={!!busy}
+            onChange={event => setEnhanceContrast(event.target.checked)} /> Improve contrast before reading</label>
+          <p className={styles.note}>Optional grayscale contrast adjustment for faint or bright-on-dark text. The original color photo stays available for checking letters.</p>
           {selected && !cropping && <button disabled={!!busy} onClick={() => scrollToSection(editor.current)}>Edit selected text block ↓</button>}
           {cropping && <p className={styles.note}>Drag a rectangle around the text, then apply the crop. Cropping removes previous recognition results.</p>}
           <div className={`${styles.photo} ${cropping ? styles.cropping : ''}`}
@@ -300,6 +305,12 @@ export default function ScannerPage() {
             {image && <MarkReview key={selected.id} image={image} region={selected} disabled={!!busy}
               onCorrect={(start, length, replacement) => setRegions(previous => previous.map(region => region.id === selected.id
                 ? { ...region, text: region.text.slice(0, start) + replacement + region.text.slice(start + length), translation: undefined } : region))} />}
+            {image && dialect === 'bohairic' && <SourceReview key={selected.id} image={image} region={selected} disabled={!!busy}
+              onAccept={text => {
+                setError(''); setStatus('Published text applied. Check it, then translate this block.');
+                setRegions(previous => previous.map(region => region.id === selected.id
+                  ? { ...region, text, translation: undefined, translationMethod: undefined, referenceText: undefined, referenceRow: undefined } : region));
+              }} />}
             <div className={styles.actions}>
               <button className={styles.primary} disabled={!!busy || !local || !selected.text.trim()} onClick={() => void translate(false)}>Translate block</button>
               <button disabled={!!busy || !local || !regions.some(region => region.text.trim() && !region.translation)} onClick={() => void translate(true)}>Translate remaining blocks</button>

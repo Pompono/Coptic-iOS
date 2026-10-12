@@ -35,3 +35,30 @@ Coverage is limited to whole supported Bohairic passages. This does not make
 arbitrary Coptic translation reliable, certify every corpus rendering, or fix
 OCR. Unmatched text returns an explicit unresolved result by default. Published
 Sahidic coverage is not included. AI drafts still have known semantic failures.
+
+## Scanner source-assisted letter review
+
+**Find a published passage to check these letters** searches in a dedicated
+worker, ranks text candidates, and shows at most three suggestions. It uses
+trigram overlap to shortlist passages and edit distance to rank them. Scores
+are spelling similarity, not correctness probabilities. Short/unrelated inputs
+and passages whose letters already match a supported source have no suggestions.
+The more permissive search can ignore unknown OCR symbols for proposing text;
+exact translation acceptance still uses the strict matcher.
+
+The user sees a crop of the original photographed block with context, and both
+texts with changed characters highlighted. A checkbox confirming photo review
+is required before **Use this published Coptic text** becomes available. Applying
+it replaces only that block, clears its previous English output, preserves the
+original OCR for **Restore recognised text**, and does not translate automatically.
+Published spelling may omit printed marks. There is no promise that a suggested
+passage matches a damaged photo; the user must verify it.
+
+**Improve contrast before reading** is optional. It makes a recognition-only
+grayscale copy, stretches robust luminance percentiles, and can invert light
+letters on dark backgrounds. It preserves intermediate shades rather than
+binarizing marks, leaves dimensions unchanged, and keeps the original color
+photo for all review crops. It does not retrain the OCR model or automatically
+correct chi, deskew a page, or separate bilingual columns. Crop the Coptic column
+before recognition where needed. Accuracy gains on real photographs remain to
+be measured.

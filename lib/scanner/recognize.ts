@@ -1,5 +1,5 @@
 import { textRegions } from './regions.mjs';
-import type { ScanImage } from './images';
+import { enhanceForRecognition, type ScanImage } from './images';
 import type { MarkedWord } from './markPhoto';
 
 export type ScanRegion = {
@@ -12,7 +12,7 @@ export type ScanRegion = {
 // Use the pinned Tesseract.js 6 worker protocol directly. Its createWorker()
 // exposes the underlying worker only after initialization; owning it from the
 // start lets Stop, navigation, startup errors, and timeouts release it immediately.
-export function recognizePhoto(image: ScanImage, onProgress: (message: string) => void) {
+export function recognizePhoto(image: ScanImage, onProgress: (message: string) => void, enhanceContrast = false) {
   let worker: globalThis.Worker;
   try { worker = new globalThis.Worker('/ocr/worker.min.js'); }
   catch { return { cancel() {}, result: Promise.reject(new Error('Photo recognition is unavailable in this browser.')) }; }
@@ -58,7 +58,10 @@ export function recognizePhoto(image: ScanImage, onProgress: (message: string) =
       await request('loadLanguage', { langs: 'cop', options: { langPath: assetPath, gzip: false, cacheMethod: 'none', lstmOnly: true } });
       await request('initialize', { langs: 'cop', oem: 1, config: {} });
       await request('setParameters', { params: { tessedit_pageseg_mode: '3', preserve_interword_spaces: '1' } });
-      const bytes = Uint8Array.from(atob(image.url.split(',')[1]), character => character.charCodeAt(0));
+      if (enhanceContrast) onProgress('Improving photo contrast for reading…');
+      const recognitionImage = enhanceContrast ? await enhanceForRecognition(image) : image;
+      if (stopped) throw new Error('Recognition was cancelled.');
+      const bytes = Uint8Array.from(atob(recognitionImage.url.split(',')[1]), character => character.charCodeAt(0));
       const data = await request('recognize', { image: bytes, options: {}, output: { text: true, blocks: true } });
       return textRegions(data.blocks, image.width, image.height) as { regions: ScanRegion[]; omitted: number };
     } finally {

@@ -48,3 +48,18 @@ export async function editImage(image: ScanImage, crop?: Box): Promise<ScanImage
   }
   return finish(canvas);
 }
+
+// Recognition-only copy: keep the original color photo for every review crop.
+export async function enhanceForRecognition(image: ScanImage): Promise<ScanImage> {
+  const { improveContrast } = await import('./contrast.mjs');
+  const source = await loadImage(image.url);
+  const canvas = document.createElement('canvas');
+  canvas.width = image.width; canvas.height = image.height;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Photo contrast processing is unavailable.');
+  context.drawImage(source, 0, 0);
+  const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+  pixels.data.set(improveContrast(pixels.data));
+  context.putImageData(pixels, 0, 0);
+  return finish(canvas);
+}
