@@ -2,10 +2,10 @@ import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { translationUrl } from './translationUrl.mjs';
 import { hasLocalTranslator, translateLocally } from './localTranslation/client';
 
-export async function translationRequest(endpoint: string, options: RequestInit): Promise<Response> {
+export async function translationRequest(endpoint: string, options: RequestInit, onProgress?: (message: string) => void): Promise<Response> {
   if (endpoint === '/api/translate' && await hasLocalTranslator()) {
     const { text, dialect = 'bohairic', method = 'published' } = JSON.parse(String(options.body));
-    const result = await translateLocally(text, dialect, method);
+    const result = await translateLocally(text, dialect, method, onProgress);
     return new Response(JSON.stringify(result), {
       status: 200, headers: { 'Content-Type': 'application/json' },
     });

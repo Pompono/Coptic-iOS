@@ -24,6 +24,7 @@ type TranslationPayload = {
   method?: string;
   matchedText?: string;
   sourceRow?: string;
+  segments?: { text: string; translation: string }[];
 };
 
 type SpecialKey =
@@ -120,6 +121,8 @@ export default function TranslatorPage() {
   }, []);
   const [direction, setDirection] = useState<TranslationDirection>("copticToEnglish");
   const [translationMethod, setTranslationMethod] = useState<'published' | 'experimental'>('published');
+  const [translationProgress, setTranslationProgress] = useState('');
+  const [draftSegments, setDraftSegments] = useState<{ text: string; translation: string }[]>([]);
   const [outputMethod, setOutputMethod] = useState('');
   const [referenceDetails, setReferenceDetails] = useState<{ text?: string; row?: string }>({});
   const [translationInput, setTranslationInput] = useState("");
@@ -139,6 +142,11 @@ export default function TranslatorPage() {
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [mode, setMode] = useState<PageMode>("ABC");
   const [shiftMode, setShiftMode] = useState<"off" | "once" | "lock">("off");
+  useEffect(() => {
+    setTranslationOutput(''); setConfidence(null); setTranslationError('');
+    setDraftSegments([]); setReferenceDetails({}); setOutputMethod('');
+  }, [translationInput, translatorDialect]);
+  useEffect(() => { setEnglishOutput(''); setEnglishConfidence(null); setEnglishError(''); }, [englishInput, translatorDialect]);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const lastShiftTapRef = useRef<number>(0);
   const mobileKeyboardTouchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -344,6 +352,7 @@ export default function TranslatorPage() {
   };
 
   const handleKey = (k: KeyDef) => {
+    if (currentState === "loading") return;
     if (isKeyObj(k)) {
       switch (k.key) {
         case "backspace":
@@ -389,6 +398,7 @@ export default function TranslatorPage() {
     }
 
     setTranslationState("loading");
+    setTranslationProgress("Preparing translation…");
     setTranslationError("");
 
     try {
@@ -401,7 +411,7 @@ export default function TranslatorPage() {
           includeConfidence: true,
           method: translationMethod,
         }),
-      });
+      }, setTranslationProgress);
 
       const payload = (await res.json()) as TranslationPayload;
       if (!res.ok) {
@@ -417,6 +427,7 @@ export default function TranslatorPage() {
       const top = typeof payload.translation === "string" ? payload.translation.trim() : "";
       setTranslationOutput(top);
       setOutputMethod(payload.method || "");
+      setDraftSegments(payload.segments || []);
       setReferenceDetails({ text: payload.matchedText, row: payload.sourceRow });
       setConfidence(typeof payload.confidence === "number" ? payload.confidence : null);
       setTranslationState("idle");
@@ -480,10 +491,12 @@ export default function TranslatorPage() {
   const currentConfidence = isCopticToEnglish ? confidence : englishConfidence;
 
   const handleSwitchDirection = () => {
+    if (translationState === "loading" || englishState === "loading") return;
     setDirection((current) => (current === "copticToEnglish" ? "englishToCoptic" : "copticToEnglish"));
   };
 
   const handleDialectToggle = () => {
+    if (translationState === "loading" || englishState === "loading") return;
     if (bohairicOnlyEnabled) {
       setTranslatorDialect("bohairic");
       return;
@@ -533,7 +546,7 @@ export default function TranslatorPage() {
             <button
               type="button"
               onClick={handleDialectToggle}
-              disabled={bohairicOnlyEnabled}
+              disabled={bohairicOnlyEnabled || currentState === "loading"}
               className={[
                 "rounded-full border border-[var(--border-color)] px-3 py-1 text-xs",
                 bohairicOnlyEnabled
@@ -567,6 +580,7 @@ export default function TranslatorPage() {
             <button
               type="button"
               onClick={handleSwitchDirection}
+              disabled={translationState === "loading" || englishState === "loading"}
               className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-2)] px-3 py-2 text-sm font-semibold text-[var(--text-color)] hover:bg-[var(--surface-1)]"
               title="Switch translation direction"
               aria-label="Switch translation direction"
@@ -575,6 +589,7 @@ export default function TranslatorPage() {
             </button>
             <input
               ref={inputRef}
+              disabled={currentState === "loading"}
               value={currentInput}
               onChange={(e) => {
                 if (isCopticToEnglish) {
@@ -598,16 +613,23 @@ export default function TranslatorPage() {
             </button>
           </form>
 
+          {isCopticToEnglish && currentState === "loading" && <p role="status" className="mt-3 text-sm">{translationProgress}</p>}
           {currentState === "error" ? (
             <p className="mt-3 text-xs text-rose-300">{currentError}</p>
           ) : null}
 
           <div className="mt-4 rounded-xl border border-[var(--border-color)] bg-[var(--surface-2)] p-4">
             <p className="text-xs text-[var(--text-muted)]">{isCopticToEnglish && currentOutput ? outputMethod === "published" ? "Published translation · Coptic Corpora / Tasbeha" : "Unverified AI draft" : "Output"}</p>
-            <p className={`mt-2 text-lg text-[var(--text-color)] ${!isCopticToEnglish && currentOutput ? "coptic-text" : ""}`}>
+            <p className={`mt-2 whitespace-pre-line text-lg text-[var(--text-color)] ${!isCopticToEnglish && currentOutput ? "coptic-text" : ""}`}>
               {currentOutput || "Translation will appear here."}
             </p>
             {isCopticToEnglish && currentOutput && outputMethod === "published" && <ReferenceDetails {...referenceDetails} />}
+            {isCopticToEnglish && currentOutput && outputMethod === 'experimental' && draftSegments.length > 1 && <details className="mt-3 text-sm">
+              <summary>Review each draft passage</summary>
+              {draftSegments.map((segment, index) => <div key={index} className="mt-3">
+                <p className="coptic-text">{segment.text}</p><p>{segment.translation}</p>
+              </div>)}
+            </details>}
             {currentConfidence !== null ? (
               <p className="mt-2 text-xs text-[var(--text-muted)]">
                 Confidence: {(currentConfidence * 100).toFixed(1)}%

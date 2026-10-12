@@ -1,0 +1,4 @@
+# Install torch==2.6.0 from the CPU wheel index first.
+transformers==4.48.3
+peft==0.14.0
+sentencepiece==0.2.2

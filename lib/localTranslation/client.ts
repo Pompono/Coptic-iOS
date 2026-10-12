@@ -10,7 +10,7 @@ export function hasLocalTranslator(): Promise<boolean> {
     .then(async response => response.ok && (await response.json()).model === 'megalaa/coptic-english-translator')
     .catch(() => false);
 }
-export async function translateLocally(text: string, dialect: string, method: TranslationMethod = 'published') {
+export async function translateLocally(text: string, dialect: string, method: TranslationMethod = 'published', onProgress?: (message: string) => void) {
   if (active) throw new Error('Wait for the current translation to finish.');
   active = true;
   const id = ++sequence;
@@ -25,7 +25,7 @@ export async function translateLocally(text: string, dialect: string, method: Tr
     }
   } catch (error) { if (id === sequence) active = false; throw error; }
 
-  return new Promise<{ translation: string; dialect: string; method?: string; source?: string; sourceUrl?: string; matchedText?: string; sourceRow?: string }>((resolve, reject) => {
+  return new Promise<{ translation: string; dialect: string; method?: string; source?: string; sourceUrl?: string; matchedText?: string; sourceRow?: string; segments?: { text: string; translation: string }[] }>((resolve, reject) => {
     try { worker ??= new Worker(new URL('./worker.ts', import.meta.url)); }
     catch {
       active = false;
@@ -36,14 +36,17 @@ export async function translateLocally(text: string, dialect: string, method: Tr
       worker?.terminate(); worker = null; active = false;
       reject(new Error('On-device translation took too long. Try a shorter passage.'));
     }, 180000);
-    const finish = () => { clearTimeout(timer); active = false; cancel = null; };
+    const finish = () => { clearTimeout(timer); if (id === sequence) { active = false; cancel = null; } };
     cancel = () => { finish(); reject(new Error('Translation was cancelled.')); };
     worker.onmessage = event => {
-      if (event.data.id !== id) return;
+      if (event.data.id !== id || id !== sequence) return;
+      if (typeof event.data.progress === 'string') { onProgress?.(event.data.progress); return; }
       finish();
       if (event.data.error) reject(new Error(event.data.error)); else resolve(event.data);
     };
-    worker.onerror = () => {
+    worker.onerror = event => {
+      event.preventDefault();
+      if (id !== sequence) return;
       finish(); worker?.terminate(); worker = null;
       reject(new Error('The local translator could not start. Close and reopen the app, then try a shorter passage.'));
     };
@@ -55,6 +58,7 @@ export function disposeLocalTranslator() {
   sequence++;
   active = false;
   cancel?.();
+  cancel = null;
   worker?.terminate();
   worker = null;
 }

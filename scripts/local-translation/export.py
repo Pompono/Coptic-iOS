@@ -52,16 +52,20 @@ def tokenizer_json(tokenizer):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--reuse-export', action='store_true')
+    parser.add_argument('--source', default=MODEL)
+    parser.add_argument('--intermediate', default='.model-export')
+    parser.add_argument('--destination', default='public/models/coptic-english')
+    parser.add_argument('--adaptation-manifest')
     args = parser.parse_args()
     torch.set_num_threads(2)
     root = Path(__file__).resolve().parents[2]
-    intermediate = root / '.model-export'
-    destination = root / 'public/models/coptic-english'
+    intermediate = root / args.intermediate
+    destination = root / args.destination
     (destination / 'onnx').mkdir(parents=True, exist_ok=True)
     if not args.reuse_export:
-        main_export(MODEL, output=intermediate, task='text2text-generation-with-past',
-                    opset=17, revision=REVISION, do_validation=True)
-    tokenizer = AutoTokenizer.from_pretrained(MODEL, revision=REVISION)
+        main_export(args.source, output=intermediate, task='text2text-generation-with-past',
+                    opset=17, revision=REVISION if args.source == MODEL else None, do_validation=True)
+    tokenizer = AutoTokenizer.from_pretrained(args.source, revision=REVISION if args.source == MODEL else None)
     for filename in ['config.json', 'generation_config.json', 'tokenizer_config.json', 'special_tokens_map.json']:
         shutil.copyfile(intermediate / filename, destination / filename)
     (destination / 'tokenizer.json').write_text(json.dumps(tokenizer_json(tokenizer), ensure_ascii=False))
@@ -80,12 +84,17 @@ def main():
         f'Model source and weights: https://huggingface.co/{MODEL}/tree/{REVISION}\n'
         f'License: AGPL-3.0 (see UPSTREAM_README.md).\n'
         'Conversion source: scripts/local-translation/export.py in this repository.\n')
+    adaptation = json.loads(Path(args.adaptation_manifest).read_text()) if args.adaptation_manifest else None
+    if adaptation:
+        with (destination / 'SOURCE.txt').open('a') as notice_file:
+            notice_file.write('These weights include an experimental local adaptation; see ADAPTATION.json and the repository training source.\n')
+        (destination / 'ADAPTATION.json').write_text(json.dumps(adaptation, indent=2) + '\n')
     files = {str(p.relative_to(destination)): {'bytes': p.stat().st_size,
              'sha256': hashlib.sha256(p.read_bytes()).hexdigest()}
              for p in destination.rglob('*') if p.is_file() and p.name != 'manifest.json'}
     (destination / 'manifest.json').write_text(json.dumps({
         'model': MODEL, 'revision': REVISION, 'license': 'AGPL-3.0',
-        'format': 'onnx-q8', 'files': files}, indent=2) + '\n')
+        'format': 'onnx-q8', 'adaptation': adaptation, 'files': files}, indent=2) + '\n')
 
 
 if __name__ == '__main__':

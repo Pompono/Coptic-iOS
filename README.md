@@ -299,3 +299,12 @@ the original photo and highlighted text differences. Applying a suggestion
 requires explicit photo confirmation, preserves the original OCR for undo, and
 never translates automatically. Optional recognition-only contrast adjustment
 keeps the original color photo intact.
+
+For text outside reference coverage, the experimental model now handles complete
+sentences separately, normalizes Bohairic printed marks for inference, reports
+progress, and refuses overlength or obvious fragment-only results. It preserves
+the original text for review. Model-only formatting, compression and actual
+adapter-training experiments are recorded in
+[translation evaluation](docs/translation-evaluation/README.md). Neither the
+experimental compression nor adapter weights passed the quality bar for release.
+Unfamiliar-text translation still needs checking.

@@ -1,0 +1,234 @@
+{
+  "provenance": {
+    "model": "megalaa/coptic-english-translator",
+    "revision": "c5ccdb3aabb93c9962a0ae6d7305abfe8895d91d",
+    "datasetRevision": "5b836707150687b46667fc5a0a596e9f4b3cd11d",
+    "seed": 42,
+    "steps": 1200,
+    "learningRate": 0.0001,
+    "trainingRows": 11197,
+    "trainingRowsUsed": 2400,
+    "validationExcludedBy": "normalized Coptic keys including entire tasbeha_test.csv",
+    "pretrainingOverlap": "unknown",
+    "status": "experimental; not approved for app distribution"
+  },
+  "baseline": [
+    {
+      "id": "tasbeha-test-4",
+      "text": "ϣⲟⲙⲧ ⲛⲣⲁⲛ ⲉⲧϧⲉⲛ ⲛⲓⲫⲏⲟⲩⲓ ⲛⲑⲟⲕ ⲁⲕⲉⲣⲫⲟⲣⲓⲛ ⲉⲙⲙⲱⲟⲩ ⲡⲓⲑⲉⲱⲣⲓⲙⲟⲥ ⲛⲉⲩⲁⲅⲅⲉⲗⲓⲥⲧⲏⲥ ⲁⲃⲃⲁ ⲙⲁⲣⲕⲟϣ ⲡⲓⲡⲟⲥⲧⲟⲗⲟⲥ",
+      "english": "Three names in the heavens, you were clothed in, O beholder of God the Evangelist, St. Mark the Apostle.",
+      "dialect": "bohairic",
+      "output": "Three names in the heavens, you have borne, the beholder of God the Evangelist, Abba Mark the Apostle."
+    },
+    {
+      "id": "tasbeha-test-10",
+      "text": "ⲡⲓⲓⲗⲁⲥⲧⲏⲣⲓⲟⲛ ⲉⲧⲟⲩϩⲱⲃⲥ ⲙⲙⲟϥ ϩⲓⲧⲉⲛ ⲛⲓⲭⲉⲣⲟⲩⲃⲓⲙ ⲉⲩⲟⲓ ⲛϩⲓⲕⲱⲛ",
+      "english": "The mercy seat, was overshadowed by, the forged Cherubim, from all sides.",
+      "dialect": "bohairic",
+      "output": "The mercy seat, which is covered by the Cherubim, is a symbol."
+    },
+    {
+      "id": "tasbeha-test-15",
+      "text": "ⲛⲓⲡⲁⲧⲣⲓⲁⲣⲭⲏⲥ ⲥⲉⲥⲙⲟⲩ ⲉⲣⲟⲕ ⲛⲓⲡⲣⲟⲫⲏⲧⲏⲥ ⲥⲉϯⲱⲟⲩ ⲛⲁⲕ ⲟⲩⲟϩ ⲁⲛⲟⲛ ⲧⲉⲛⲟⲩⲱϣⲧ ⲙⲙⲟⲕ ⲱ ⲡⲉⲛⲟ̅ⲥ̅ ⲓⲏ̅ⲥ̅ ⲡⲭ̅ⲥ̅",
+      "english": "The patriarchs bless you, the prophets glorify you, we also worship You, O our Lord Jesus Christ.",
+      "dialect": "bohairic",
+      "output": "The patriarchs bless You, the prophets glorify You, and we worship You, O our Lord Jesus Christ."
+    },
+    {
+      "id": "tasbeha-test-21",
+      "text": "ⲕⲥⲙⲁⲣⲱⲟⲩⲧ ⲟⲩⲟϩ ⲕⲧⲁⲓⲏⲟⲩⲧ ϧⲉⲛ ⲧⲫⲉ ⲛⲉⲙ ϩⲓϫⲉⲛ ⲡⲓⲕⲁϩⲓ ⲱ ⲡⲉⲛⲁⲗⲏⲑⲓⲛⲟⲥ ⲛⲛⲟⲩϯ ⲡⲉⲛϭⲟⲓⲥ ⲓⲏⲥⲟⲩⲥ ⲡⲓⲭⲣⲓⲥⲧⲟⲥ",
+      "english": "Blessed and glorious in heaven and on earth are You, O our true God, our Lord Jesus Christ.",
+      "dialect": "bohairic",
+      "output": "Blessed and glorified in heaven and on earth, O true God, our Lord Jesus Christ."
+    },
+    {
+      "id": "tasbeha-test-29",
+      "text": "ⲁⲛⲟⲛ ϧⲁ ⲛⲓⲗⲁⲟⲥ ⲛⲭⲣⲓⲥⲧⲓⲁⲛⲟⲥ ⲫⲁⲓ ⲅⲁⲣ ⲡⲉ ⲡⲉⲛⲛⲟⲩϯ ⲛⲁⲗⲏⲑⲓⲛⲟⲥ",
+      "english": "We the Christian people, for He is our true God.",
+      "dialect": "bohairic",
+      "output": "We, the Christian peoples, for He is our true God."
+    },
+    {
+      "id": "tasbeha-test-37",
+      "text": "ⲉⲓⲓⲣⲓ ⲙⲫⲙⲉⲩⲓ ⲙⲡⲓⲛⲁϩϯ ⲉⲧⲉⲛϧⲏⲧⲕ ⲛⲁⲧⲙⲉⲧϣⲟⲃⲓ ⲫⲁⲓ ⲉⲧⲁϥϣⲱⲡⲓ ⲛϣⲟⲣⲡ ϧⲉⲛⲑⲙⲁⲩ ⲛⲧⲉⲕⲙⲁⲩ ⲗⲱⲏⲇⲏ ⲛⲉⲙ ⲧⲉⲕⲙⲁⲩ ⲉⲩⲛⲓⲕⲏ ⲡⲁϩⲏⲧ ⲇⲉ ⲑⲏⲧ ϫⲉ ⲁϥϣⲱⲡⲓ ⲛϧⲏ ⲧⲕ ϩⲱⲕ",
+      "english": "When I call to remembrance the unfeigned faith that is in thee, which dwelt first in thy grandmother Lois, and thy mother Eunice; and I am persuaded that in thee also.",
+      "dialect": "bohairic",
+      "output": "Remembering therefore the faith which was in thee without hypocrisy, the which dwelt at first in thy mother's womb Loosing and thy mother Eunice; but I am persuaded that it abideth in thee also."
+    },
+    {
+      "id": "tasbeha-test-51",
+      "text": "ⲟⲩⲟϩ ⲉϣⲱⲡ ⲁⲓϣⲁⲛⲭⲁⲩ ⲉⲃⲟⲗ ⲉⲡⲟⲩⲏⲓ ⲛⲁⲧⲟⲩⲱⲙ ⲥⲉⲛⲁⲃⲱⲗ ⲉⲃⲟⲗ ϩⲓ ⲡⲓⲙⲱⲓⲧ ⲟⲩⲟϩ ϩⲁⲛⲕⲉⲟⲩⲟⲛ ⲛϧⲏⲧⲟⲩ ⲛⲁⲩϩⲓⲫⲟⲩⲉⲓ ⲡⲉ",
+      "english": "And if I send them away fasting to their own houses, they will faint by the way: for divers of them came from far.",
+      "dialect": "bohairic",
+      "output": "And if I send them away fasting to their house, they will faint on the road: and some of them were (imperf.) doubtful."
+    },
+    {
+      "id": "tasbeha-test-84",
+      "text": "ⲧⲟⲧⲉ ⲡⲉϫⲉ ⲓⲏⲥⲟⲩⲥ ⲛⲁϥ ϫⲉ ⲙⲁϣⲉ ⲛⲁⲕ ⲡⲥⲁⲧⲁⲛⲁⲥ ⲥⲥϧⲏⲟⲩⲧ ⲅⲁⲣ ϫⲉ ⲡϭⲟⲓⲥ ⲡⲉⲕⲛⲟⲩϯ ⲡⲉⲧⲉⲕⲉⲟⲩⲱϣⲧ ⲙⲙⲟϥ ⲟⲩⲟϩ ⲛⲑⲟϥ ⲙⲙⲁⲩⲁⲧϥ ⲡⲉⲧⲉⲕⲉϣⲉⲙϣⲏⲧϥ",
+      "english": "Then saith Jesus unto him, Get thee hence, Satan: for it is written, Thou shalt worship the Lord thy God, and him only shalt thou serve.",
+      "dialect": "bohairic",
+      "output": "Then said Jesus unto him, Get thee behind me, Satan: for it is written, Thou shalt worship the Lord thy God, and him only shalt thou serve."
+    },
+    {
+      "id": "tasbeha-test-103",
+      "text": "ⲛⲁⲓ ⲁϥⲥⲟⲧⲡⲟⲩ ⲁϥϩⲟⲛϩⲉⲛ ⲛⲱⲟⲩ ⲛϫⲉ ⲡⲓⲭⲣⲓⲥⲧⲟⲥ ⲉⲙⲙⲁⲛⲟⲩⲏⲗ ϫⲉ ⲙⲁϣⲉⲛⲱⲧⲉⲛ ϩⲁ ⲛⲓⲉⲥⲱⲟⲩ ⲛⲏⲉⲧⲥⲱⲣⲉⲙ ϧⲉⲛ ⲡⲓⲥⲣⲁⲏⲗ",
+      "english": "These Christ Emmanuel, has chosen and ordered, saying \"Go to the sheep, the lost ones of Israel.",
+      "dialect": "bohairic",
+      "output": "These (things) Christ chose, he ordered Emmanuel to go to the stray sheep in Israel."
+    },
+    {
+      "id": "tasbeha-test-137",
+      "text": "ⲁⲗⲗⲏⲗⲟⲩⲓⲁ ⲁ̅ⲗ̅ ⲁ̅ⲗ̅ ⲫⲏⲉⲧϩⲉⲙⲥⲓ ϩⲓϫⲉⲛ ⲛⲓⲭⲉⲣⲟⲩⲃⲓⲙ ⲟⲩⲟⲛϩⲕ ⲉⲃⲟⲗ ⲙⲡⲉⲙⲑⲟ ⲛⲉⲫⲣⲉⲙ ⲛⲉⲙ ⲃⲉⲛⲓⲁⲙⲓⲛ ⲛⲉⲙ ⲙⲁⲛⲁⲥⲥⲏ",
+      "english": "Alleluia, alleluia, alleluia. You who sits upon the Cherubim, manifest Yourself. Before Ephraim, Benjamin, and Manasseh.",
+      "dialect": "bohairic",
+      "output": "Alleluia, alleluia, alleluia. You who sit on the Cherubim, manifest Yourself before Ephraim, Benjamin, and Manasse."
+    },
+    {
+      "id": "tasbeha-test-162",
+      "text": "ⲁⲩⲉⲣⲛⲏⲥⲧⲉⲩⲓⲛ ⲛϣⲟⲙⲧ ⲛⲉϩⲟⲟⲩ ⲉⲩⲉⲣⲡⲣⲟⲥⲉⲩⲭⲉⲥⲑⲉ ϧⲉⲛ ⲟⲩⲙⲉⲧϧⲣⲱⲟⲩ",
+      "english": "They fasted, for three days, and prayed, with voices.",
+      "dialect": "bohairic",
+      "output": "They fasted for three days, praying with [a] loud voice."
+    },
+    {
+      "id": "tasbeha-test-262",
+      "text": "ⲁⲣⲓϣⲫⲏⲣ ⲛⲉⲣϩⲱⲃ ⲛⲉⲙ ⲛⲉⲕⲉⲃⲓⲁⲓⲕ ϧⲉⲛ ϩⲱⲃ ⲛⲓⲃⲉⲛ ⲛⲁⲅⲁⲑⲟⲛ",
+      "english": "In work, be a partner with Your servants in every good deed.",
+      "dialect": "bohairic",
+      "output": "Share in work with Your servants in everything that is good."
+    },
+    {
+      "id": "tasbeha-test-332",
+      "text": "ⲛⲁⲩϫⲱ ⲟⲩⲛ ⲙⲙⲟⲥ ⲛϫⲉⲛⲓⲓⲟⲩⲇⲁⲓ ⲙⲫⲏ ⲉⲧⲁϥⲉⲣⲫⲁϧⲣⲓ ⲉⲣⲟϥ ϫⲉ ⲡⲥⲁⲃⲃⲁⲧⲟⲛ ⲡⲉ ⲟⲩⲟϩ ⲥϣⲉ ⲛⲁⲕ ⲁⲛ ⲉⲱⲗⲓ ⲙⲡⲉⲕϭⲗⲟϫ",
+      "english": "The Jews therefore said unto him that was cured, It is the sabbath day: it is not lawful for thee to carry thy bed.",
+      "dialect": "bohairic",
+      "output": "Then said the Jews, It is the sabbath day: it is not lawful for thee to take up thy bed."
+    },
+    {
+      "id": "tasbeha-test-362",
+      "text": "ⲟⲩⲟϩ ⲁⲛⲟⲛ ⲁⲛⲉⲙⲓ ⲟⲩⲟϩ ⲁⲛⲛⲁϩϯ ⲉϯⲁⲅⲁⲡⲏ ⲛⲧⲉⲫⲛⲟⲩϯ ⲉⲧⲉⲛϧⲏⲧⲉⲛ ⲫⲛⲟⲩϯ ⲟⲩⲁⲅⲁⲡⲏ ⲡⲉ ⲟⲩⲟϩ ⲫⲏ ⲉⲧϣⲟⲡ ϧⲉⲛϯⲁⲅⲁⲡⲏ ϥϣⲟⲡ ϧⲉⲛⲫⲛⲟⲩϯ ⲟⲩⲟϩ ⲫⲛⲟⲩϯ ϣⲟⲡ ⲛϧⲏⲧϥ",
+      "english": "And we have known and believed the love that God hath to us. God is love; and he that dwelleth in love dwelleth in God, and God in him.",
+      "dialect": "bohairic",
+      "output": "And we have known and believed the love which God hath for us. God is love, and he that dwelleth in love dwelleth in God, and God abideth in him."
+    },
+    {
+      "id": "tasbeha-test-412",
+      "text": "ⲟⲩⲟϩ ⲟⲩⲧⲱⲙⲧ ⲁϥϭⲓ ⲛⲟⲩⲟⲛ ⲛⲓⲃⲉⲛ ⲟⲩⲟϩ ⲛⲁⲩϯⲱⲟⲩ ⲙⲫⲛⲟⲩϯ ⲟⲩⲟϩ ⲁⲩⲙⲟϩ ⲛϩⲟϯ ⲉⲩϫⲱ ⲙⲙⲟⲥ ϫⲉ ⲁⲛⲛⲁⲩ ⲉϩⲁⲛϣⲫⲏⲣⲓ ⲙⲫⲟⲟⲩ",
+      "english": "And they were all amazed, and they glorified God, and were filled with fear, saying, We have seen strange things to day.",
+      "dialect": "bohairic",
+      "output": "And suddenly they were all amazed, and glorified God, saying, We have seen strange things to day."
+    }
+  ],
+  "adapted": [
+    {
+      "id": "tasbeha-test-4",
+      "text": "ϣⲟⲙⲧ ⲛⲣⲁⲛ ⲉⲧϧⲉⲛ ⲛⲓⲫⲏⲟⲩⲓ ⲛⲑⲟⲕ ⲁⲕⲉⲣⲫⲟⲣⲓⲛ ⲉⲙⲙⲱⲟⲩ ⲡⲓⲑⲉⲱⲣⲓⲙⲟⲥ ⲛⲉⲩⲁⲅⲅⲉⲗⲓⲥⲧⲏⲥ ⲁⲃⲃⲁ ⲙⲁⲣⲕⲟϣ ⲡⲓⲡⲟⲥⲧⲟⲗⲟⲥ",
+      "english": "Three names in the heavens, you were clothed in, O beholder of God the Evangelist, St. Mark the Apostle.",
+      "dialect": "bohairic",
+      "output": "Three names in the heavens, you have borne, the beholder of God the Evangelist, Abba Mark the Apostle."
+    },
+    {
+      "id": "tasbeha-test-10",
+      "text": "ⲡⲓⲓⲗⲁⲥⲧⲏⲣⲓⲟⲛ ⲉⲧⲟⲩϩⲱⲃⲥ ⲙⲙⲟϥ ϩⲓⲧⲉⲛ ⲛⲓⲭⲉⲣⲟⲩⲃⲓⲙ ⲉⲩⲟⲓ ⲛϩⲓⲕⲱⲛ",
+      "english": "The mercy seat, was overshadowed by, the forged Cherubim, from all sides.",
+      "dialect": "bohairic",
+      "output": "The mercy seat, which is covered by the Cherubim, is a symbol."
+    },
+    {
+      "id": "tasbeha-test-15",
+      "text": "ⲛⲓⲡⲁⲧⲣⲓⲁⲣⲭⲏⲥ ⲥⲉⲥⲙⲟⲩ ⲉⲣⲟⲕ ⲛⲓⲡⲣⲟⲫⲏⲧⲏⲥ ⲥⲉϯⲱⲟⲩ ⲛⲁⲕ ⲟⲩⲟϩ ⲁⲛⲟⲛ ⲧⲉⲛⲟⲩⲱϣⲧ ⲙⲙⲟⲕ ⲱ ⲡⲉⲛⲟ̅ⲥ̅ ⲓⲏ̅ⲥ̅ ⲡⲭ̅ⲥ̅",
+      "english": "The patriarchs bless you, the prophets glorify you, we also worship You, O our Lord Jesus Christ.",
+      "dialect": "bohairic",
+      "output": "The patriarchs bless You, the prophets glorify You, and we worship You, O our Lord Jesus Christ."
+    },
+    {
+      "id": "tasbeha-test-21",
+      "text": "ⲕⲥⲙⲁⲣⲱⲟⲩⲧ ⲟⲩⲟϩ ⲕⲧⲁⲓⲏⲟⲩⲧ ϧⲉⲛ ⲧⲫⲉ ⲛⲉⲙ ϩⲓϫⲉⲛ ⲡⲓⲕⲁϩⲓ ⲱ ⲡⲉⲛⲁⲗⲏⲑⲓⲛⲟⲥ ⲛⲛⲟⲩϯ ⲡⲉⲛϭⲟⲓⲥ ⲓⲏⲥⲟⲩⲥ ⲡⲓⲭⲣⲓⲥⲧⲟⲥ",
+      "english": "Blessed and glorious in heaven and on earth are You, O our true God, our Lord Jesus Christ.",
+      "dialect": "bohairic",
+      "output": "Blessed and glorified in heaven and on earth, O the true God, our Lord Jesus Christ."
+    },
+    {
+      "id": "tasbeha-test-29",
+      "text": "ⲁⲛⲟⲛ ϧⲁ ⲛⲓⲗⲁⲟⲥ ⲛⲭⲣⲓⲥⲧⲓⲁⲛⲟⲥ ⲫⲁⲓ ⲅⲁⲣ ⲡⲉ ⲡⲉⲛⲛⲟⲩϯ ⲛⲁⲗⲏⲑⲓⲛⲟⲥ",
+      "english": "We the Christian people, for He is our true God.",
+      "dialect": "bohairic",
+      "output": "We are Christian people, for He is our true God."
+    },
+    {
+      "id": "tasbeha-test-37",
+      "text": "ⲉⲓⲓⲣⲓ ⲙⲫⲙⲉⲩⲓ ⲙⲡⲓⲛⲁϩϯ ⲉⲧⲉⲛϧⲏⲧⲕ ⲛⲁⲧⲙⲉⲧϣⲟⲃⲓ ⲫⲁⲓ ⲉⲧⲁϥϣⲱⲡⲓ ⲛϣⲟⲣⲡ ϧⲉⲛⲑⲙⲁⲩ ⲛⲧⲉⲕⲙⲁⲩ ⲗⲱⲏⲇⲏ ⲛⲉⲙ ⲧⲉⲕⲙⲁⲩ ⲉⲩⲛⲓⲕⲏ ⲡⲁϩⲏⲧ ⲇⲉ ⲑⲏⲧ ϫⲉ ⲁϥϣⲱⲡⲓ ⲛϧⲏ ⲧⲕ ϩⲱⲕ",
+      "english": "When I call to remembrance the unfeigned faith that is in thee, which dwelt first in thy grandmother Lois, and thy mother Eunice; and I am persuaded that in thee also.",
+      "dialect": "bohairic",
+      "output": "Remembering the unfeigned faith which is in thee by faith, which dwelt first in thy grandmother Lois, and thy mother Eunice, and, I am persuaded, in thee also."
+    },
+    {
+      "id": "tasbeha-test-51",
+      "text": "ⲟⲩⲟϩ ⲉϣⲱⲡ ⲁⲓϣⲁⲛⲭⲁⲩ ⲉⲃⲟⲗ ⲉⲡⲟⲩⲏⲓ ⲛⲁⲧⲟⲩⲱⲙ ⲥⲉⲛⲁⲃⲱⲗ ⲉⲃⲟⲗ ϩⲓ ⲡⲓⲙⲱⲓⲧ ⲟⲩⲟϩ ϩⲁⲛⲕⲉⲟⲩⲟⲛ ⲛϧⲏⲧⲟⲩ ⲛⲁⲩϩⲓⲫⲟⲩⲉⲓ ⲡⲉ",
+      "english": "And if I send them away fasting to their own houses, they will faint by the way: for divers of them came from far.",
+      "dialect": "bohairic",
+      "output": "And when I send them away fasting to their house, they will faint by the way: and some of them were running."
+    },
+    {
+      "id": "tasbeha-test-84",
+      "text": "ⲧⲟⲧⲉ ⲡⲉϫⲉ ⲓⲏⲥⲟⲩⲥ ⲛⲁϥ ϫⲉ ⲙⲁϣⲉ ⲛⲁⲕ ⲡⲥⲁⲧⲁⲛⲁⲥ ⲥⲥϧⲏⲟⲩⲧ ⲅⲁⲣ ϫⲉ ⲡϭⲟⲓⲥ ⲡⲉⲕⲛⲟⲩϯ ⲡⲉⲧⲉⲕⲉⲟⲩⲱϣⲧ ⲙⲙⲟϥ ⲟⲩⲟϩ ⲛⲑⲟϥ ⲙⲙⲁⲩⲁⲧϥ ⲡⲉⲧⲉⲕⲉϣⲉⲙϣⲏⲧϥ",
+      "english": "Then saith Jesus unto him, Get thee hence, Satan: for it is written, Thou shalt worship the Lord thy God, and him only shalt thou serve.",
+      "dialect": "bohairic",
+      "output": "Then said Jesus unto him, Get thee hence, Satan: for it is written, Thou shalt worship the Lord thy God, and him only shalt thou serve."
+    },
+    {
+      "id": "tasbeha-test-103",
+      "text": "ⲛⲁⲓ ⲁϥⲥⲟⲧⲡⲟⲩ ⲁϥϩⲟⲛϩⲉⲛ ⲛⲱⲟⲩ ⲛϫⲉ ⲡⲓⲭⲣⲓⲥⲧⲟⲥ ⲉⲙⲙⲁⲛⲟⲩⲏⲗ ϫⲉ ⲙⲁϣⲉⲛⲱⲧⲉⲛ ϩⲁ ⲛⲓⲉⲥⲱⲟⲩ ⲛⲏⲉⲧⲥⲱⲣⲉⲙ ϧⲉⲛ ⲡⲓⲥⲣⲁⲏⲗ",
+      "english": "These Christ Emmanuel, has chosen and ordered, saying \"Go to the sheep, the lost ones of Israel.",
+      "dialect": "bohairic",
+      "output": "These (things) Christ chose, he ordered Emmanuel to go to the stray sheep in Israel."
+    },
+    {
+      "id": "tasbeha-test-137",
+      "text": "ⲁⲗⲗⲏⲗⲟⲩⲓⲁ ⲁ̅ⲗ̅ ⲁ̅ⲗ̅ ⲫⲏⲉⲧϩⲉⲙⲥⲓ ϩⲓϫⲉⲛ ⲛⲓⲭⲉⲣⲟⲩⲃⲓⲙ ⲟⲩⲟⲛϩⲕ ⲉⲃⲟⲗ ⲙⲡⲉⲙⲑⲟ ⲛⲉⲫⲣⲉⲙ ⲛⲉⲙ ⲃⲉⲛⲓⲁⲙⲓⲛ ⲛⲉⲙ ⲙⲁⲛⲁⲥⲥⲏ",
+      "english": "Alleluia, alleluia, alleluia. You who sits upon the Cherubim, manifest Yourself. Before Ephraim, Benjamin, and Manasseh.",
+      "dialect": "bohairic",
+      "output": "Alleluia, alleluia, alleluia. You who sit on the Cherubim, manifest Yourself before Ephraim, Benjamin, and Manasse."
+    },
+    {
+      "id": "tasbeha-test-162",
+      "text": "ⲁⲩⲉⲣⲛⲏⲥⲧⲉⲩⲓⲛ ⲛϣⲟⲙⲧ ⲛⲉϩⲟⲟⲩ ⲉⲩⲉⲣⲡⲣⲟⲥⲉⲩⲭⲉⲥⲑⲉ ϧⲉⲛ ⲟⲩⲙⲉⲧϧⲣⲱⲟⲩ",
+      "english": "They fasted, for three days, and prayed, with voices.",
+      "dialect": "bohairic",
+      "output": "They fasted for three days, and prayed with a loud voice."
+    },
+    {
+      "id": "tasbeha-test-262",
+      "text": "ⲁⲣⲓϣⲫⲏⲣ ⲛⲉⲣϩⲱⲃ ⲛⲉⲙ ⲛⲉⲕⲉⲃⲓⲁⲓⲕ ϧⲉⲛ ϩⲱⲃ ⲛⲓⲃⲉⲛ ⲛⲁⲅⲁⲑⲟⲛ",
+      "english": "In work, be a partner with Your servants in every good deed.",
+      "dialect": "bohairic",
+      "output": "Share in work with Your servants in everything that is good."
+    },
+    {
+      "id": "tasbeha-test-332",
+      "text": "ⲛⲁⲩϫⲱ ⲟⲩⲛ ⲙⲙⲟⲥ ⲛϫⲉⲛⲓⲓⲟⲩⲇⲁⲓ ⲙⲫⲏ ⲉⲧⲁϥⲉⲣⲫⲁϧⲣⲓ ⲉⲣⲟϥ ϫⲉ ⲡⲥⲁⲃⲃⲁⲧⲟⲛ ⲡⲉ ⲟⲩⲟϩ ⲥϣⲉ ⲛⲁⲕ ⲁⲛ ⲉⲱⲗⲓ ⲙⲡⲉⲕϭⲗⲟϫ",
+      "english": "The Jews therefore said unto him that was cured, It is the sabbath day: it is not lawful for thee to carry thy bed.",
+      "dialect": "bohairic",
+      "output": "Then said the Jews unto him that was healed, It is the sabbath day; and it is not lawful for thee to take up thy bed."
+    },
+    {
+      "id": "tasbeha-test-362",
+      "text": "ⲟⲩⲟϩ ⲁⲛⲟⲛ ⲁⲛⲉⲙⲓ ⲟⲩⲟϩ ⲁⲛⲛⲁϩϯ ⲉϯⲁⲅⲁⲡⲏ ⲛⲧⲉⲫⲛⲟⲩϯ ⲉⲧⲉⲛϧⲏⲧⲉⲛ ⲫⲛⲟⲩϯ ⲟⲩⲁⲅⲁⲡⲏ ⲡⲉ ⲟⲩⲟϩ ⲫⲏ ⲉⲧϣⲟⲡ ϧⲉⲛϯⲁⲅⲁⲡⲏ ϥϣⲟⲡ ϧⲉⲛⲫⲛⲟⲩϯ ⲟⲩⲟϩ ⲫⲛⲟⲩϯ ϣⲟⲡ ⲛϧⲏⲧϥ",
+      "english": "And we have known and believed the love that God hath to us. God is love; and he that dwelleth in love dwelleth in God, and God in him.",
+      "dialect": "bohairic",
+      "output": "And we know and have believed the love which God hath for us. God is love; and him that dwelleth in love dwelleth in God, and God abideth in him."
+    },
+    {
+      "id": "tasbeha-test-412",
+      "text": "ⲟⲩⲟϩ ⲟⲩⲧⲱⲙⲧ ⲁϥϭⲓ ⲛⲟⲩⲟⲛ ⲛⲓⲃⲉⲛ ⲟⲩⲟϩ ⲛⲁⲩϯⲱⲟⲩ ⲙⲫⲛⲟⲩϯ ⲟⲩⲟϩ ⲁⲩⲙⲟϩ ⲛϩⲟϯ ⲉⲩϫⲱ ⲙⲙⲟⲥ ϫⲉ ⲁⲛⲛⲁⲩ ⲉϩⲁⲛϣⲫⲏⲣⲓ ⲙⲫⲟⲟⲩ",
+      "english": "And they were all amazed, and they glorified God, and were filled with fear, saying, We have seen strange things to day.",
+      "dialect": "bohairic",
+      "output": "And they were all amazed, and glorified God, and were filled with fear, saying, We have seen strange things to day."
+    }
+  ],
+  "compressedChecks": {
+    "q8Grandmother": "Remembering therefore the faith which was in thee without hypocrisy, the which dwelt at home in the mother of thy mother Lōdena, and her mother Eunice: but I am persuaded that in thee also.",
+    "mixedPrecisionGrandmother": "Remembering therefore the faith which was in thee without hypocrisy, the which dwelt at home at the mother of thy mother Lēdah, and at Iconium, and in thy mother Eunice, I am persuaded that it was with thee."
+  },
+  "decision": "Not shipped: full-precision improvements were not preserved in tested mobile-compatible exports; mixed precision added an unsupported place name. All experimental weights are outside public assets."
+}

@@ -165,7 +165,7 @@ export default function ScannerPage() {
       for (const [index, region] of targets.entries()) {
         if (operation.current !== id) break;
         setStatus(`Translating block ${index + 1} of ${targets.length}…`);
-        const result = await translateLocally(region.text, dialect, translationMethod);
+        const result = await translateLocally(region.text, dialect, translationMethod, message => { if (operation.current === id) setStatus(`Block ${index + 1} of ${targets.length} · ${message}`); });
         if (operation.current !== id) break;
         setRegions(previous => previous.map(item => item.id === region.id
           ? { ...item, translation: result.translation, translationMethod: result.method, referenceText: result.matchedText, referenceRow: result.sourceRow, error: undefined } : item));

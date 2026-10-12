@@ -96,6 +96,7 @@ try {
     await page.getByText('You are the flower, of incense, that has blossomed, from the root of Jesse.').waitFor();
     await page.getByText(/Published translation · Coptic Corpora/).waitFor();
     await page.locator('input').first().fill('[[ⲑⲟ ⲧⲉ ϯϩⲣⲏⲣⲓ');
+    assert.equal(await page.getByText('You are the flower, of incense, that has blossomed, from the root of Jesse.').count(), 0, 'Editing text invalidates the previous published result immediately');
     await page.getByRole('button', { name: 'Translate', exact: true }).click();
     await page.getByText(/No unambiguous published translation/).waitFor();
     assert.equal(await page.getByText('You are the flower, of incense, that has blossomed, from the root of Jesse.').count(), 0);
@@ -117,6 +118,20 @@ try {
     await page.getByRole('button', { name: 'Translate', exact: true }).waitFor({ timeout: 180000 });
     assert.match(await page.locator('body').innerText(), /You are the daughter/i);
     console.log('PASS: beam decoder preserves daughter rather than the old greedy Son output.');
+    await page.locator('input').first().fill('ⲁⲛⲟⲕ ⲟⲩⲣⲱⲙⲓ ⲡⲉ. ⲛⲑⲟ ⲟⲩⲥϩⲓⲙⲓ ⲧⲉ.');
+    await page.getByRole('button', { name: 'Translate', exact: true }).click();
+    await page.getByRole('button', { name: 'Translate', exact: true }).waitFor({ timeout: 180000 });
+    await page.getByText('Review each draft passage', { exact: true }).click();
+    assert.match(await page.locator('body').innerText(), /I am a man/i);
+    assert.match(await page.locator('body').innerText(), /(?:you are|thou art) a woman/i);
+    await page.getByText('Unverified AI draft', { exact: true }).waitFor();
+    console.log('PASS: unfamiliar composed text translates through the model in two complete passages.');
+    await page.locator('input').first().fill('ⲁ'.repeat(700));
+    await page.getByRole('button', { name: 'Translate', exact: true }).click();
+    await page.getByText(/One sentence exceeds the local model’s trained length/).waitFor();
+    assert.equal(await page.getByText('Unverified AI draft', { exact: true }).count(), 0, 'An overlength failure clears earlier English instead of accepting partial output');
+
+
 
     await page.locator('input').first().fill('ⲉ 4 ⲙⲁⲣⲓⲁ: ⲍ □ ⲛⲁⲛ');
     await page.getByRole('button', { name: 'Translate', exact: true }).click();

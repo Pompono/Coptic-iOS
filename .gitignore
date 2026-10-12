@@ -60,3 +60,6 @@ ios/App/DerivedData/
 /public/ocr/
 
 /.venv-local-model/
+
+# Local experimental adapter weights and reports
+/.model-adaptation/
