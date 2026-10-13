@@ -143,6 +143,7 @@ export default function SettingsPage() {
 
   const toggleButtonStyle = (active: boolean) => ({
     minWidth: 76,
+    minHeight: 44,
     padding: "8px 12px",
     border: "none",
     cursor: "pointer",
@@ -173,7 +174,7 @@ export default function SettingsPage() {
   const toggleControlStyle = {
     display: "inline-flex",
     border: "1px solid var(--border-color)",
-    borderRadius: 8,
+    borderRadius: 12,
     overflow: "hidden",
     justifySelf: "end",
   } as const;
@@ -200,9 +201,8 @@ export default function SettingsPage() {
   } as const;
 
   return (
-    <main
+    <main className="app-page settings-page"
       style={{
-        padding: 24,
         maxWidth: 900,
         margin: "0 auto",
         minHeight: "var(--page-content-height)",
@@ -211,28 +211,28 @@ export default function SettingsPage() {
         gap: 20,
       }}
     >
-      <div>
+      <div className="app-page-header">
         <h1 style={{ marginTop: 0, marginBottom: 8, fontSize: 34, fontWeight: 800 }}>Settings</h1>
-        <p style={{ marginBottom: 0, opacity: 0.85 }}>Customize the app to fit your needs!</p>
+        <p style={{ marginBottom: 0, opacity: 0.85 }}>Make Coptic feel right for you.</p>
       </div>
 
-      <section
+      <section className="settings-panel"
         style={{
           display: "grid",
           gap: 20,
           border: "1px solid var(--border-color)",
-          borderRadius: 12,
-          padding: 18,
+          borderRadius: 20,
+          padding: 20,
           background: "var(--panel-bg)",
         }}
       >
         <div style={toggleRowStyle} aria-label="Theme toggle">
           <span style={toggleLabelStyle}>App Theme</span>
           <div style={toggleControlStyle}>
-            <button type="button" onClick={() => onToggleTheme("light")} style={toggleButtonStyle(themeMode === "light")}>
+            <button type="button" onClick={() => onToggleTheme("light")} aria-pressed={themeMode === "light"} style={toggleButtonStyle(themeMode === "light")}>
               Light
             </button>
-            <button type="button" onClick={() => onToggleTheme("dark")} style={toggleButtonStyle(themeMode === "dark")}>
+            <button type="button" onClick={() => onToggleTheme("dark")} aria-pressed={themeMode === "dark"} style={toggleButtonStyle(themeMode === "dark")}>
               Dark
             </button>
           </div>
@@ -242,10 +242,10 @@ export default function SettingsPage() {
           <span style={toggleLabelStyle}>Coptic Font</span>
 
           <div style={toggleControlStyle}>
-            <button type="button" onClick={() => onToggleFont("unicode")} style={toggleButtonStyle(fontMode === "unicode")}>
+            <button type="button" onClick={() => onToggleFont("unicode")} aria-pressed={fontMode === "unicode"} style={toggleButtonStyle(fontMode === "unicode")}>
               Standard
             </button>
-            <button type="button" onClick={() => onToggleFont("avva")} style={toggleButtonStyle(fontMode === "avva")}>
+            <button type="button" onClick={() => onToggleFont("avva")} aria-pressed={fontMode === "avva"} style={toggleButtonStyle(fontMode === "avva")}>
               New
             </button>
           </div>
@@ -258,14 +258,14 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={() => onToggleBohairicOnlyEnabled(false)}
-              style={toggleButtonStyle(!bohairicOnlyEnabled)}
+              aria-pressed={!bohairicOnlyEnabled} style={toggleButtonStyle(!bohairicOnlyEnabled)}
             >
               Off
             </button>
             <button
               type="button"
               onClick={() => onToggleBohairicOnlyEnabled(true)}
-              style={toggleButtonStyle(bohairicOnlyEnabled)}
+              aria-pressed={bohairicOnlyEnabled} style={toggleButtonStyle(bohairicOnlyEnabled)}
             >
               On
             </button>
@@ -279,14 +279,14 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={() => onToggleKeyboardEnabled(false)}
-              style={toggleButtonStyle(!keyboardEnabled)}
+              aria-pressed={!keyboardEnabled} style={toggleButtonStyle(!keyboardEnabled)}
             >
               Disabled
             </button>
             <button
               type="button"
               onClick={() => onToggleKeyboardEnabled(true)}
-              style={toggleButtonStyle(keyboardEnabled)}
+              aria-pressed={keyboardEnabled} style={toggleButtonStyle(keyboardEnabled)}
             >
               Enabled
             </button>
@@ -300,14 +300,14 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={() => onToggleDevTools(false)}
-              style={toggleButtonStyle(!devToolsEnabled)}
+              aria-pressed={!devToolsEnabled} style={toggleButtonStyle(!devToolsEnabled)}
             >
               Off
             </button>
             <button
               type="button"
               onClick={() => onToggleDevTools(true)}
-              style={toggleButtonStyle(devToolsEnabled)}
+              aria-pressed={devToolsEnabled} style={toggleButtonStyle(devToolsEnabled)}
             >
               On
             </button>

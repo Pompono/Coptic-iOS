@@ -1,5 +1,7 @@
 "use client";
 
+import AppIcon from "../AppIcon";
+
 import { type PointerEvent as ReactPointerEvent, type TouchEvent as ReactTouchEvent, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   isCopticKeyboardEnabled,
@@ -802,7 +804,7 @@ export default function DictionaryPage() {
                               ) : null}
                             </>
                           ) : isReturn ? (
-                            "↩"
+                            <AppIcon name="return" />
                           ) : isSpace ? (
                             ""
                           ) : (
@@ -1210,7 +1212,7 @@ export default function DictionaryPage() {
                           ) : null}
                         </>
                       ) : isReturn ? (
-                        "↩"
+                        <AppIcon name="return" />
                       ) : isSpace ? (
                         ""
                       ) : (

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "@/lib/AppLink";
+import AppIcon from "../AppIcon";
 import ReferenceDetails from "./ReferenceDetails";
 
 import { translationRequest } from "@/lib/translationService";
@@ -514,7 +515,7 @@ export default function TranslatorPage() {
       }}
     >
       <div
-        className="mx-auto max-w-5xl px-5 py-6"
+        className="app-page translator-page"
         style={{
           paddingBottom: isMobileViewport && showKeyboard ? "calc(24px + env(safe-area-inset-bottom, 0px))" : undefined,
         }}
@@ -768,7 +769,7 @@ function KeyboardGrid({
                   position: "relative",
                 }}
               >
-                {isBackspace ? <IconBackspace /> : isShiftKey ? <><IconShift />{capsLock ? <span style={{ position: "absolute", bottom: 8, width: 18, height: 3, borderRadius: 3, background: "var(--accent-contrast-color)", opacity: 0.9 }} /> : null}</> : isReturn ? "↩" : isSpace ? "" : <span className="coptic-text">{displayKey(k)}</span>}
+                {isBackspace ? <IconBackspace /> : isShiftKey ? <><IconShift />{capsLock ? <span style={{ position: "absolute", bottom: 8, width: 18, height: 3, borderRadius: 3, background: "var(--accent-contrast-color)", opacity: 0.9 }} /> : null}</> : isReturn ? <AppIcon name="return" /> : isSpace ? "" : <span className="coptic-text">{displayKey(k)}</span>}
               </button>
             );
           })}
