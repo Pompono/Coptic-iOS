@@ -5,10 +5,12 @@ export const COPTIC_KEYBOARD_SESSION_VISIBLE_STORAGE_KEY = "coptic-keyboard-visi
 
 export function isCopticKeyboardEnabled(): boolean {
   if (typeof window === "undefined") {
-    return true;
+    return false;
   }
 
-  return localStorage.getItem(COPTIC_KEYBOARD_ENABLED_STORAGE_KEY) !== "false";
+  const stored = localStorage.getItem(COPTIC_KEYBOARD_ENABLED_STORAGE_KEY);
+  if (stored !== null) return stored !== "false";
+  return !window.matchMedia("(max-width: 768px)").matches;
 }
 
 export function readCopticKeyboardSessionVisibility(defaultVisible = true): boolean {

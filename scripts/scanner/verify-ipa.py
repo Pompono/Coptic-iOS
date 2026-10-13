@@ -10,6 +10,10 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
     assert binary[:4] == b'\xcf\xfa\xed\xfe', 'Expected a 64-bit Mach-O device binary'
     assert int.from_bytes(binary[4:8], 'little') == 0x0100000C, 'Expected arm64'
     assets = root + 'public/'
+    for name in ('a.wav', 'o.wav', 'correct-answer.wav', 'incorrect-answer.wav', 'lesson-complete.wav'):
+        data = archive.read(assets + 'audio/learn/shared/' + name)
+        assert data[:4] == b'RIFF' and len(data) > 1000, name
+    archive.getinfo(assets + 'download-on-the-app-store-badge.svg')
     archive.getinfo(assets + 'read/index.html')
     archive.getinfo(assets + 'vocabulary/index.html')
     archive.getinfo(assets + 'bohairic_dictionary.json')

@@ -63,7 +63,6 @@ function SettingsIcon() {
 }
 
 const DOCK_ITEMS: DockItem[] = [
-  { id: "home", label: "Home", href: "/", icon: <HomeIcon /> },
   {
     id: "dictionary",
     label: "Dictionary",
@@ -78,6 +77,7 @@ const DOCK_ITEMS: DockItem[] = [
     icon: <PlaceholderTwoIcon />,
     iconClassName: "mobile-chin-dock__icon--learn",
   },
+  { id: "home", label: "Home", href: "/", icon: <HomeIcon /> },
   {
     id: "translator",
     label: "Translator",

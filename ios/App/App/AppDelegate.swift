@@ -1,3 +1,4 @@
+import AVFoundation
 import UIKit
 import Capacitor
 
@@ -7,8 +8,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        configureLessonAudioSession()
         return true
+    }
+
+    private func configureLessonAudioSession() {
+        do {
+            // Pronunciation is intentional playback, including with the silent switch on.
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+            try session.setActive(true)
+        } catch {
+            NSLog("Coptic could not configure lesson audio: %@", error.localizedDescription)
+        }
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
@@ -26,7 +38,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
-        // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
+        configureLessonAudioSession()
     }
 
     func applicationWillTerminate(_ application: UIApplication) {

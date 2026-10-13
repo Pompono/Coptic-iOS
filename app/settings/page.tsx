@@ -1,5 +1,6 @@
 "use client";
 
+import { COPTIC_KEYBOARD_APP_STORE_URL } from "../KeyboardInstallPrompt";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -22,13 +23,12 @@ import {
 import { clearProgress } from "@/lib/progress";
 import { subscribeToMediaQueryChange } from "@/lib/mediaQuery";
 
-const COPTIC_KEYBOARD_APP_STORE_URL = "https://apps.apple.com/us/app/coptic-keyboard/id1510907422";
 
 export default function SettingsPage() {
   const router = useRouter();
   const [fontMode, setFontMode] = useState<CopticFontMode>("avva");
   const [themeMode, setThemeMode] = useState<ThemeMode>("light");
-  const [keyboardEnabled, setKeyboardEnabled] = useState(true);
+  const [keyboardEnabled, setKeyboardEnabled] = useState(false);
   const [bohairicOnlyEnabled, setBohairicOnlyEnabled] = useState(true);
   const [devToolsEnabled, setDevToolsEnabled] = useState(false);
   const [devLessonId, setDevLessonId] = useState(lessons[0]?.id ?? "");

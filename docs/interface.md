@@ -9,3 +9,7 @@ Shared page spacing lives in `app/globals.css` (`app-page`, `app-page-header`). 
 Aim for 44-pixel tap targets, visible keyboard focus, and an explicit selected state. Settings segmented buttons expose their state with `aria-pressed`. Preserve safe-area padding and the existing scroll-reset behavior.
 
 Polish must preserve published-translation matching, experimental draft labels, scanner photo confirmation, original OCR restoration, and saved learning data. Visual changes do not establish improved translation accuracy.
+
+The mobile dock order is Dictionary, Learn, Home, Translator, Settings. Keep Home in the center. The built-in Coptic keyboard defaults off on phone-sized layouts; saved explicit settings take precedence. On iOS, the keyboard install prompt appears on fresh launches until “Don’t show again” or “Already installed” is selected. Its close button only dismisses the current launch.
+
+The learning pathway paints at the top, then scrolls quickly to an off-screen in-progress unit, keeping its full heading below the safe area. Skip that move when the heading is already visible and respect reduced motion and touch/wheel interruption.

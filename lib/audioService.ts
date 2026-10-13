@@ -53,7 +53,7 @@ class AudioService {
     }
   }
 
-  async init() {
+  init() {
     this.applyPlaybackAudioSessionType();
 
     if (!this.ctx || this.ctx.state === "closed") {
@@ -66,7 +66,7 @@ class AudioService {
 
   async resume() {
     this.applyPlaybackAudioSessionType();
-    const ctx = await this.init();
+    const ctx = this.init();
     if (ctx.state !== "running") {
       await ctx.resume();
     }
@@ -94,8 +94,6 @@ class AudioService {
     source.buffer = silentBuffer;
     source.connect(gain);
     gain.connect(ctx.destination);
-    source.start(0);
-
     await new Promise<void>((resolve) => {
       source.onended = () => {
         try {
@@ -108,6 +106,7 @@ class AudioService {
 
         resolve();
       };
+      source.start(0);
     });
   }
 
@@ -147,6 +146,8 @@ class AudioService {
   async play(key: string, url = key) {
     const ctx = await this.resume();
     const buffer = await this.preload(key, url);
+    // Loading may overlap an interruption or background/foreground transition.
+    if (ctx.state !== "running") await ctx.resume();
     const source = ctx.createBufferSource();
 
     source.buffer = buffer;

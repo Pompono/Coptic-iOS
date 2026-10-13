@@ -809,30 +809,52 @@ export default function UnitProgressClient({ focusLessonId = null }: { focusLess
   );
 
   useLayoutEffect(() => {
-    if ((!focusLessonId && !hasLoadedProgress) || !targetLesson) {
-      return;
-    }
+    // Paint the pathway from the top before any optional progress scroll.
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [focusLessonId]);
 
+  useEffect(() => {
+    if (!hasLoadedProgress || !targetLesson || lastAutoScrolledLessonIdRef.current === targetLesson.id) return;
     const targetNode = unitSectionRefs.current[targetLesson.id];
-    if (!targetNode || typeof window === "undefined") {
-      return;
-    }
-
-    if (lastAutoScrolledLessonIdRef.current === targetLesson.id) {
-      return;
-    }
-
-    const frame = window.requestAnimationFrame(() => {
-      const focusInset = 24;
-      const targetY = Math.max(targetNode.getBoundingClientRect().top + window.scrollY - focusInset, 0);
-      window.scrollTo({ top: targetY, behavior: "auto" });
-      lastAutoScrolledLessonIdRef.current = targetLesson.id;
+    if (!targetNode) return;
+    lastAutoScrolledLessonIdRef.current = targetLesson.id;
+    let frame = 0;
+    let cancelled = false;
+    const cancel = () => { cancelled = true; window.cancelAnimationFrame(frame); };
+    // Two frames let the top of the page paint before moving to an off-screen unit.
+    frame = window.requestAnimationFrame(() => {
+      frame = window.requestAnimationFrame(() => {
+        const shell = document.querySelector(".mobile-chin-page-shell");
+        const topInset = 24 + (shell ? parseFloat(getComputedStyle(shell).paddingTop) || 0 : 0);
+        const dock = document.querySelector(".mobile-chin-dock");
+        const bottomInset = dock ? dock.getBoundingClientRect().height : 0;
+        const banner = targetNode.querySelector(".unit-banner") ?? targetNode;
+        const bounds = banner.getBoundingClientRect();
+        if (bounds.top >= topInset && bounds.bottom <= window.innerHeight - bottomInset) return;
+        const start = window.scrollY;
+        const target = Math.max(0, bounds.top + start - topInset);
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          window.scrollTo({ top: target, behavior: "instant" }); return;
+        }
+        let began: number | null = null;
+        const step = (timestamp: number) => {
+          if (cancelled) return;
+          began ??= timestamp;
+          const progress = Math.min((timestamp - began) / 360, 1);
+          window.scrollTo({ top: start + (target - start) * (1 - Math.pow(1 - progress, 3)), behavior: "instant" });
+          if (progress < 1) frame = window.requestAnimationFrame(step);
+        };
+        frame = window.requestAnimationFrame(step);
+      });
     });
-
+    window.addEventListener("touchstart", cancel, { passive: true });
+    window.addEventListener("wheel", cancel, { passive: true });
     return () => {
-      window.cancelAnimationFrame(frame);
+      cancel();
+      window.removeEventListener("touchstart", cancel);
+      window.removeEventListener("wheel", cancel);
     };
-  }, [focusLessonId, hasLoadedProgress, targetLesson]);
+  }, [hasLoadedProgress, targetLesson]);
 
   return (
     <main
@@ -944,7 +966,7 @@ export default function UnitProgressClient({ focusLessonId = null }: { focusLess
         .unit-map-shell {
           max-width: 460px;
           margin: 0 auto;
-          animation: unit-map-shell-rise 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+
         }
 
         .course-map-shell {

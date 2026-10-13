@@ -5,10 +5,11 @@ import path from 'node:path';
 import { readFile, access, stat } from 'node:fs/promises';
 import { checkScanner } from './scanner/smoke.mjs';
 import { checkReading } from './reading-smoke.mjs';
+import { checkKeyboardPrompt } from './keyboard-prompt-smoke.mjs';
 import { checkScrollBounds } from './scroll-smoke.mjs';
 
 const root = path.resolve('out');
-const types = { '.txt': 'text/plain', '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.wasm': 'application/wasm', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg', '.ttf': 'font/ttf' };
+const types = { '.txt': 'text/plain', '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.wasm': 'application/wasm', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.ttf': 'font/ttf' };
 const server = http.createServer(async (request, response) => {
   try {
     const pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
@@ -28,6 +29,7 @@ let browser;
 try {
   const engine = process.env.COPTIC_BROWSER === 'webkit' ? webkit : chromium;
   browser = await engine.launch({ headless: true });
+  await checkKeyboardPrompt(browser, base);
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const externalRequests = [];
   await context.route('**/*', route => {
@@ -37,6 +39,14 @@ try {
     if (url.startsWith(base + '/') || url.startsWith('blob:') || url.startsWith('data:')) return route.continue();
     externalRequests.push(route.request().url());
     return route.abort();
+  });
+  await context.addInitScript(() => {
+    window.__lessonAudioStarts = [];
+    const start = AudioBufferSourceNode.prototype.start;
+    AudioBufferSourceNode.prototype.start = function (...args) {
+      if (this.buffer?.duration > .01) window.__lessonAudioStarts.push({ duration: this.buffer.duration, state: this.context.state });
+      return start.apply(this, args);
+    };
   });
   const page = await context.newPage();
   const errors = [];
@@ -50,6 +60,9 @@ try {
       await page.getByRole('button', { name: 'Check', exact: true }).waitFor();
       assert.equal(await page.getByRole('navigation', { name: 'Mobile navigation' }).count(), 0);
       assert.ok(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 2), 'Full-screen exercises do not reserve extra dock space');
+      await page.locator('.lesson-audio-card').first().click();
+      await page.waitForFunction(() => window.__lessonAudioStarts.some(audio => audio.state === 'running' && audio.duration > .01));
+      console.log('PASS: tapping the actual lesson card starts a bundled recording in a running audio context.');
       // Complete the introductory a/o/d lesson as a learner would. Answer
       // buttons are located by text because their positions are randomized.
       const answers = ['ⲁ', 'a', 'a', 'dha', 'dha', 'ⲇⲁ', 'o', 'o', 'ⲟ', 'dho', 'ⲇⲟ', 'dhad', 'dho', 'ⲇⲁⲇ', 'dhod', 'dhod', 'ⲇⲟⲇ', 'dhad', 'dha'];

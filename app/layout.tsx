@@ -1,6 +1,7 @@
 // app/layout.tsx
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
+import KeyboardInstallPrompt from "./KeyboardInstallPrompt";
 import AudioUnlock from "./AudioUnlock";
 import CopticFontPreference from "./CopticFontPreference";
 import MobileChinDock from "./MobileChinDock";
@@ -33,6 +34,7 @@ export default function RootLayout({
         <NavigationScrollReset />
         <AppViewport>{children}</AppViewport>
         <MobileChinDock />
+        <KeyboardInstallPrompt />
       </body>
     </html>
   );
