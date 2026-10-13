@@ -13,3 +13,5 @@ Polish must preserve published-translation matching, experimental draft labels, 
 The mobile dock order is Dictionary, Learn, Home, Translator, Settings. Keep Home in the center. The built-in Coptic keyboard defaults off on phone-sized layouts; saved explicit settings take precedence. On iOS, the keyboard install prompt appears on fresh launches until “Don’t show again” or “Already installed” is selected. Its close button only dismisses the current launch.
 
 The learning pathway paints at the top, then scrolls quickly to an off-screen in-progress unit, keeping its full heading below the safe area. Skip that move when the heading is already visible and respect reduced motion and touch/wheel interruption.
+
+On iOS, the launcher icon follows the in-app theme setting. Light uses the primary navy-and-beige AppIcon; dark uses the gold-on-black CopticDark alternate asset. The AppIcon Capacitor bridge changes it only when needed. Changes are serialized so rapid theme toggles finish at the latest selection, and startup/resume reconciles the saved theme. iOS may display its standard icon-change notice. Web browsers keep their configured website icon.

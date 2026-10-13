@@ -1,11 +1,15 @@
 """Verify the uploaded device archive actually contains the offline scanner assets."""
 import hashlib
 import json
+import plistlib
 import sys
 import zipfile
 
 with zipfile.ZipFile(sys.argv[1]) as archive:
     root = 'Payload/App.app/'
+    info = plistlib.loads(archive.read(root + 'Info.plist'))
+    alternate = info['CFBundleIcons']['CFBundleAlternateIcons']['CopticDark']
+    assert alternate.get('CFBundleIconName') == 'CopticDark' or any('CopticDark' in name for name in alternate.get('CFBundleIconFiles', [])), 'Gold alternate icon must be registered'
     binary = archive.read(root + 'App')
     assert binary[:4] == b'\xcf\xfa\xed\xfe', 'Expected a 64-bit Mach-O device binary'
     assert int.from_bytes(binary[4:8], 'little') == 0x0100000C, 'Expected arm64'

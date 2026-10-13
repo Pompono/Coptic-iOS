@@ -1,5 +1,6 @@
 "use client";
 
+import { syncNativeAppIcon } from "@/lib/nativeAppIcon";
 import { useEffect } from "react";
 import { subscribeToMediaQueryChange } from "@/lib/mediaQuery";
 
@@ -8,6 +9,7 @@ export type ThemeMode = "dark" | "light";
 
 export function applyThemeMode(mode: ThemeMode) {
   document.documentElement.dataset.theme = mode;
+  void syncNativeAppIcon(mode).catch(error => console.warn("App icon could not follow theme:", error));
 }
 
 function getPreferredTheme(): ThemeMode {
@@ -44,7 +46,15 @@ export default function ThemePreference() {
       }
     };
 
-    return subscribeToMediaQueryChange(media, onSystemThemeChange);
+    const unsubscribe = subscribeToMediaQueryChange(media, onSystemThemeChange);
+    const onResume = () => {
+      if (document.visibilityState === "visible") applyThemeMode(getPreferredTheme());
+    };
+    document.addEventListener("visibilitychange", onResume);
+    return () => {
+      unsubscribe();
+      document.removeEventListener("visibilitychange", onResume);
+    };
   }, []);
 
   return null;
