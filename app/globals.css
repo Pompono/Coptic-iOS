@@ -365,3 +365,16 @@ button:disabled { cursor: default; }
 .keyboard-prompt-dismiss { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; font-size: 13px; }
 .keyboard-prompt-dismiss input { width: 18px; height: 18px; accent-color: var(--accent-color); }
 .keyboard-prompt-installed { display: block; width: 100%; min-height: 44px; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; color: var(--text-muted); }
+
+/* A full-width bottom bar; retain the app's own palette and SVG tabs. */
+@media (max-width: 768px) {
+  :root { --page-content-height: calc(100svh - env(safe-area-inset-top, 0px) - 71px - env(safe-area-inset-bottom, 0px)); }
+  .mobile-chin-page-shell { padding-bottom: calc(71px + env(safe-area-inset-bottom, 0px)); }
+  .mobile-chin-dock { padding: 0; background: var(--bg-color); border-top: 1px solid var(--border-color); }
+  .mobile-chin-dock__rail {
+    width: 100%; max-width: none; border: 0; border-radius: 0;
+    padding: 8px max(14px, env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
+    background: transparent; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;
+  }
+  .mobile-chin-avoid { bottom: calc(73px + env(safe-area-inset-bottom, 0px)) !important; }
+}
