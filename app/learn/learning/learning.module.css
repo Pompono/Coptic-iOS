@@ -53,3 +53,5 @@
 .practiceContent::-webkit-scrollbar,.introBody::-webkit-scrollbar { display:none; }
 .practiceContent>* { flex-shrink:0; }
 .practiceContent .prompt { min-height:108px; padding:16px 12px; }
+
+.label input:focus { outline:none; border-color:var(--teal); box-shadow:0 0 0 1px var(--teal); }

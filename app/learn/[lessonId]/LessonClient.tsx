@@ -1341,7 +1341,7 @@ function PairLettersLesson({ lesson, step }: { lesson: Lesson; step: UnitLessonS
       );
     }
 
-    const panelShowChoiceGrid = targetExercise.kind !== "sound-to-roman";
+    const panelShowChoiceGrid = targetExercise.choices.length > 3;
     const panelCardLabel = targetExercise.kind === "hear-and-choose" ? null : targetExercise.display;
     const panelCardLabelIsCoptic = panelCardLabel ? containsCoptic(panelCardLabel) : false;
     const panelExerciseAudioId = getExerciseAudioId(targetExercise);
@@ -1353,7 +1353,7 @@ function PairLettersLesson({ lesson, step }: { lesson: Lesson; step: UnitLessonS
       <div
         style={{
           display: "grid",
-          gridTemplateRows: desktopLayout ? "auto minmax(0, 1fr)" : `${promptRowHeight}px ${cardMinHeight}px minmax(0, 1fr)`,
+          gridTemplateRows: desktopLayout ? "auto minmax(0, 1fr)" : `auto ${cardMinHeight}px minmax(0, 1fr)`,
           gap: slidePanelGap,
           height: "100%",
           minHeight: 0,
@@ -1427,7 +1427,7 @@ function PairLettersLesson({ lesson, step }: { lesson: Lesson; step: UnitLessonS
                 }}/>
             </div>
 
-            <div
+            <div className="lesson-answer-list" data-count={panelChoices.length}
               style={{
                 display: "grid",
                 gridTemplateColumns: panelShowChoiceGrid ? "repeat(2, minmax(0, 1fr))" : "1fr",
@@ -1544,7 +1544,7 @@ function PairLettersLesson({ lesson, step }: { lesson: Lesson; step: UnitLessonS
                 }}/>
             </div>
 
-            <div
+            <div className="lesson-answer-list" data-count={panelChoices.length}
               style={{
                 display: "grid",
                 gridTemplateColumns: panelShowChoiceGrid ? "repeat(2, minmax(0, 1fr))" : "1fr",
@@ -1751,24 +1751,7 @@ function PairLettersLesson({ lesson, step }: { lesson: Lesson; step: UnitLessonS
           </div>
         ) : null}
 
-        {isRetryRound ? (
-          <div
-            style={{
-              alignSelf: "flex-start",
-              borderRadius: 999,
-              padding: compactPhone ? "6px 10px" : "8px 12px",
-              background: LESSON_THEME.retryBg,
-              border: `1px solid ${LESSON_THEME.retryBorder}`,
-              color: LESSON_THEME.retryText,
-              fontSize: compactPhone ? 12 : 13,
-              fontWeight: 800,
-              letterSpacing: 0.4,
-              textTransform: "uppercase",
-            }}
-          >
-            Retry round{retryQuestionsRemaining > 0 ? ` · ${retryQuestionsRemaining} left` : ""}
-          </div>
-        ) : null}
+        {isRetryRound&&<span className="lesson-retry-context" role="status">Retry round{retryQuestionsRemaining>0?` · ${retryQuestionsRemaining} left`:''}</span>}
 
         <div
           style={{

@@ -44,6 +44,10 @@ class AppViewController: CAPBridgeViewController {
             window.__copticAudioSmoke = { status: 'running' };
             (async () => {
               try {
+                const lockedViewport = await cap.nativePromise('AppExperience', 'exerciseMode', { active: true });
+                if (lockedViewport.scrollEnabled || Math.abs(lockedViewport.offsetY) > 1) throw new Error('Lesson viewport moved');
+                const restoredViewport = await cap.nativePromise('AppExperience', 'exerciseMode', { active: false });
+                if (!restoredViewport.scrollEnabled) throw new Error('Page scrolling was not restored');
                 await cap.nativePromise('AppExperience', 'copy', { text: 'Coptic clipboard check' });
                 const preferences = await cap.nativePromise('AppExperience', 'preferences', {});
                 if (!(preferences.textScale > 0)) throw new Error('Invalid preferred text scale');
@@ -238,15 +242,43 @@ public class AppExperiencePlugin: CAPPlugin, CAPBridgedPlugin {
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "preferences", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "copy", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "feedback", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "feedback", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "exerciseMode", returnType: CAPPluginReturnPromise)
     ]
     private var textObserver: NSObjectProtocol?
+    private var exerciseActive = false
+    private var scrollObservation: NSKeyValueObservation?
     public override func load() {
+        // WKWebView can pan its UIScrollView to a focused input even when the
+        // HTML document is fixed. Lesson panes own scrolling; keep this parent still.
+        scrollObservation = bridge?.webView?.scrollView.observe(\.contentOffset, options: [.new]) { [weak self] scroll, _ in
+            guard self?.exerciseActive == true, scroll.contentOffset != .zero else { return }
+            scroll.setContentOffset(.zero, animated: false)
+        }
         textObserver = NotificationCenter.default.addObserver(forName: UIContentSizeCategory.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
             self?.notifyListeners("textScaleChanged", data: ["scale": UIFont.preferredFont(forTextStyle: .body).pointSize / 17.0])
         }
     }
     deinit { if let observer = textObserver { NotificationCenter.default.removeObserver(observer) } }
+    @objc func exerciseMode(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            self.exerciseActive = call.getBool("active") ?? false
+            guard let scroll = self.bridge?.webView?.scrollView else {
+                call.reject("Web view is unavailable")
+                return
+            }
+            scroll.isScrollEnabled = !self.exerciseActive
+            if self.exerciseActive {
+                scroll.setContentOffset(.zero, animated: false)
+                #if DEBUG
+                if ProcessInfo.processInfo.environment["COPTIC_NATIVE_AUDIO_SMOKE"] == "1" {
+                    scroll.setContentOffset(CGPoint(x: 0, y: 80), animated: false)
+                }
+                #endif
+            }
+            call.resolve(["scrollEnabled": scroll.isScrollEnabled, "offsetY": Double(scroll.contentOffset.y)])
+        }
+    }
     @objc func preferences(_ call: CAPPluginCall) {
         DispatchQueue.main.async {
             call.resolve(["textScale": UIFont.preferredFont(forTextStyle: .body).pointSize / 17.0])

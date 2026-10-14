@@ -1,4 +1,5 @@
 "use client";
+import {setNativeExerciseMode} from "@/lib/nativeExperience";
 import {usePathname} from 'next/navigation';
 import {useEffect,useLayoutEffect,useRef,useState,type ReactNode} from 'react';
 export default function AppViewport({children}:{children:ReactNode}){
@@ -8,7 +9,8 @@ export default function AppViewport({children}:{children:ReactNode}){
  useLayoutEffect(()=>{
   document.documentElement.dataset.exerciseRoute=String(exercise);
   if(exercise)window.scrollTo(0,0);
-  return()=>{delete document.documentElement.dataset.exerciseRoute;};
+  void setNativeExerciseMode(exercise);
+  return()=>{delete document.documentElement.dataset.exerciseRoute;void setNativeExerciseMode(false);};
  },[exercise]);
  useEffect(()=>{
   const viewport=window.visualViewport;

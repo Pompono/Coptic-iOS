@@ -4,6 +4,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { readFile, access, stat } from 'node:fs/promises';
 import { startLesson, checkLearning, finishTransfer } from './learning-smoke.mjs';
+import { checkLessonLayouts } from './lesson-layout-smoke.mjs';
 import { checkDesign } from './design-smoke.mjs';
 import { checkDictionary } from './dictionary-smoke.mjs';
 import { checkScanner } from './scanner/smoke.mjs';
@@ -35,6 +36,7 @@ try {
   const engine = process.env.COPTIC_BROWSER === 'webkit' ? webkit : chromium;
   browser = await engine.launch({ headless: true });
   await checkDesign(browser, base);
+  await checkLessonLayouts(browser, base);
   await checkLearning(browser, base);
   await checkDictionary(browser, base);
   await checkKeyboardPrompt(browser, base);

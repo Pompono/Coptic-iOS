@@ -736,10 +736,10 @@ export default function Section1Unit2Lesson1Client({
       question.kind === "listening_mcq" ||
       question.kind === "meaning_mcq"
     ) {
-      const singleColumn = question.kind === "sound_mcq" && question.choices.length <= 3;
+      const singleColumn = question.choices.length <= 3;
 
       return (
-        <div
+        <div className="lesson-answer-list" data-count={question.choices.length}
           style={{
             display: "grid",
             gridTemplateColumns: singleColumn ? "1fr" : "repeat(2, minmax(0, 1fr))",
@@ -1110,7 +1110,7 @@ export default function Section1Unit2Lesson1Client({
                 display: "grid",
                 gridTemplateRows: desktopLayout
                   ? "auto minmax(0, 1fr)"
-                  : `${promptRowHeight}px ${cardMinHeight}px minmax(0, 1fr)`,
+                  : `auto ${cardMinHeight}px minmax(0, 1fr)`,
                 gap: slidePanelGap,
                 height: "100%",
                 minHeight: 0,

@@ -1211,7 +1211,7 @@ export default function Section1Unit2Lesson2Client({
       const singleColumn = isTranslateChoiceScreen || question.choices.length <= 3;
 
       return (
-        <div
+        <div className="lesson-answer-list" data-count={question.choices.length}
           style={{
             display: "grid",
             gridTemplateColumns: singleColumn ? "1fr" : "repeat(2, minmax(0, 1fr))",
@@ -1414,8 +1414,8 @@ export default function Section1Unit2Lesson2Client({
                 gridTemplateRows: desktopLayout
                   ? "auto minmax(0, 1fr)"
                   : showsReferenceCard
-                    ? `${promptRowHeight}px ${cardMinHeight}px minmax(0, 1fr)`
-                    : `${promptRowHeight}px minmax(0, 1fr)`,
+                    ? `auto ${cardMinHeight}px minmax(0, 1fr)`
+                    : "auto minmax(0, 1fr)",
                 gap: slidePanelGap,
                 height: "100%",
                 minHeight: 0,
