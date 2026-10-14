@@ -1,4 +1,7 @@
 export type ExerciseSetId =
+  | "bohairic-noun-phrases"
+  | "bohairic-names-and-phrases"
+  | "bohairic-first-reading-checkpoint"
   | "a-o-d-letters-and-sounds"
   | "pair-letters-and-sounds"
   | "r-letters-and-sounds"
@@ -461,6 +464,10 @@ if (secondUnit?.progressionGroups) {
     summary: "Practice se, names, and short sentence building with Anna, Maria, Mark, and the water.",
     exerciseSet: "section-1-unit-2-group-1-lesson-2",
   };
+  firstGroup.lessons[2] = { ...firstGroup.lessons[2], title: "Articles and nouns", summary: "Build and read the person, the water, and the name. Learn what the article adds.", exerciseSet: "bohairic-noun-phrases" };
+  firstGroup.lessons[3] = { ...firstGroup.lessons[3], title: "Names together", summary: "Read Anna and Mark, and put their names together with ⲛⲉⲙ, and.", exerciseSet: "bohairic-names-and-phrases" };
+  firstGroup.lessons[4] = { ...firstGroup.lessons[4], title: "First reading checkpoint", summary: "Mix names, articles, and familiar nouns in a short reading checkpoint.", exerciseSet: "bohairic-first-reading-checkpoint" };
+
 }
 
 export const lessons: Lesson[] = lessonSections.flatMap((section) => section.lessons);

@@ -1,4 +1,5 @@
 "use client";
+import { LEARNING_KEY } from "@/lib/learning/progress.mjs";
 
 const STORAGE_PREFIX = "coptic-unit-progress:";
 const FAILED_STORAGE_PREFIX = "coptic-unit-failed-steps:";
@@ -115,6 +116,8 @@ export function clearAllUnitProgress() {
     }
   }
 
+  window.localStorage.removeItem(LEARNING_KEY);
+  window.dispatchEvent(new Event("coptic-learning-change"));
   keysToRemove.forEach((key) => {
     window.localStorage.removeItem(key);
   });

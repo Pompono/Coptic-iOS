@@ -1,4 +1,5 @@
 "use client";
+import UnitMastery from "../learning/UnitMastery";
 
 import Link from "@/lib/AppLink";
 import { type CSSProperties, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -890,6 +891,7 @@ export default function UnitProgressClient({ focusLessonId = null }: { focusLess
                 <TitleTag className="unit-banner-title">
                   {unitState.lesson.title.replace(/^Unit \d+: /, "")}
                 </TitleTag>
+                <UnitMastery unitId={unitState.lesson.id} />
               </div>
 
               <div className="unit-track">

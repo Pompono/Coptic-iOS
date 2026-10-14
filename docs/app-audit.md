@@ -27,8 +27,8 @@ Compared against Pompono/Bohairic-Dictionary's DictionaryService and Translitera
 
 ## Remaining work
 
-- 45 of 47 course units remain placeholders. 28 regular lesson steps have exercise sets; this is not a complete course. Author and review content rather than presenting empty units as complete.
-- The literal audio-reference audit found “se Maria” without a mapped recording. A real recording is needed; do not substitute synthetic speech.
+- 45 of 47 course units remain placeholders. 31 regular lesson steps have exercise sets; this is not a complete course. Author and review content rather than presenting empty units as complete.
+- “se Maria” has no mapped recording. The learning update makes it a written task with audio disabled; an actual recording is still needed for listening practice.
 - General translation is still experimental outside matched published sources. OCR can still confuse letters and marks. Search improvements do not establish better translation or OCR accuracy.
 - The Windows app's separate favorites, per-entry personal notes, copy controls, adjustable reading sizes and draggable desktop divider are not ported by this search update. The iOS app already has Save word for review and its vocabulary review queue.
 - The supplied Bohairic data has no populated example arrays; Has examples may legitimately return no results.

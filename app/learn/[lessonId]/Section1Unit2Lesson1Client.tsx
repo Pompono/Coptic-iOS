@@ -1,5 +1,8 @@
 "use client";
 
+import { COPTIC, QUESTIONS, type LessonQuestion, type ImageChoice } from "@/lib/learning/wordLesson1";
+import { LearningSession, LessonCoach, LessonExplanation, SlowReplay, useLearningSession } from "../learning/LearningSession";
+import { itemsForQuestion } from "@/lib/learning/content";
 import { LESSON_THEME } from "@/lib/lessonTheme";
 
 import Link from "@/lib/AppLink";
@@ -10,304 +13,25 @@ import { resolveLessonAudio } from "../../../lib/lessonAudio";
 import { clearStepFailed, markStepCompleted, markStepFailed } from "../progress";
 import { type Lesson, type UnitLessonStep } from "../../../lib/lesson";
 
-type ImageChoice = {
-  id: string;
-  label: string;
-  art: "man" | "water" | "big" | "rice" | "bread";
-};
-
-type LessonQuestion =
-  | {
-      id: string;
-      kind: "sound_mcq";
-      prompt: string;
-      text: string;
-      choices: string[];
-      answer: string;
-      audioId: string;
-    }
-  | {
-      id: string;
-      kind: "letter_mcq";
-      prompt: string;
-      sound: string;
-      choices: string[];
-      answer: string;
-      audioId: string;
-    }
-  | {
-      id: string;
-      kind: "listening_mcq";
-      prompt: string;
-      audio: string;
-      choices: string[];
-      answer: string;
-      audioId: string;
-    }
-  | {
-      id: string;
-      kind: "image_vocab";
-      prompt: string;
-      text: string;
-      meaning: string;
-      choices: ImageChoice[];
-      answer: string;
-      audioId: string;
-      newWord: true;
-    }
-  | {
-      id: string;
-      kind: "translate";
-      prompt: string;
-      text: string;
-      answer: string;
-      acceptedAnswers?: string[];
-      audioId: string;
-      newWord: true;
-    }
-  | {
-      id: string;
-      kind: "word_bank";
-      prompt: string;
-      text: string;
-      choices: string[];
-      answer: string;
-      audioId: string;
-      newWord: true;
-    }
-  | {
-      id: string;
-      kind: "breakdown";
-      prompt: string;
-      text: string;
-      mapping: Array<{ coptic: string; meaning: string }>;
-      audioId: string;
-      newWord: true;
-    }
-  | {
-      id: string;
-      kind: "meaning_mcq";
-      prompt: string;
-      text: string;
-      choices: string[];
-      answer: string;
-      audioId: string;
-      newWord: true;
-    };
-
-const COPTIC = {
-  ma: "\u2C99\u2C81",
-  me: "\u2C99\u2C89",
-  mi: "\u2C99\u2C93",
-  mo: "\u2C99\u2C9F",
-  na: "\u2C9B\u2C81",
-  ro: "\u2CA3\u2C9F",
-  ra: "\u2CA3\u2C81",
-  ri: "\u2CA3\u2C93",
-  re: "\u2CA3\u2C89",
-  pi: "\u2CA1\u2C93",
-  pa: "\u2CA1\u2C81",
-  po: "\u2CA1\u2C9F",
-  piromi: "\u2CA1\u2C93\u2CA3\u2CB1\u2C99\u2C93",
-  pimoou: "\u2CA1\u2C93\u2C99\u2CB1\u2C9F\u2CA9",
-  the: "\u2CA1\u2C93",
-  water: "\u2C99\u2CB1\u2C9F\u2CA9",
-  mina: "\u2C98\u2C8F\u2C9B\u2C81",
-  markos: "\u2C98\u2C81\u2CA3\u2C95\u2C9F\u2CA5",
-} as const;
-
-const ART: Record<ImageChoice["art"], string> = {
-  man: "\uD83D\uDC68",
-  water: "\uD83D\uDCA7",
-  big: "\uD83D\uDC18",
-  rice: "\uD83C\uDF5A",
-  bread: "\uD83C\uDF5E",
-};
+function VocabularyArt({ art, size }: { art: ImageChoice["art"]; size:number }) {
+  const drawing = art === "man" ? <><circle cx="32" cy="17" r="9"/><path d="M14 56v-8c0-12 8-19 18-19s18 7 18 19v8M23 45v11M41 45v11"/></>
+    : art === "water" ? <><path d="M32 6C25 19 14 30 14 40a18 18 0 0 0 36 0C50 30 39 19 32 6Z"/><path d="M23 40c0 6 4 10 9 10"/></>
+    : art === "bread" ? <><path d="M8 45V30c0-14 11-21 24-21s24 7 24 21v15c0 6-4 10-10 10H18c-6 0-10-4-10-10Z"/><path d="m22 19-4 9m16-11-4 10m15-7-4 10"/></>
+    : art === "rice" ? <><path d="M8 32h48c0 16-10 23-24 23S8 48 8 32ZM13 27c1-6 5-9 10-9 2-6 9-9 15-4 6-2 12 3 13 10"/><path d="m20 24 3 2m7-4 3 2m7-2 3 2"/></>
+    : <><path d="M12 45V23h40v22M12 23l8-9m-8 9 8 9m32-9-8-9m8 9-8 9M12 50h40"/><path d="M26 35h12v10H26Z"/></>;
+  return <svg width={size} height={size} viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{drawing}</svg>;
+}
 
 const SUCCESS_MESSAGES = ["Awesome!", "Excellent!", "Nice!", "Well done!", "Perfect!"] as const;
 
 
-
-const QUESTIONS: LessonQuestion[] = [
-  {
-    id: "u2l1-1",
-    kind: "sound_mcq",
-    prompt: "What sound does this make?",
-    text: COPTIC.ma,
-    choices: ["ma", "na", "mo"],
-    answer: "ma",
-    audioId: "ma",
-  },
-  {
-    id: "u2l1-2",
-    kind: "letter_mcq",
-    prompt: 'Select the correct letters for "ma"',
-    sound: "ma",
-    choices: [COPTIC.me, COPTIC.na, COPTIC.ma, COPTIC.mo],
-    answer: COPTIC.ma,
-    audioId: "ma",
-  },
-  {
-    id: "u2l1-3",
-    kind: "listening_mcq",
-    prompt: "What do you hear?",
-    audio: COPTIC.ma,
-    choices: [COPTIC.mo, COPTIC.ma, COPTIC.na, COPTIC.me],
-    answer: COPTIC.ma,
-    audioId: "ma",
-  },
-  {
-    id: "u2l1-4",
-    kind: "sound_mcq",
-    prompt: "What sound does this make?",
-    text: COPTIC.ro,
-    choices: ["ri", "ra", "ro"],
-    answer: "ro",
-    audioId: COPTIC.ro,
-  },
-  {
-    id: "u2l1-5",
-    kind: "letter_mcq",
-    prompt: 'Select the correct letters for "ro"',
-    sound: "ro",
-    choices: [COPTIC.ra, COPTIC.ri, COPTIC.ro, COPTIC.re],
-    answer: COPTIC.ro,
-    audioId: COPTIC.ro,
-  },
-  {
-    id: "u2l1-6",
-    kind: "listening_mcq",
-    prompt: "What do you hear?",
-    audio: COPTIC.ro,
-    choices: [COPTIC.ra, COPTIC.ri, COPTIC.ro, COPTIC.mo],
-    answer: COPTIC.ro,
-    audioId: COPTIC.ro,
-  },
-  {
-    id: "u2l1-7",
-    kind: "sound_mcq",
-    prompt: "What sound does this make?",
-    text: COPTIC.mi,
-    choices: ["mi", "ma", "mo"],
-    answer: "mi",
-    audioId: COPTIC.mi,
-  },
-  {
-    id: "u2l1-8",
-    kind: "letter_mcq",
-    prompt: 'Select the correct letters for "mi"',
-    sound: "mi",
-    choices: [COPTIC.mi, COPTIC.ma, COPTIC.pi, COPTIC.ri],
-    answer: COPTIC.mi,
-    audioId: COPTIC.mi,
-  },
-  {
-    id: "u2l1-9",
-    kind: "sound_mcq",
-    prompt: "What sound does this make?",
-    text: COPTIC.pi,
-    choices: ["pi", "pa", "po"],
-    answer: "pi",
-    audioId: COPTIC.pi,
-  },
-  {
-    id: "u2l1-10",
-    kind: "letter_mcq",
-    prompt: 'Select the correct letters for "pi"',
-    sound: "pi",
-    choices: [COPTIC.pa, COPTIC.po, COPTIC.pi, COPTIC.mi],
-    answer: COPTIC.pi,
-    audioId: COPTIC.pi,
-  },
-  {
-    id: "u2l1-11",
-    kind: "image_vocab",
-    prompt: "Select the correct image",
-    text: COPTIC.piromi,
-    meaning: "the man",
-    choices: [
-      { id: "the man", label: "the man", art: "man" },
-      { id: "the water", label: "the water", art: "water" },
-      { id: "big", label: "big", art: "big" },
-      { id: "the rice", label: "the rice", art: "rice" },
-    ],
-    answer: "the man",
-    audioId: COPTIC.piromi,
-    newWord: true,
-  },
-  {
-    id: "u2l1-12",
-    kind: "image_vocab",
-    prompt: "Select the correct image",
-    text: COPTIC.pimoou,
-    meaning: "the water",
-    choices: [
-      { id: "big", label: "big", art: "big" },
-      { id: "the rice", label: "the rice", art: "rice" },
-      { id: "the water", label: "the water", art: "water" },
-      { id: "the bread", label: "the bread", art: "bread" },
-    ],
-    answer: "the water",
-    audioId: COPTIC.pimoou,
-    newWord: true,
-  },
-  {
-    id: "u2l1-13",
-    kind: "translate",
-    prompt: "Translate this sentence",
-    text: COPTIC.mina,
-    answer: "Mina",
-    audioId: COPTIC.mina,
-    newWord: true,
-  },
-  {
-    id: "u2l1-14",
-    kind: "translate",
-    prompt: "Translate this sentence",
-    text: COPTIC.markos,
-    answer: "Markos",
-    acceptedAnswers: ["Markos", "markos", "Mark", "mark"],
-    audioId: COPTIC.markos,
-    newWord: true,
-  },
-  {
-    id: "u2l1-15",
-    kind: "word_bank",
-    prompt: "Translate this sentence",
-    text: COPTIC.pimoou,
-    choices: ["the", "water", "rice", "and"],
-    answer: "the water",
-    audioId: COPTIC.pimoou,
-    newWord: true,
-  },
-  {
-    id: "u2l1-17",
-    kind: "meaning_mcq",
-    prompt: "What does this mean?",
-    text: COPTIC.piromi,
-    choices: ["the man", "the water", "rice", "big"],
-    answer: "the man",
-    audioId: COPTIC.piromi,
-    newWord: true,
-  },
-  {
-    id: "u2l1-18",
-    kind: "meaning_mcq",
-    prompt: "What does this mean?",
-    text: COPTIC.pimoou,
-    choices: ["the water", "the man", "rice", "yes"],
-    answer: "the water",
-    audioId: COPTIC.pimoou,
-    newWord: true,
-  },
-];
 
 function containsCoptic(text: string) {
   return /[\u2C80-\u2CFF\u03E2-\u03EF]/.test(text);
 }
 
 function normalizeAnswer(input: string) {
-  return input.trim().replace(/\s+/g, " ").toLowerCase();
+  return input.normalize("NFKC").trim().replace(/[.!?,:;]+$/u, "").replace(/\s+/g, " ").toLowerCase();
 }
 
 
@@ -699,6 +423,7 @@ export default function Section1Unit2Lesson1Client({
   lesson: Lesson;
   step: UnitLessonStep;
 }) {
+  const learning = useLearningSession();
   const router = useRouter();
   const audioUnlockedRef = useRef(false);
   const [viewport, setViewport] = useState({ width: 1280, height: 900 });
@@ -852,7 +577,7 @@ export default function Section1Unit2Lesson1Client({
 
   const nextQuestion = () => {
     if (index >= QUESTIONS.length - 1) {
-      setIsComplete(true);
+      learning.finish();
       return;
     }
 
@@ -888,6 +613,8 @@ export default function Section1Unit2Lesson1Client({
         correct = normalizeAnswer(selectedWords.join(" ")) === normalizeAnswer(question.answer);
         break;
     }
+
+    learning.record(question.id, itemsForQuestion(question), correct);
 
     if (correct) {
       playLessonAudio(step.id, "correct-answer", "");
@@ -1128,7 +855,7 @@ export default function Section1Unit2Lesson1Client({
                     fontSize: imageArtSize,
                   }}
                 >
-                  {ART[choice.art]}
+                  <VocabularyArt art={choice.art} size={imageArtSize} />
                 </div>
                 <div
                   style={{
@@ -1395,6 +1122,8 @@ export default function Section1Unit2Lesson1Client({
           </div>
         </div>
 
+        <LessonCoach step={step} index={index} audioPath={resolveLessonAudio(step.id, questionAudioId)?.src} />
+
         <div
           style={{
             position: "relative",
@@ -1537,6 +1266,8 @@ export default function Section1Unit2Lesson1Client({
             >
               {feedback || "\u00A0"}
             </div>
+
+            <LessonExplanation question={question} wrong={resultState === "wrong"} />
 
             <button
               type="button"

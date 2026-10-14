@@ -4,7 +4,7 @@ import { Capacitor, registerPlugin } from "@capacitor/core";
 const NativeAudio = registerPlugin<{
   activate(): Promise<void>;
   preload(options: { path: string }): Promise<{ duration: number }>;
-  play(options: { path: string }): Promise<{ duration: number }>;
+  play(options: { path: string; rate?: number }): Promise<{ duration: number }>;
   stop(): Promise<void>;
 }>("LessonAudio");
 const usesNativeAudio = () => Capacitor.getPlatform() === "ios";
@@ -168,12 +168,13 @@ class AudioService {
     await Promise.all(entries.map(({ key, url }) => this.preload(key, url)));
   }
 
-  async play(key: string, url = key) {
+  async play(key: string, url = key, rate = 1) {
+    if (!Number.isFinite(rate) || rate < 0.5 || rate > 1.5) throw new Error("Unsupported recording speed.");
     if (usesNativeAudio()) {
-      const result = await NativeAudio.play({ path: url });
+      const result = await NativeAudio.play({ path: url, rate });
       // The sentence lesson uses the recording duration to schedule its next prompt.
       recordingStarted();
-      return { buffer: { duration: result.duration } };
+      return { buffer: { duration: result.duration / rate } };
     }
     const ctx = await this.resume();
     const buffer = await this.preloadWeb(key, url);
@@ -182,6 +183,7 @@ class AudioService {
     const source = ctx.createBufferSource();
 
     source.buffer = buffer;
+    if (source.playbackRate) source.playbackRate.value = rate;
     source.connect(ctx.destination);
     this.activeSources.add(source);
 

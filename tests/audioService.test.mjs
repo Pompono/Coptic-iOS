@@ -5,12 +5,13 @@ import ts from 'typescript';
 
 let platform = 'web';
 const nativeCalls = [];
+const nativeRates = [];
 globalThis.__nativeAudioTest = {
   Capacitor: { getPlatform: () => platform },
   registerPlugin: () => ({
     activate: async () => nativeCalls.push('activate'),
     preload: async ({ path }) => { nativeCalls.push(['preload', path]); return { duration: 1.2 }; },
-    play: async ({ path }) => { nativeCalls.push(['play', path]); return { duration: 1.2 }; },
+    play: async ({ path, rate }) => { nativeRates.push(rate); nativeCalls.push(['play', path]); return { duration: 1.2 }; },
     stop: async () => nativeCalls.push('stop')
   })
 };
@@ -58,4 +59,15 @@ test('iOS recordings use the native bundled player, preserving duration and stop
     await audioService.pause();
     assert.deepEqual(nativeCalls, ['activate', ['preload', '/audio/learn/shared/a.wav'], ['play', '/audio/learn/shared/a.wav'], 'stop', 'stop']);
   } finally { platform = 'web'; globalThis.fetch = previousFetch; delete globalThis.__nativeAudioTest; }
+});
+
+test('native slow replay requests the rate, adjusts duration, and restores normal speed', async () => {
+  platform='ios';
+  try {
+    const slow=await audioService.play('a','/audio/learn/shared/a.wav',.75);
+    assert.ok(Math.abs(slow.buffer.duration-1.6)<.00001);
+    await audioService.play('a','/audio/learn/shared/a.wav');
+    assert.deepEqual(nativeRates.slice(-2),[.75,1]);
+    await assert.rejects(audioService.play('a','/audio/learn/shared/a.wav',0));
+  } finally {platform='web';}
 });

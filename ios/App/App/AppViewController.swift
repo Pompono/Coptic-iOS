@@ -51,6 +51,12 @@ class AppViewController: CAPBridgeViewController {
                   if (!(result.duration > 0)) throw new Error('Invalid recording duration: ' + name);
                   await cap.nativePromise('LessonAudio', 'stop', {});
                 }
+                const slow = await cap.nativePromise('LessonAudio', 'play', { path: '/audio/learn/shared/a.wav', rate: .75 });
+                if (Math.abs(slow.rate - .75) > .01) throw new Error('Slow replay rate was not applied');
+                await cap.nativePromise('LessonAudio', 'stop', {});
+                const normal = await cap.nativePromise('LessonAudio', 'play', { path: '/audio/learn/shared/a.wav', rate: 1 });
+                if (Math.abs(normal.rate - 1) > .01) throw new Error('Normal replay rate was not restored');
+                await cap.nativePromise('LessonAudio', 'stop', {});
                 window.__copticAudioSmoke = { status: 'passed' };
               } catch (error) { window.__copticAudioSmoke = { status: 'failed', message: error.message }; }
             })();
@@ -154,6 +160,7 @@ public class LessonAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         if let cached = players[path] { return cached }
         let player = try AVAudioPlayer(contentsOf: url)
         player.volume = 1
+        player.enableRate = true
         guard player.prepareToPlay() else {
             throw NSError(domain: "CopticAudio", code: 3, userInfo: [NSLocalizedDescriptionKey: "Could not prepare recording: " + path])
         }
@@ -190,11 +197,13 @@ public class LessonAudioPlugin: CAPPlugin, CAPBridgedPlugin {
                 let player = try self.recording(call)
                 stage = "playback"
                 player.currentTime = 0
+                player.enableRate = true
+                player.rate = min(1.5, max(0.5, Float(call.getDouble("rate") ?? 1.0)))
                 guard player.play() else {
                     call.reject("Could not start recording: " + (call.getString("path") ?? ""))
                     return
                 }
-                call.resolve(["duration": player.duration])
+                call.resolve(["duration": player.duration, "rate": player.rate])
             } catch { self.rejectAudio(call, stage: stage, error: error) }
         }
     }

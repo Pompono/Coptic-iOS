@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { finishTransfer } from './learning-smoke.mjs';
 import { readFile } from 'node:fs/promises';
 import ts from 'typescript';
 const source = ts.transpileModule(await readFile('lib/lesson.ts', 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 } }).outputText;
@@ -65,6 +66,7 @@ export async function checkDarkTheme(page, base) {
         await page.getByRole('button', { name: 'Continue', exact: true }).click();
         if (index < remaining.length - 1) await page.waitForTimeout(300);
       }
+      await finishTransfer(page,set);
       const outcome = page.locator('.lesson-outcome-screen');
       await outcome.waitFor();
       assert.ok((await colors(outcome)).gradient.includes('rgb(0, 0, 0)'), 'Completion screen stays dark');

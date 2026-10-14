@@ -1,5 +1,8 @@
 "use client";
 
+import { COPTIC, QUESTIONS, type LessonQuestion } from "@/lib/learning/wordLesson2";
+import { LearningSession, LessonCoach, LessonExplanation, SlowReplay, useLearningSession } from "../learning/LearningSession";
+import { itemsForQuestion } from "@/lib/learning/content";
 import { LESSON_THEME } from "@/lib/lessonTheme";
 
 import Image from "next/image";
@@ -11,251 +14,16 @@ import { resolveLessonAudio } from "../../../lib/lessonAudio";
 import { clearStepFailed, markStepCompleted, markStepFailed } from "../progress";
 import { type Lesson, type UnitLessonStep } from "../../../lib/lesson";
 
-type LessonQuestion =
-  | {
-      id: string;
-      kind: "sound_mcq";
-      prompt: string;
-      text: string;
-      choices: string[];
-      answer: string;
-      audioId: string;
-    }
-  | {
-      id: string;
-      kind: "letter_mcq";
-      prompt: string;
-      sound: string;
-      choices: string[];
-      answer: string;
-      audioId: string;
-    }
-  | {
-      id: string;
-      kind: "listening_mcq";
-      prompt: string;
-      audio: string;
-      choices: string[];
-      answer: string;
-      audioId: string;
-    }
-  | {
-      id: string;
-      kind: "word_bank";
-      prompt: string;
-      text: string;
-      choices: string[];
-      answer: string;
-      audioId: string;
-      audioOnly?: boolean;
-      newWord: true;
-    };
-
-const COPTIC = {
-  ma: "\u2C99\u2C81",
-  me: "\u2C99\u2C89",
-  mo: "\u2C99\u2C9F",
-  po: "\u2CA1\u2C9F",
-  na: "\u2C9B\u2C81",
-  ne: "\u2C9B\u2C89",
-  se: "\u2CA5\u2C89",
-  ria: "\u2CA3\u2C93\u2C81",
-  kai: "\u2C95\u2C81\u2C93",
-  tia: "\u2CA7\u2C93\u2C81",
-  moi: "\u2C99\u2C9F\u2C93",
-  boi: "\u2C83\u2C9F\u2C93",
-  ba: "\u2C83\u2C81",
-  anna: "\u2C80\u2C9B\u2C9B\u2C81",
-  maria: "\u2C98\u2C81\u2CA3\u2C93\u2C81",
-  markos: "\u2C98\u2C81\u2CA3\u2C95\u2C9F\u2CA5",
-  seAnna: "\u2CA4\u2C89 \u2C80\u2C9B\u2C9B\u2C81",
-  seMaria: "\u2CA5\u2C89, \u2C98\u2C81\u2CA3\u2C93\u2C81",
-  annaNemMarkos: "\u2C80\u2C9B\u2C9B\u2C81 \u2C9B\u2C89\u2C99 \u2C98\u2C81\u2CA3\u2C95\u2C9F\u2CA5",
-  piMiniMarket: "\u2CA1\u2C93 \u2C99\u2C93\u2C9B\u2C93 \u2C99\u2C81\u2CA3\u2C95\u2C89\u2CA7",
-  piMoou: "\u2CA1\u2C93 \u2C99\u2C9F\u2C9F\u2CA9",
-} as const;
-
 const SUCCESS_MESSAGES = ["Awesome!", "Excellent!", "Nice!", "Well done!", "Perfect!"] as const;
 
 
-
-const QUESTIONS: LessonQuestion[] = [
-  {
-    id: "u2l2-1",
-    kind: "sound_mcq",
-    prompt: "What sound does this make?",
-    text: COPTIC.se,
-    choices: ["na", "ma", "se"],
-    answer: "se",
-    audioId: "se",
-  },
-  {
-    id: "u2l2-7",
-    kind: "letter_mcq",
-    prompt: 'Select the correct letters for "se"',
-    sound: "se",
-    choices: [COPTIC.na, COPTIC.moi, COPTIC.se, COPTIC.boi],
-    answer: COPTIC.se,
-    audioId: "se",
-  },
-  {
-    id: "u2l2-1-listen",
-    kind: "listening_mcq",
-    prompt: "What do you hear?",
-    audio: "se",
-    choices: ["na", "ma", "se"],
-    answer: "se",
-    audioId: "se",
-  },
-  {
-    id: "u2l2-2",
-    kind: "listening_mcq",
-    prompt: "What do you hear?",
-    audio: "se",
-    choices: ["se", "ria", "ma", "ro"],
-    answer: "se",
-    audioId: "se",
-  },
-  {
-    id: "u2l2-3",
-    kind: "sound_mcq",
-    prompt: "What sound does this make?",
-    text: COPTIC.ria,
-    choices: ["kai", "ria", "ro"],
-    answer: "ria",
-    audioId: "ria",
-  },
-  {
-    id: "u2l2-8",
-    kind: "letter_mcq",
-    prompt: 'Select the correct letters for "ria"',
-    sound: "ria",
-    choices: [COPTIC.po, COPTIC.kai, COPTIC.ria, COPTIC.tia],
-    answer: COPTIC.ria,
-    audioId: "ria",
-  },
-  {
-    id: "u2l2-4",
-    kind: "listening_mcq",
-    prompt: "What do you hear?",
-    audio: "ria",
-    choices: ["tia", "po", "ria", "kai"],
-    answer: "ria",
-    audioId: "ria",
-  },
-  {
-    id: "u2l2-5",
-    kind: "listening_mcq",
-    prompt: "What do you hear?",
-    audio: "ria",
-    choices: ["ma", "se", "na", "ria"],
-    answer: "ria",
-    audioId: "ria",
-  },
-  {
-    id: "u2l2-6-sound",
-    kind: "sound_mcq",
-    prompt: "What sound does this make?",
-    text: COPTIC.ma,
-    choices: ["ma", "na", "ne"],
-    answer: "ma",
-    audioId: "ma",
-  },
-  {
-    id: "u2l2-6-listen-a",
-    kind: "listening_mcq",
-    prompt: "What do you hear?",
-    audio: "ma",
-    choices: ["na", "ria", "se", "ma"],
-    answer: "ma",
-    audioId: "ma",
-  },
-  {
-    id: "u2l2-6",
-    kind: "listening_mcq",
-    prompt: "What do you hear?",
-    audio: "ma",
-    choices: ["va", "mo", "ma", "ve"],
-    answer: "ma",
-    audioId: "ma",
-  },
-  {
-    id: "u2l2-9",
-    kind: "letter_mcq",
-    prompt: 'Select the correct letters for "ma"',
-    sound: "ma",
-    choices: [COPTIC.ma, COPTIC.ne, COPTIC.me, COPTIC.ba],
-    answer: COPTIC.ma,
-    audioId: "ma",
-  },
-  {
-    id: "u2l2-10",
-    kind: "listening_mcq",
-    prompt: "Translate this sentence",
-    audio: COPTIC.anna,
-    choices: ["Anna", "Mark", "yes", "big"],
-    answer: "Anna",
-    audioId: COPTIC.anna,
-  },
-  {
-    id: "u2l2-11",
-    kind: "listening_mcq",
-    prompt: "Translate this sentence",
-    audio: "se Anna",
-    choices: ["yes Anna", "yeah Anna"],
-    answer: "yes Anna",
-    audioId: "se Anna",
-  },
-  {
-    id: "u2l2-12",
-    kind: "listening_mcq",
-    prompt: "Translate this sentence",
-    audio: "se Maria",
-    choices: ["yes Maria", "Maria", "yes Anna", "Mark"],
-    answer: "yes Maria",
-    audioId: "se Maria",
-  },
-  {
-    id: "u2l2-13",
-    kind: "word_bank",
-    prompt: "Translate this sentence",
-    text: COPTIC.annaNemMarkos,
-    choices: ["Anna", "and", "Mark", "mini", "the", "water"],
-    answer: "Anna and Mark",
-    audioId: COPTIC.annaNemMarkos,
-    audioOnly: true,
-    newWord: true,
-  },
-  {
-    id: "u2l2-14",
-    kind: "word_bank",
-    prompt: "Translate this sentence",
-    text: COPTIC.piMiniMarket,
-    choices: ["the", "mini", "market", "rice", "water", "yes"],
-    answer: "the mini market",
-    audioId: COPTIC.piMiniMarket,
-    audioOnly: true,
-    newWord: true,
-  },
-  {
-    id: "u2l2-15",
-    kind: "word_bank",
-    prompt: "Translate this sentence",
-    text: COPTIC.piMoou,
-    choices: ["the", "water", "yes", "Anna", "Maria", "Mark"],
-    answer: "the water",
-    audioId: COPTIC.piMoou,
-    audioOnly: true,
-    newWord: true,
-  },
-];
 
 function containsCoptic(text: string) {
   return /[\u2C80-\u2CFF\u03E2-\u03EF]/.test(text);
 }
 
 function normalizeAnswer(input: string) {
-  return input.trim().replace(/\s+/g, " ").toLowerCase();
+  return input.normalize("NFKC").trim().replace(/[.!?,:;]+$/u, "").replace(/\s+/g, " ").toLowerCase();
 }
 
 
@@ -304,7 +72,7 @@ function getExpectedAnswer(question: LessonQuestion) {
 }
 
 function getTranslateGlossary(question: LessonQuestion) {
-  if (question.kind !== "listening_mcq" || question.prompt !== "Translate this sentence") {
+  if (question.kind !== "listening_mcq" || question.prompt !== "Translate this phrase") {
     return null;
   }
 
@@ -680,6 +448,7 @@ export default function Section1Unit2Lesson2Client({
   lesson: Lesson;
   step: UnitLessonStep;
 }) {
+  const learning = useLearningSession();
   const router = useRouter();
   const audioUnlockedRef = useRef(false);
   const [viewport, setViewport] = useState({ width: 1280, height: 900 });
@@ -740,7 +509,7 @@ export default function Section1Unit2Lesson2Client({
   const desktopSlideViewportHeight = 520;
   const progress = Math.max(0.08, index / QUESTIONS.length);
   const isTranslateChoiceScreen =
-    question.kind === "listening_mcq" && question.prompt === "Translate this sentence";
+    question.kind === "listening_mcq" && question.prompt === "Translate this phrase";
   const translateGlossary = getTranslateGlossary(question);
   const showsNewWordBadge = isTranslateChoiceScreen && Boolean(translateGlossary);
   const promptRowHeight =
@@ -953,7 +722,7 @@ export default function Section1Unit2Lesson2Client({
 
   const nextQuestion = () => {
     if (index >= QUESTIONS.length - 1) {
-      setIsComplete(true);
+      learning.finish();
       return;
     }
 
@@ -971,12 +740,14 @@ export default function Section1Unit2Lesson2Client({
       case "sound_mcq":
       case "letter_mcq":
       case "listening_mcq":
-        correct = selectedChoice === question.answer;
+        correct = ("acceptedAnswers" in question ? question.acceptedAnswers ?? [question.answer] : [question.answer]).some(answer => normalizeAnswer(answer) === normalizeAnswer(selectedChoice ?? ""));
         break;
       case "word_bank":
         correct = normalizeAnswer(selectedWords.join(" ")) === normalizeAnswer(question.answer);
         break;
     }
+
+    learning.record(question.id, itemsForQuestion(question), correct);
 
     if (correct) {
       playLessonAudio(step.id, "correct-answer", "");
@@ -1026,6 +797,7 @@ export default function Section1Unit2Lesson2Client({
         type="button"
         className="lesson-tap-target lesson-audio-card"
         onClick={playCurrentAudio}
+        disabled={!resolveLessonAudio(step.id, questionAudioId)?.src}
         style={{
           width: "100%",
           maxWidth: isTranslateChoiceScreen ? (desktopLayout ? 460 : 400) : desktopLayout ? 420 : 380,
@@ -1078,7 +850,7 @@ export default function Section1Unit2Lesson2Client({
           </span>
         )}
 
-        <span
+        {resolveLessonAudio(step.id, questionAudioId)?.src && <span
           style={{
             position: "absolute",
             right: compactPhone ? 16 : 22,
@@ -1086,7 +858,7 @@ export default function Section1Unit2Lesson2Client({
           }}
         >
           <IconSpeaker size={isTranslateChoiceScreen ? (compactPhone ? 22 : 28) : compactPhone ? 26 : 32} />
-        </span>
+        </span>}
       </button>
     );
   };
@@ -1660,6 +1432,8 @@ export default function Section1Unit2Lesson2Client({
           </div>
         </div>
 
+        <LessonCoach step={step} index={index} audioPath={resolveLessonAudio(step.id, questionAudioId)?.src} />
+
         <div
           style={{
             position: "relative",
@@ -1840,6 +1614,8 @@ export default function Section1Unit2Lesson2Client({
             >
               {feedback || "\u00A0"}
             </div>
+
+            <LessonExplanation question={question} wrong={resultState === "wrong"} />
 
             <button
               type="button"

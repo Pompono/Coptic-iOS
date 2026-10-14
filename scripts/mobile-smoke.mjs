@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import path from 'node:path';
 import { readFile, access, stat } from 'node:fs/promises';
+import { checkLearning, finishTransfer } from './learning-smoke.mjs';
 import { checkDictionary } from './dictionary-smoke.mjs';
 import { checkScanner } from './scanner/smoke.mjs';
 import { checkReading } from './reading-smoke.mjs';
@@ -32,6 +33,7 @@ let browser;
 try {
   const engine = process.env.COPTIC_BROWSER === 'webkit' ? webkit : chromium;
   browser = await engine.launch({ headless: true });
+  await checkLearning(browser, base);
   await checkDictionary(browser, base);
   await checkKeyboardPrompt(browser, base);
   await checkRecordingFailure(browser, base);
@@ -82,6 +84,7 @@ try {
         await next.click();
         await page.waitForTimeout(300);
       }
+      await finishTransfer(page, 'a-o-d-letters-and-sounds');
       const key = 'coptic-unit-progress:section-1-unit-01-pair-letters-and-sounds';
       assert.ok(JSON.parse(await page.evaluate(key => localStorage.getItem(key), key)).includes('lesson-1-a-o-d'));
       await page.goto(base + unit);
