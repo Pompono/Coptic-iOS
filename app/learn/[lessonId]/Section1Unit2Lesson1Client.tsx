@@ -1057,6 +1057,7 @@ export default function Section1Unit2Lesson1Client({
 
   return (
     <main
+      className="authored-exercise"
       onPointerDownCapture={unlockAudio}
       style={{
         height: compactPhone ? "var(--page-content-height)" : "auto",
@@ -1100,6 +1101,12 @@ export default function Section1Unit2Lesson1Client({
           </Link>
 
           <div
+            className="lesson-progress-track"
+            role="progressbar"
+            aria-label="Lesson progress"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(progress * 100)}
             style={{
               flex: 1,
               height: progressHeight,
@@ -1163,8 +1170,8 @@ export default function Section1Unit2Lesson1Client({
                   style={{
                     margin: 0,
                     fontSize: titleFontSize,
-                    lineHeight: 1.08,
-                    fontWeight: 800,
+                    lineHeight: 1.2,
+                    fontWeight: 700,
                     letterSpacing: "-0.02em",
                     color: LESSON_THEME.textPrimary,
                     maxWidth: desktopLayout ? "18ch" : undefined,

@@ -1,4 +1,5 @@
 "use client";
+import AppIcon from "@/app/AppIcon";
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from '@/lib/AppLink';
 import { useRouter } from 'next/navigation';
@@ -80,7 +81,7 @@ export function LearningSession({ lesson, step, children, newLesson = false }: {
     {phase === 'loading' ? <main className={styles.screen}><p>Preparing your lesson…</p></main>
       : phase === 'guide' ? <main className={styles.introScreen}>
         <div ref={guideContent} className={styles.introBody}>
-          <div className={styles.top}><Link href={`/learn/${lesson.id}/`}>Close lesson</Link><span>Lesson guide</span></div>
+          <div className={styles.top}><Link href={`/learn/${lesson.id}/`}><AppIcon name="close" size={16}/>Close lesson</Link><span>Lesson guide</span></div>
           <h1>{step.title}</h1>
           <p>{lessonNote(step)}</p>
           <div className={styles.skills}>{items.slice(0,3).map(item => <div key={learningId(item)}>
@@ -136,7 +137,8 @@ function LearningPractice({ items, lesson, title, description, onDone, review = 
   };
   if (!items.length) return <main className={styles.screen}><div className={styles.inner}><p>This lesson’s practice is ready.</p><button className={styles.primary} onClick={onDone}>Continue</button></div></main>;
   return <main className={`${styles.screen} ${styles.practiceScreen}`}><div className={styles.practiceLayout}><div ref={practiceContent} className={styles.practiceContent}>
-    <div className={styles.top}><Link href={`/learn/${lesson.id}/`}>Close lesson</Link><span>{reading ? 'Read' : `${index+1} of ${count}`}</span></div>
+    <div className={styles.top}><Link href={`/learn/${lesson.id}/`}><AppIcon name="close" size={16}/>Close lesson</Link><span>{reading ? 'Read' : `${index+1} of ${count}`}</span></div>
+    <progress className={styles.progress} value={reading?0:index+1} max={count} aria-label="Practice progress"/>
     <h1>{title}</h1><p className={styles.muted}>{description}</p>
     {reading ? <>
       <p>{items.every(i=>i.pos === 'Letter / syllable') ? 'Read these sound patterns from left to right. Tap a pattern to check its sound label.' : 'These are short practice phrases. Tap a word or phrase to see how it works.'}</p>
@@ -152,7 +154,7 @@ function LearningPractice({ items, lesson, title, description, onDone, review = 
           <label className={styles.label}>{kind === 'gap' ? 'Missing letter' : 'Your answer'}<input aria-label={kind==='gap'?'Missing letter':'Your answer'} value={answer} disabled={result!=='idle'} onChange={e=>setAnswer(e.target.value)} onKeyDown={e=>{if(e.key==='Enter' && answer.trim() && result==='idle')check();}} autoCapitalize="none" autoCorrect="off" spellCheck={false} /></label>
           {kind==='gap' && <div className={styles.bank}>{[...new Set([...gapParts,'ⲉ','ⲟ'])].filter(ch=>ch!==' ').map(ch=><button key={ch} className="coptic-text" disabled={result!=='idle'} onClick={()=>setAnswer(ch)}>{ch}</button>)}</div>}
         </>}
-      {item.audio && <div className={styles.listen}><button onClick={()=>void audioService.play(item.audio,item.audio).catch(reportAudioFailure)}>Replay recording</button><SlowReplay path={item.audio}/></div>}
+      {item.audio && <div className={styles.listen}><button onClick={()=>void audioService.play(item.audio,item.audio).catch(reportAudioFailure)}><AppIcon name="play" size={16}/>Replay recording</button><SlowReplay path={item.audio}/></div>}
       {result==='idle' && <button className={styles.hint} onClick={()=>setHint(true)}>Show a hint</button>}
       {hint && result==='idle' && <p>{item.explanation}</p>}
       {result!=='idle' && <div role="status" className={styles.panel}><p>{result==='correct'?'Correct.':`Not quite. ${expected}`}</p><p>{item.explanation}</p></div>}

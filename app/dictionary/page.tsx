@@ -1,4 +1,5 @@
 "use client";
+import PageHeader from "../PageHeader";
 
 import AppIcon from "../AppIcon";
 import Link from "@/lib/AppLink";
@@ -693,11 +694,11 @@ export default function DictionaryPage() {
               : undefined,
         }}
       >
-        <h1 className="mt-0 text-4xl font-semibold tracking-tight">Coptic Dictionary</h1>
-        <p className="mt-2 text-[var(--text-muted)]">Search Coptic words, English meanings, or transliteration.</p>
+        <PageHeader title="Dictionary" description="Search words, meanings, or transliteration." icon="book"/>
 
         <div className="mt-5 space-y-3">
           <div className="dictionary-search-shell flex items-center gap-3 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-1)] px-4 py-3">
+            <AppIcon name="search" size={20}/>
             <input
               ref={queryInputRef}
               value={query}
@@ -714,7 +715,7 @@ export default function DictionaryPage() {
           </div>
 
           <div className="flex items-center justify-between gap-3 text-sm">
-            <Link href="/dictionary/settings/" className="inline-flex min-h-11 items-center gap-2 text-[var(--text-muted)] underline underline-offset-4">Advanced dictionary settings</Link>
+            <Link href="/dictionary/settings/" className="ui-text-action"><AppIcon name="settings" size={18}/>Advanced dictionary settings</Link>
             <button type="button" onClick={() => { setQuery(""); queryInputRef.current?.focus({ preventScroll: true }); }} className="min-h-11 px-3 text-[var(--text-muted)]">Clear</button>
           </div>
           {suggestions.length > 0 && <div className="flex flex-wrap items-center gap-2 text-sm" aria-label="Spelling suggestions">Try:
@@ -731,12 +732,7 @@ export default function DictionaryPage() {
               ) : loadState === "error" ? (
                 <span role="alert" className="text-[var(--lesson-choice-wrong-text)]">Failed to load dictionary files. <button type="button" onClick={() => setLoadAttempt(n => n + 1)} className="ml-2 min-h-11 underline">Retry</button></span>
               ) : (
-                <span>
-                  {totalShown} shown • {totalAll} total •{" "}
-                  <span className="text-[var(--text-muted)]">
-                    Badge: <b>Bohairic</b> = verified Bohairic; <b>Unknown</b> = dialect not guaranteed.
-                  </span>
-                </span>
+                <div className="dictionary-result-summary"><span>{totalShown.toLocaleString()} of {totalAll.toLocaleString()} entries</span><details><summary>Dialect labels</summary><p><b>Bohairic</b> entries are verified Bohairic. <b>Unknown</b> means the dialect is not guaranteed.</p></details></div>
               )}
             </div>
         </div>

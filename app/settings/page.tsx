@@ -1,4 +1,5 @@
 "use client";
+import PageHeader from "../PageHeader";
 
 import { COPTIC_KEYBOARD_APP_STORE_URL } from "../KeyboardInstallPrompt";
 import Image from "next/image";
@@ -152,13 +153,13 @@ export default function SettingsPage() {
   } as const;
 
   return <main className="app-page settings-page" style={{display:'grid',alignContent:'start'}}>
-    <header className="app-page-header"><h1>Settings</h1><p>Make Coptic feel right for you.</p></header>
-    <section><h2 className="settings-section-title">APPEARANCE</h2><div className="settings-group">
+    <PageHeader title="Settings" description="Make Coptic feel right for you." icon="settings"/>
+    <section><h2 className="settings-section-title">Appearance</h2><div className="settings-group">
       <div className="settings-row" aria-label="Theme toggle"><label htmlFor="theme-choice">App theme</label><select id="theme-choice" aria-label="App theme" value={themeMode} onChange={e=>onToggleTheme(e.target.value as ThemeMode)}><option value="light">Light</option><option value="dark">Dark</option></select></div>
       <div className="settings-row"><label htmlFor="font-choice">Coptic font</label><select id="font-choice" value={fontMode} onChange={e=>onToggleFont(e.target.value as CopticFontMode)}><option value="unicode">Standard</option><option value="avva">Avva Shenouda</option></select></div>
     </div></section>
-    <section><h2 className="settings-section-title">LANGUAGE</h2><div className="settings-group"><div className="settings-row"><label htmlFor="bohairic-switch">Bohairic-only mode</label><input id="bohairic-switch" type="checkbox" role="switch" checked={bohairicOnlyEnabled} onChange={e=>onToggleBohairicOnlyEnabled(e.target.checked)}/></div></div><p className="settings-note">Use verified Bohairic entries and keep the translator in Bohairic.</p></section>
-    <section><h2 className="settings-section-title">DEVELOPER</h2><div className="settings-group"><div className="settings-row" aria-label="Developer tools toggle"><label htmlFor="developer-switch">Developer tools</label><input id="developer-switch" type="checkbox" role="switch" checked={devToolsEnabled} onChange={e=>onToggleDevTools(e.target.checked)}/></div></div>
+    <section><h2 className="settings-section-title">Language</h2><div className="settings-group"><div className="settings-row"><label htmlFor="bohairic-switch">Bohairic-only mode</label><input id="bohairic-switch" type="checkbox" className="ui-switch" role="switch" checked={bohairicOnlyEnabled} onChange={e=>onToggleBohairicOnlyEnabled(e.target.checked)}/></div></div><p className="settings-note">Use verified Bohairic entries and keep the translator in Bohairic.</p></section>
+    <section><h2 className="settings-section-title">Developer</h2><div className="settings-group"><div className="settings-row" aria-label="Developer tools toggle"><label htmlFor="developer-switch">Developer tools</label><input id="developer-switch" type="checkbox" className="ui-switch" role="switch" checked={devToolsEnabled} onChange={e=>onToggleDevTools(e.target.checked)}/></div></div>
         {devToolsEnabled ? (
           <div
             style={{
@@ -261,6 +262,6 @@ export default function SettingsPage() {
         ) : null}
 
     </section>
-    <section><h2 className="settings-section-title">COPTIC KEYBOARD</h2><div className="settings-group keyboard-resource"><span>Type with the iOS<br/>Coptic keyboard</span><a href={COPTIC_KEYBOARD_APP_STORE_URL} target="_blank" rel="noreferrer" aria-label="Download the Coptic Keyboard app on the App Store"><Image src="/download-on-the-app-store-badge.svg" alt="Download on the App Store" width={130} height={44}/></a></div><p className="settings-note">An optional system keyboard, available separately on the App Store.</p></section>
+    <section><h2 className="settings-section-title">Coptic keyboard</h2><div className="settings-group keyboard-resource"><span>Type with the iOS<br/>Coptic keyboard</span><a href={COPTIC_KEYBOARD_APP_STORE_URL} target="_blank" rel="noreferrer" aria-label="Download the Coptic Keyboard app on the App Store"><Image src="/download-on-the-app-store-badge.svg" alt="Download on the App Store" width={130} height={44}/></a></div><p className="settings-note">An optional system keyboard, available separately on the App Store.</p></section>
   </main>;
 }

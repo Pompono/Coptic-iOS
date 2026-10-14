@@ -1317,10 +1317,10 @@ function PairLettersLesson({ lesson, step }: { lesson: Lesson; step: UnitLessonS
             <h1
               style={{
                 fontSize: titleFontSize,
-                lineHeight: 1.08,
+                lineHeight: 1.2,
                 margin: 0,
                 color: LESSON_THEME.textPrimary,
-                fontWeight: 800,
+                fontWeight: 700,
                 letterSpacing: "-0.02em",
               }}
             >
@@ -1379,10 +1379,10 @@ function PairLettersLesson({ lesson, step }: { lesson: Lesson; step: UnitLessonS
           <h1
             style={{
               fontSize: titleFontSize,
-              lineHeight: 1.08,
+              lineHeight: 1.2,
               margin: 0,
                 color: LESSON_THEME.textPrimary,
-              fontWeight: 800,
+              fontWeight: 700,
               letterSpacing: "-0.02em",
             }}
           >
@@ -1695,6 +1695,7 @@ function PairLettersLesson({ lesson, step }: { lesson: Lesson; step: UnitLessonS
 
   return (
     <main
+      className="authored-exercise"
       onPointerDownCapture={() => warmLessonInteractionAudio(lesson.id, getExerciseAudioId(exercise))}
       style={{
         height: compactPhone ? "var(--page-content-height)" : "auto",
@@ -1737,6 +1738,12 @@ function PairLettersLesson({ lesson, step }: { lesson: Lesson; step: UnitLessonS
           </Link>
 
           <div
+            className="lesson-progress-track"
+            role="progressbar"
+            aria-label="Lesson progress"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(progress * 100)}
             style={{
               flex: 1,
               height: progressHeight,

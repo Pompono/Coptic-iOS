@@ -15,11 +15,11 @@ type DockItem = {
 };
 
 const DOCK_ITEMS: DockItem[] = [
- {id:'dictionary',label:'Dictionary',href:'/dictionary',icon:<AppIcon name="book" size={23}/>},
- {id:'learn',label:'Learn',href:'/learn',icon:<AppIcon name="learn" size={23}/>},
- {id:'home',label:'Home',href:'/',icon:<AppIcon name="home" size={23}/>},
- {id:'translator',label:'Translator',href:'/translator',icon:<AppIcon name="translate" size={23}/>},
- {id:'settings',label:'Settings',href:'/settings',icon:<AppIcon name="settings" size={23}/>},
+ {id:'dictionary',label:'Dictionary',href:'/dictionary',icon:<AppIcon name="book" size={28}/>},
+ {id:'learn',label:'Learn',href:'/learn',icon:<AppIcon name="learn" size={28}/>},
+ {id:'home',label:'Home',href:'/',icon:<AppIcon name="home" size={28}/>},
+ {id:'translator',label:'Translator',href:'/translator',icon:<AppIcon name="translate" size={28}/>},
+ {id:'settings',label:'Settings',href:'/settings',icon:<AppIcon name="settings" size={28}/>},
 ];
 
 function isItemActive(pathname: string, item: DockItem) {

@@ -324,17 +324,6 @@ button:disabled { cursor: default; }
 .app-page-header { margin-bottom: 28px; }
 .app-page-header h1 { font-size: 34px; font-weight: 800; letter-spacing: -.035em; line-height: 1.15; margin: 0 0 12px; }
 .app-page-header p { color: var(--text-muted); line-height: 1.6; }
-.home-page { padding-top: 36px; }
-.home-page h1 { font-size: 40px; }
-.home-destinations { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.home-destination { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px; border: 1px solid var(--border-color); border-radius: 18px; background: var(--surface-1); color: var(--text-color); text-decoration: none; transition: background-color 140ms ease; }
-.home-destination > span { min-width: 0; }
-.home-destination svg { flex-shrink: 0; }
-.home-destination-title { display: block; font-size: 17px; font-weight: 700; }
-.home-destination-description { display: block; font-size: 13px; line-height: 1.55; margin-top: 5px; color: var(--text-muted); }
-.home-destination--primary { grid-column: 1 / -1; color: var(--accent-contrast-color); background: var(--accent-color); border-color: var(--accent-color); }
-.home-destination--primary .home-destination-description { color: inherit; opacity: .85; }
-.home-destination:active { opacity: .85; }
 .desktop-settings { position: fixed; right: 20px; bottom: 20px; width: 48px; height: 48px; display: inline-flex; justify-content: center; align-items: center; border: 1px solid var(--border-color); border-radius: 50%; background: var(--panel-bg); }
 .settings-panel > div[aria-label] + div[aria-label] { border-top: 1px solid var(--border-color); padding-top: 20px; }
 .translator-page > h1 { font-size: clamp(28px, 6vw, 34px); font-weight: 750; line-height: 1.2; }
@@ -343,9 +332,6 @@ button:disabled { cursor: default; }
 :root[data-theme="dark"] .mobile-chin-dock__item.is-active { background: var(--accent-color); }
 @media (max-width: 430px) {
   .app-page { padding: 24px 20px 32px; }
-  .home-page { padding-top: 32px; }
-  .home-destinations { grid-template-columns: minmax(0, 1fr); }
-  .home-destination { padding: 17px 18px; }
   .translator-page > label select { display: block; margin-left: 0; }
 }
 @media (prefers-reduced-motion: reduce) {

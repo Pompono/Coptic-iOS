@@ -1,4 +1,5 @@
 "use client";
+import PageHeader from "@/app/PageHeader";
 import AppIcon from "@/app/AppIcon";
 import UnitMastery from "../learning/UnitMastery";
 
@@ -243,9 +244,7 @@ export default function UnitProgressClient({ focusLessonId = null }: { focusLess
   }, [hasLoadedProgress, targetLesson]);
 
   return <main className="unit-map-page app-page">
-    <header className="app-page-header course-header"><span className="eyebrow">YOUR LEARNING PATH</span><h1>Learn Coptic</h1><p>A clear path from your first letters to reading.</p>
-      <div className="course-resources"><Link href="/read/">Read Coptic</Link><Link href="/vocabulary/">Vocabulary & review</Link></div>
-    </header>
+    <PageHeader title="Learn Coptic" description="From your first letters to reading." icon="learn"><Link className="ui-secondary" href="/read/"><AppIcon name="reader"/>Read Coptic</Link><Link className="ui-secondary" href="/vocabulary/"><AppIcon name="review"/>Vocabulary & review</Link></PageHeader>
     <div className="course-map-shell">
       {visibleLessonStates.map(unitState => {
         const focused=unitState.lesson.id===targetLesson?.id;
@@ -253,8 +252,7 @@ export default function UnitProgressClient({ focusLessonId = null }: { focusLess
         const total=availableSteps.length;
         const complete=availableSteps.filter(step=>unitState.completedSet.has(step.id)).length;
         return <section key={unitState.lesson.id} ref={node=>{unitSectionRefs.current[unitState.lesson.id]=node;}} className={`course-unit-block ${focused?'is-focused':''} ${unitState.unitUnlocked?'':'is-locked'}`}>
-          <header className="unit-banner"><div className="eyebrow">{unitState.lesson.sectionTitle} · UNIT {unitState.lesson.unitNumber}</div>
-            <h2 className="unit-banner-title">{unitState.lesson.title.replace(/^Unit \d+: /,'')}</h2>
+          <header className="unit-banner"><h2 className="unit-banner-title">{unitState.lesson.title.replace(/^Unit \d+: /,'')}</h2><div className="unit-banner-subtitle">{unitState.lesson.sectionTitle} · Unit {unitState.lesson.unitNumber}</div>
             <div className="unit-progress-caption"><span>{unitState.isUnitFullyCompleted?'Completed':unitState.unitUnlocked?total>0&&complete===total?'Available practice complete':'In progress':'Upcoming'}</span><span>{total?`${complete} / ${total} lessons`:'Content coming soon'}</span></div>
             {total>0&&<progress className="unit-progress" value={complete} max={total} aria-label={`Unit ${unitState.lesson.unitNumber} completion`}/>}
             <UnitMastery unitId={unitState.lesson.id}/>
@@ -269,7 +267,7 @@ export default function UnitProgressClient({ focusLessonId = null }: { focusLess
               const current=group.id===unitState.currentGroupId;
               const action=completed?(group.reviewStep?'Review':'Replay lesson'):selection.hasCurrentLessonFailed?'Try Again':'Start';
               return <li key={group.id} className={`course-row ${current?'is-current':''} ${completed?'is-completed':''}`}>
-                <span className="course-row-marker" aria-hidden="true">{completed?<AppIcon name="check" size={18}/>:!unlocked?<AppIcon name="lock" size={15}/>:index+1}</span>
+                <span className="course-row-marker" aria-hidden="true">{completed?<AppIcon name="check" size={18}/>:!unlocked?<AppIcon name="lock" size={15}/>:current?<AppIcon name="cross" size={23}/>:index+1}</span>
                 <div className="course-row-content"><div className="course-row-status">{completed?'Completed':current?'Next lesson':unlocked?'Ready':'Locked'}</div><h3>{group.kind==='review'?`Unit ${unitState.lesson.unitNumber} review`:group.subtitle}</h3>
                   <p>{!actionStep?.exerciseSet?'In preparation':group.kind==='review'?group.subtitle:`Lesson ${selection.currentLessonNumber} of ${group.totalLessons}`}</p>
                   {actionStep?.exerciseSet&&<p className="course-row-summary">{actionStep.summary}</p>}

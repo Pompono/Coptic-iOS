@@ -1,4 +1,5 @@
 "use client";
+import PageHeader from "../PageHeader";
 
 import AppIcon from "../AppIcon";
 import Link from "@/lib/AppLink";
@@ -524,14 +525,13 @@ export default function TranslatorPage() {
           paddingBottom: isMobileViewport && showKeyboard ? "calc(24px + env(safe-area-inset-bottom, 0px))" : undefined,
         }}
       >
-        <header className="translation-header"><h1>Translator</h1><Link href="/translator/scanner/"><AppIcon name="scan"/>Scan a photo</Link></header>
-        <p>Coptic and English, side by side.</p>
+        <PageHeader title="Translator" description="Coptic and English, side by side." icon="translate"><Link className="ui-secondary" href="/translator/scanner/"><AppIcon name="scan"/>Scan a photo</Link></PageHeader>
         <div className="translation-options">
           {isCopticToEnglish&&localTranslationEnabled?<label>Translation method<select aria-label="Translation method" value={translationMethod} disabled={currentState==='loading'} onChange={event=>{setTranslationMethod(event.target.value as typeof translationMethod);setTranslationOutput('');setTranslationError('');setCopyStatus('');}}><option value="published">Published text</option><option value="experimental">Experimental AI draft</option></select></label>:<span>Translation</span>}
           <div><button type="button" onClick={handleDialectToggle} disabled={bohairicOnlyEnabled||currentState==='loading'} aria-label="Translator dialect" title={bohairicOnlyEnabled?'Locked by global Bohairic-only mode in Settings':'Change dialect'}>{bohairicOnlyEnabled?'Bohairic-only':dialectLabel}</button>{bohairicOnlyEnabled&&<small>Locked by Settings</small>}</div>
         </div>
         <section className="translation-input-panel" aria-label="Translation input">
-          <div className="translation-direction"><span>{isCopticToEnglish?'Coptic → English':'English → Coptic'}</span><button type="button" onClick={handleSwitchDirection} disabled={currentState==='loading'} aria-label="Switch translation direction"><AppIcon name="translate"/></button></div>
+          <div className="translation-direction"><span>{isCopticToEnglish?'Coptic → English':'English → Coptic'}</span><button type="button" onClick={handleSwitchDirection} disabled={currentState==='loading'} aria-label="Switch translation direction"><AppIcon name="return"/></button></div>
           <form className="translation-form" onSubmit={handleSubmit}>
             <textarea ref={inputRef} aria-label={isCopticToEnglish?'Coptic text':'English text'} disabled={currentState==='loading'} value={currentInput} onChange={event=>{setCopyStatus('');if(isCopticToEnglish)setTranslationInput(event.target.value);else setEnglishInput(event.target.value);}} onKeyDown={handleInputKeyDown} onPointerDownCapture={hideKeyboardOnManualInputFocus} placeholder={isCopticToEnglish?'Type Coptic text...':'Type English text...'} className={isCopticToEnglish?'coptic-text':''} autoCorrect="off" autoCapitalize="none" spellCheck={false}/>
             <button type="submit" className="ui-primary" disabled={currentState==='loading'}>{currentState==='loading'?'Translating…':'Translate'}{currentState!=='loading'&&<AppIcon name="arrow" size={18}/>}</button>
@@ -540,7 +540,7 @@ export default function TranslatorPage() {
         </section>
         {currentState==='error'&&<p role="alert" className="translation-error">{currentError}</p>}
         <section className="translation-result" aria-label="Translation result" aria-live="polite">
-          <div className="translation-result-header"><span>{isCopticToEnglish&&currentOutput?outputMethod==='published'?'Published translation · Coptic Corpora / Tasbeha':'Unverified AI draft':'TRANSLATION'}</span>
+          <div className="translation-result-header"><span>{isCopticToEnglish&&currentOutput?outputMethod==='published'?'Published translation · Coptic Corpora / Tasbeha':'Unverified AI draft':'Translation'}</span>
             {currentOutput&&<button type="button" aria-label="Copy translation" onClick={()=>{void copyText(currentOutput).then(()=>setCopyStatus('Copied')).catch(()=>setCopyStatus('Could not copy. Select the text to copy it.'));}}><AppIcon name="copy" size={16}/>{copyStatus==='Copied'?'Copied':'Copy'}</button>}</div>
           <p className={!isCopticToEnglish&&currentOutput?'coptic-text':!currentOutput?'text-[var(--text-muted)]':''}>{currentOutput||'Your translation will appear here.'}</p>
           {copyStatus&&<span role="status" className={copyStatus==='Copied'?'sr-only':'text-sm'}>{copyStatus}</span>}

@@ -26,7 +26,7 @@ export async function checkDarkTheme(page, base) {
   for (const route of ['/', '/learn/', '/dictionary/', '/translator/', '/read/', '/vocabulary/', '/settings/', '/translator/scanner/']) {
     await page.goto(base + route); await page.waitForLoadState('networkidle');
     const body = await colors(page.locator('body'));
-    assert.equal(body.background, 'rgb(16, 24, 32)', `${route}: app background stays dark`);
+    assert.equal(body.background, 'rgb(8, 12, 16)', `${route}: app background stays dark`);
     assert.ok(contrast(body.text, body.background) >= 4.5, `${route}: readable page text`);
     if (route === '/learn/') {
       const main = await colors(page.locator('main'));
@@ -41,8 +41,8 @@ export async function checkDarkTheme(page, base) {
     await startLesson(page);
     await page.getByRole('button', { name: 'Check', exact: true }).waitFor();
     const main = await colors(page.locator('main'));
-    assert.ok(main.gradient.includes('rgb(16, 24, 32)'), `${set}: lesson background is dark`);
-    assert.ok(contrast(main.text, 'rgb(16, 24, 32)') >= 4.5);
+    assert.ok(main.gradient.includes('rgb(8, 12, 16)'), `${set}: lesson background is dark`);
+    assert.ok(contrast(main.text, 'rgb(8, 12, 16)') >= 4.5);
     const disabled = await colors(page.getByRole('button', { name: 'Check', exact: true }));
     assert.ok(contrast(disabled.text, disabled.background) >= 4.5, 'Disabled action remains legible');
     if (set === exerciseSets[0]) {
@@ -71,7 +71,7 @@ export async function checkDarkTheme(page, base) {
       await finishTransfer(page,set);
       const outcome = page.locator('.lesson-outcome-screen');
       await outcome.waitFor();
-      assert.equal((await colors(outcome)).background, 'rgb(16, 24, 32)', 'Completion screen stays dark');
+      assert.equal((await colors(outcome)).background, 'rgb(8, 12, 16)', 'Completion screen stays dark');
     }
   }
   await page.goto(base + '/settings/'); await page.waitForLoadState('networkidle');

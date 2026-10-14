@@ -1,5 +1,7 @@
 "use client";
+import PageHeader, { PageBackLink } from "../../PageHeader";
 
+import AppIcon from "@/app/AppIcon";
 import Link from '@/lib/AppLink';
 import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent } from 'react';
 import { Capacitor } from '@capacitor/core';
@@ -205,17 +207,20 @@ export default function ScannerPage() {
   return (
     <main className={styles.page}>
       <div className={styles.shell}>
-        <Link href="/translator/" className={styles.back}>← Translator</Link>
-        <div className={styles.heading}><h1>Scan Coptic</h1><span className={styles.badge}>Experimental</span></div>
-        <p className={styles.muted}>Photograph printed Coptic, check the recognised text, then translate it over the image.</p>
-        <p className={styles.note}>Photos and recognised text stay on this device. Clear, upright text works best. Handwriting and old manuscripts may not read correctly.</p>
-
+        <PageBackLink href="/translator/">Translator</PageBackLink>
+        <PageHeader title="Scan Coptic" description="Capture, check, and translate printed Coptic." icon="scan"/>
+        <section className={styles.importPanel} aria-label="Import a photo">
+        {!image&&<div className={styles.importEmpty}><AppIcon name="scan" size={42}/><h2>Start with a photo</h2><p>Choose a clear page of printed Coptic.</p></div>}
         <div className={styles.actions}>
           <button className={styles.primary} disabled={!!busy} onClick={() => void openPhoto(CameraSource.Camera)}>Take photo</button>
           <button disabled={!!busy} onClick={() => void openPhoto(CameraSource.Photos)}>Choose photo</button>
           <input ref={cameraInput} type="file" accept="image/*" capture="environment" aria-label="Take a Coptic photo" className={styles.file} onChange={event => void importFile(event)} />
           <input ref={fileInput} type="file" accept="image/*" aria-label="Choose a Coptic photo" className={styles.file} onChange={event => void importFile(event)} />
         </div>
+
+        </section>
+        <p className={styles.note}>Photos and recognised text stay on this device.</p>
+        <details className={styles.tips}><summary>About photo recognition</summary><p><span className="ui-status">Experimental recognition</span></p><p>Clear, upright text works best. Handwriting and old manuscripts may not read correctly.</p></details>
 
         {image && <>
           <div className={styles.toolbar}>

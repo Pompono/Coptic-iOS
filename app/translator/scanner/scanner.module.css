@@ -46,27 +46,29 @@
 .reviewConfirmation { display: flex; align-items: flex-start; gap: 10px; margin: 14px 0; }
 .reviewConfirmation input { width: 20px; height: 20px; flex-shrink: 0; }
 
-/* Keep the existing workflow; give each part room and a clear selected state. */
-.shell { max-width: 900px; padding: 28px 24px 40px; }
-.heading h1 { font-size: clamp(28px, 6vw, 34px); font-weight: 750; }
-.shell button:not(.region) { min-height: 44px; font-weight: 600; }
-.note, .muted { line-height: 1.65; }
-.editor { padding: 20px; border-radius: 20px; }
-.editor h2 { margin-bottom: 12px; }
-.toolbar { gap: 12px; }
-.dialect { flex-wrap: wrap; }
-.dialect select { max-width: 100%; min-height: 44px; }
-.blockPicker { padding: 4px 0 10px; }
-.blockPicker button[aria-pressed=true] { background: var(--accent-color); color: var(--accent-contrast-color); }
-.output { margin-top: 16px; background: var(--surface-1); }
-.output h3 { font-weight: 650; }
-.markReview { background: var(--surface-1); }
-@media (max-width: 430px) {
-  .shell { padding: 24px 20px 32px; }
-  .editor { padding: 16px; }
-  .toolbar { align-items: flex-start; }
-}
 
-:global(:root[data-theme="dark"]) .changedBefore { background: #47271f; color: #ffd2c6; }
-:global(:root[data-theme="dark"]) .changedAfter { background: #203b28; color: #c4edce; }
-.shell{max-width:760px;padding:24px 20px 32px}.heading h1{font-size:1.9375rem;font-weight:700;letter-spacing:-.04em}.badge{border:0;border-radius:6px;background:var(--teal-surface);color:var(--teal);font-size:0.6875rem}.shell button:not(.region){font-weight:550;border-radius:12px}.editor{padding:18px;border-radius:16px;border:1px solid var(--border-color)}.editor h2{font-size:1.1875rem;letter-spacing:-.02em}.output{border:0;background:var(--teal-surface);padding:16px;border-radius:12px}.output p{font-size:1.125rem}.markReview{border:0;background:var(--surface-2);border-radius:12px}.bubble{box-shadow:0 2px 8px #0001;border-radius:8px}.note{font-size:0.8125rem}.blockPicker button{border-radius:10px}.error{border-color:var(--lesson-error-border);background:var(--lesson-error-bg)}
+/* Match the reader and translation utility rather than styling a separate app. */
+.shell { max-width:760px; padding:24px 20px 32px; }
+.shell button:not(.region) { min-height:44px; border:0; font-size:.9375rem; font-weight:500; border-radius:14px; box-shadow:var(--surface-shadow); }
+.note,.muted { line-height:1.5; }
+.editor { border:0; padding:20px; border-radius:20px; box-shadow:var(--surface-shadow); }
+.editor h2 { font-size:1.25rem; letter-spacing:-.025em; margin-bottom:12px; }
+.toolbar { gap:12px; }
+.dialect { flex-wrap:wrap; }.dialect select { max-width:100%; min-height:44px; }
+.blockPicker { padding:4px 0 10px; }
+.blockPicker button[aria-pressed=true] { background:var(--accent-color); color:var(--accent-contrast-color); }
+.output { margin-top:16px; border:0; background:var(--teal-surface); padding:16px; border-radius:14px; }.output h3 { font-size:.875rem; font-weight:600; }.output p { font-size:1.125rem; }
+.markReview { border:0; background:var(--surface-2); border-radius:14px; }
+.error { border:0; background:var(--lesson-error-bg); color:var(--lesson-choice-wrong-text); }
+:global(:root[data-theme="dark"]) .changedBefore { background:#47271f; color:#ffd2c6; }
+:global(:root[data-theme="dark"]) .changedAfter { background:#203b28; color:#c4edce; }
+
+.importPanel { padding:24px 20px; background:var(--surface-1); border-radius:20px; box-shadow:var(--surface-shadow); }
+.importEmpty { text-align:center; display:flex; flex-direction:column; align-items:center; gap:10px; color:var(--teal); padding:8px 0 20px; }
+.importEmpty h2 { font-size:1.25rem; font-weight:600; letter-spacing:-.025em; color:var(--text-color); }
+.importEmpty p { color:var(--text-muted); font-size:.9375rem; }
+.importPanel .actions { margin:0; justify-content:center; }
+.importPanel button:not(.primary) { background:var(--surface-2); box-shadow:none; }
+.tips { margin:8px 0 24px; color:var(--text-muted); font-size:.875rem; }
+.tips summary { min-height:44px; display:flex; align-items:center; color:var(--tint-color); cursor:pointer; }
+.tips p { margin:8px 0; line-height:1.5; }

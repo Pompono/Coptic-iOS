@@ -19,6 +19,22 @@ export async function checkDesign(browser,base){
   assert.match(await unit.getByRole('link',{name:'Review',exact:true}).getAttribute('href'),/group-1-review/,'Completed groups keep their review lesson');
   assert.match(await unit.getByRole('link',{name:'Start',exact:true}).getAttribute('href'),/lesson-6-a-ou-da/);
   assert.ok(await unit.getByText('Complete earlier lessons to unlock',{exact:true}).count()>0);
+  // Catch the inconsistent hierarchy and missing heritage artwork from the last revision.
+  const headings=[];
+  for(const route of ['/','/learn/','/dictionary/','/translator/','/settings/','/read/','/vocabulary/','/translator/scanner/']){
+   await page.goto(base+route);await page.waitForLoadState('networkidle');
+   const header=page.locator('.page-header');
+   assert.equal(await header.count(),1,route+' has one shared page header');
+   const layout=await header.evaluate(el=>{
+    const title=el.querySelector('h1'),subtitle=el.querySelector(':scope > p'),style=getComputedStyle(title);
+    return {font:style.fontSize,weight:style.fontWeight,line:style.lineHeight,subtitleBelow:subtitle.getBoundingClientRect().top>=title.getBoundingClientRect().bottom};
+   });
+   assert.ok(layout.subtitleBelow,route+' puts supporting text after the title');
+   headings.push({font:layout.font,weight:layout.weight,line:layout.line});
+   const art=page.locator('.mobile-chin-dock__item[aria-label="Translator"] .heritage-icon__art');
+   assert.match(await art.evaluate(el=>getComputedStyle(el).maskImage),/translate-tab-icon.svg/,'Coptic-letter translator artwork remains in the tab bar');
+  }
+  assert.ok(headings.every(style=>JSON.stringify(style)===JSON.stringify(headings[0])),'All main pages share title typography');
   await page.goto(base+'/read/');await page.waitForLoadState('networkidle');
   assert.ok(await page.getByRole('button',{name:/Look up/}).first().evaluate(el=>parseFloat(getComputedStyle(el).fontSize))>=30,'Passage buttons retain their Coptic type size');
   for(const theme of ['light','dark']){

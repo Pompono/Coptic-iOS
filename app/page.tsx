@@ -7,6 +7,7 @@ import {readVocabulary} from '@/lib/vocabulary/store';
 import {dueCards} from '@/lib/vocabulary/schedule.mjs';
 import {practicePassages} from '@/lib/reading/passages.mjs';
 import AppIcon from './AppIcon';
+import PageHeader from './PageHeader';
 
 export default function HomePage(){
  const [current,setCurrent]=useState({href:'/learn/',title:'Letters & sounds',step:'Begin your first lesson',completed:0,available:true}),[review,setReview]=useState({saved:0,due:0}),[reading,setReading]=useState('Explore a passage, one word at a time.');
@@ -27,16 +28,17 @@ export default function HomePage(){
   try{const saved=JSON.parse(localStorage.getItem('coptic-reader:v1')??'null');const passage=practicePassages.find(p=>p.id===saved?.passageId);if(passage)setReading(`Resume ${passage.title.toLowerCase()}.`);else if(saved?.passageId==='custom'&&saved.draft?.trim())setReading('Return to your saved passage.');}catch{}
  },[]);
  return <main className="app-page home-page">
-  <header className="home-header"><div><span className="eyebrow">READ · LEARN · REMEMBER</span><h1>Coptic</h1></div><span className="home-monogram coptic-text" aria-hidden="true">ⲁ</span></header>
+  <PageHeader title="Coptic" description="Read, learn, and remember." icon="cross"/>
   <section className="home-continue" aria-label="Your learning">
-   <div className="eyebrow">{current.available?'YOUR NEXT LESSON':'YOUR LEARNING PATH'}</div><h2>{current.title}</h2><p>{current.step}</p>
+   <div className="home-continue__top"><span>{current.available?'Your next lesson':'Your learning path'}</span><AppIcon name="learn" size={30}/></div><h2>{current.title}</h2><p>{current.step}</p>
    <Link href={current.href} className="ui-primary">{!current.available?'Explore the pathway':current.completed?'Continue learning':'Start learning'}<AppIcon name="arrow"/></Link>
    {current.completed>0&&<p className="home-progress">{current.completed} lessons completed on this device</p>}
   </section>
-  <Link href="/vocabulary/" className="home-review"><span className="home-tool-icon"><AppIcon name="review"/></span><span><strong>Vocabulary & review</strong><span>{review.due?`${review.due} words ready to review`:review.saved?`${review.saved} saved words · All caught up`:'Collect words as you read'}</span></span><AppIcon name="chevron" size={16}/></Link>
-  <section className="home-library"><div className="section-heading"><h2>Explore the language</h2></div>
-   <Link href="/read/" className="home-reader"><AppIcon name="book" size={26}/><span><strong>Read Coptic</strong><span>{reading}</span></span><AppIcon name="arrow"/></Link>
-   <div className="home-tools"><Link href="/dictionary/" className="home-tool"><AppIcon name="search"/><strong>Dictionary</strong><span>Find a word</span></Link><Link href="/translator/" className="home-tool"><AppIcon name="translate"/><strong>Translator</strong><span>Text & photos</span></Link></div>
+  <Link href="/vocabulary/" className="home-review"><span className="destination-icon is-review"><AppIcon name="review" size={25}/></span><span><strong>Vocabulary & review</strong><span>{review.due?`${review.due} words ready to review`:review.saved?`${review.saved} saved words · All caught up`:'Collect words as you read'}</span></span><AppIcon name="chevron" size={16}/></Link>
+  <section className="home-library"><div className="section-heading"><h2>Explore</h2></div><div className="home-destinations">
+   <Link href="/read/" className="home-destination"><span className="destination-icon is-reading"><AppIcon name="reader" size={28}/></span><span><strong>Read Coptic</strong><span>{reading}</span></span><AppIcon name="chevron" size={16}/></Link>
+   <Link href="/dictionary/" className="home-destination"><span className="destination-icon is-dictionary"><AppIcon name="book" size={28}/></span><span><strong>Dictionary</strong><span>Words, meanings & sources</span></span><AppIcon name="chevron" size={16}/></Link>
+   <Link href="/translator/" className="home-destination"><span className="destination-icon is-translator"><AppIcon name="translate" size={28}/></span><span><strong>Translator</strong><span>Translate text or a photo</span></span><AppIcon name="chevron" size={16}/></Link></div>
   </section>
   <Link href="/learn/" className="home-path-link">Browse the learning pathway<AppIcon name="arrow" size={16}/></Link>
  </main>;

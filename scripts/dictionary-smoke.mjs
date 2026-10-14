@@ -10,7 +10,7 @@ export async function checkDictionary(browser, base) {
   await context.route('**/*', route => route.request().url().startsWith(base + '/') ? route.continue() : route.abort());
   try {
     await page.goto(base + '/dictionary/');
-    await page.getByText(/shown.*total/).waitFor();
+    await page.getByText(/of [\d,]+ entries/).waitFor();
     const query = page.getByRole('textbox', { name: 'Dictionary search' });
     const cards = page.locator('a[href^="/dictionary/entry/"]');
     assert.equal(await page.locator('select, input[type=checkbox]').count(), 0);
@@ -18,13 +18,13 @@ export async function checkDictionary(browser, base) {
     assert.equal(await query.evaluate(el => getComputedStyle(el).outlineStyle), 'none');
     const settings = async (update) => {
       await page.getByRole('link', { name: 'Advanced dictionary settings', exact: true }).click();
-      await page.getByRole('heading', { name: 'Advanced dictionary settings', exact: true }).waitFor();
+      await page.getByRole('heading', { name: 'Dictionary settings', exact: true }).waitFor();
       await page.waitForLoadState('networkidle');
       assert.ok(await page.getByLabel('Part of speech', {exact:true}).locator('option').count() > 1, 'Parts of speech populate from the dictionary');
       assert.equal(await page.getByRole('alert').filter({hasText:'Parts of speech could not be loaded'}).count(), 0);
       await update();
       await page.getByRole('link', { name: 'Done', exact: true }).click();
-      await page.getByText(/shown.*total/).waitFor();
+      await page.getByText(/of [\d,]+ entries/).waitFor();
       await page.waitForLoadState('networkidle');
     };
     await settings(() => page.getByLabel('Search in', { exact: true }).selectOption('transliteration'));
@@ -77,7 +77,7 @@ export async function checkDictionary(browser, base) {
     await page.getByRole('alert').filter({ hasText: 'Failed to load dictionary files' }).waitFor();
     await page.unroute('**/bohairic_dictionary.json', fail);
     await page.getByRole('button', { name: 'Retry', exact: true }).click();
-    await page.getByText(/shown.*total/).waitFor();
+    await page.getByText(/of [\d,]+ entries/).waitFor();
     await page.getByRole('alert').filter({ hasText: 'Failed to load dictionary files' }).waitFor({ state: 'hidden' });
     await page.waitForLoadState('networkidle');
     assert.deepEqual(errors, []);

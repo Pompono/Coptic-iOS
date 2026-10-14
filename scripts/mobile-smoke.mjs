@@ -97,7 +97,7 @@ try {
       await page.waitForLoadState('networkidle');
       assert.ok(JSON.parse(await page.evaluate(key => localStorage.getItem(key), key)).includes('lesson-1-a-o-d'));
     }
-    if (route === '/dictionary/') await page.getByText(/shown.*total/).waitFor();
+    if (route === '/dictionary/') await page.getByText(/of [\d,]+ entries/).waitFor();
     if (route === '/settings/') {
       await page.getByRole('combobox', { name: 'App theme', exact: true }).selectOption('dark');
       await page.waitForLoadState('networkidle');

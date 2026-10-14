@@ -1,4 +1,5 @@
 "use client";
+import PageHeader, { PageBackLink } from "../PageHeader";
 import { useEffect, useMemo, useState } from 'react';
 import Link from '@/lib/AppLink';
 import { dueCards, gradeCard } from '@/lib/vocabulary/schedule.mjs';
@@ -53,14 +54,14 @@ export default function VocabularyPage() {
     } catch (failure) { setError(failure instanceof Error ? failure.message : 'Review could not be saved.'); }
   }
   return <main className={styles.shell}>
-    <Link href="/read/">← Read Coptic</Link><h1>Vocabulary & review</h1>
-    <p>Save words while reading or browsing the dictionary. Review them when they are due; difficult words return sooner.</p>
+    <PageBackLink href="/read/">Read Coptic</PageBackLink>
+    <PageHeader title="Vocabulary & review" description="Keep the words you’re learning fresh." icon="review"/>
     {error && <p className={styles.error} role="alert">{error}</p>}
     {!ready ? <p role="status">Loading saved words…</p> : <>
       <p className={styles.muted}>{cards.length} saved · {due.length} due · {reviewed} reviewed this session</p>
       {!cards.length && <div className={styles.panel}><h2>Start with a word</h2><p>Open a passage, tap a word, and save its dictionary meaning.</p><Link className={styles.link} href="/read/">Open the reader →</Link></div>}
       {current ? <section className={styles.panel} aria-label="Vocabulary review">
-        <div className={styles.actions}><button aria-pressed={mode === 'recall'} onClick={() => { setMode('recall'); setChoice(null); setRevealed(false); }}>Recall</button>
+        <div className={styles.segmented} role="group" aria-label="Review mode"><button aria-pressed={mode === 'recall'} onClick={() => { setMode('recall'); setChoice(null); setRevealed(false); }}>Recall</button>
           <button aria-pressed={mode === 'quiz'} disabled={choices.length < 2} onClick={() => { setMode('quiz'); setChoice(null); setRevealed(false); }}>Meaning quiz</button></div>
         <p className={styles.muted}>{current.dialect === 'bohairic' ? 'Bohairic' : 'Dialect not specified'} · {current.pos || 'Dictionary word'}{current.lapses > 0 ? ` · ${current.lapses} difficult reviews` : ''}</p>
         <h2 className={`${styles.word} coptic-text`}>{current.word}</h2>

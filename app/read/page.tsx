@@ -1,4 +1,5 @@
 "use client";
+import PageHeader, { PageBackLink } from "../PageHeader";
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from '@/lib/AppLink';
 import SaveWord from '@/app/SaveWord';
@@ -68,12 +69,10 @@ export default function ReaderPage() {
     </div>;
   }
   return <main className={styles.shell}>
-    <Link href="/">← Home</Link>
-    <h1>Read Coptic</h1>
-    <p>Tap a word to explore its meaning and forms. Save unfamiliar words, then practise them in your review queue.</p>
-    <div className={styles.actions}><Link className={styles.link} href="/vocabulary/">Vocabulary & review →</Link></div>
+    <PageBackLink href="/">Home</PageBackLink>
+    <PageHeader title="Read Coptic" description="Explore a passage, one word at a time." icon="reader"><Link className="ui-secondary" href="/vocabulary/">Vocabulary & review</Link></PageHeader>
     {error && <p role="alert" className={styles.error}>{error}</p>}
-    <div className={styles.actions}>{practicePassages.map(item => <button key={item.id} aria-pressed={passageId === item.id} onClick={() => {
+    <div className={styles.segmented} role="group" aria-label="Reading passage">{practicePassages.map(item => <button key={item.id} aria-pressed={passageId === item.id} onClick={() => {
       setPassageId(item.id); setText(item.text); setSelected(null); setShowMeaning(false); rememberPassage(item.id);
     }}>{item.title}</button>)}</div>
     <details><summary>Read your own passage</summary>
