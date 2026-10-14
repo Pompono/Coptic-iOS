@@ -78,7 +78,7 @@ export async function checkDarkTheme(page, base) {
   await page.getByRole('combobox', { name: 'App theme', exact: true }).selectOption('light');
   await page.goto(base + '/learn/'); await page.waitForLoadState('networkidle');
   const light = await colors(page.locator('main'));
-  assert.equal(light.background, 'rgb(248, 247, 243)', 'Switching back restores the warm-white palette');
+  assert.equal(light.background, 'rgb(244, 244, 242)', 'Switching back restores the grouped light palette');
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.reload(); await page.waitForLoadState('networkidle');
   assert.equal(await page.locator('.unit-banner').first().evaluate(node => getComputedStyle(node).opacity), '1', 'Reduced motion keeps pathway headings visible');
