@@ -39,6 +39,8 @@ export async function checkLearning(browser,base){
   assert.equal(Object.keys(progress.skills).length,3);
   assert.equal(await page.getByRole('navigation',{name:'Mobile navigation'}).count(),0);
   await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await page.waitForURL(`${base}/learn/${unit.id}/`);
+  await page.waitForLoadState('networkidle');
   // Put a learned item due; the next lesson brings it into the flow directly.
   await page.evaluate(()=>{const data=JSON.parse(localStorage.getItem('coptic-learning:v1'));const first=Object.values(data.skills)[0];first.dueAt=0;localStorage.setItem('coptic-learning:v1',JSON.stringify(data));});
   const next=unit.progressionGroups[0].lessons.find(s=>s.exerciseSet==='bohairic-names-and-phrases');
@@ -55,11 +57,14 @@ export async function checkLearning(browser,base){
   assert.ok(deck.cards.some(card=>card.word==='ⲡⲓⲣⲱⲙⲓ'&&card.lapses===1));
   await finishTransfer(page,next.exerciseSet,{newLesson:true});
   await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await page.waitForURL(`${base}/learn/${unit.id}/`);
   await page.getByLabel('Skill mastery').first().waitFor();
+  await page.waitForLoadState('networkidle');
   const checkpoint=unit.progressionGroups[0].lessons.find(s=>s.exerciseSet==='bohairic-first-reading-checkpoint');
   await page.goto(`${base}/learn/${unit.id}/play/${checkpoint.id}/`);
   await page.getByRole('heading',{name:'First reading checkpoint',exact:true}).waitFor();
   await finishTransfer(page,checkpoint.exerciseSet,{newLesson:true});
+  await page.waitForLoadState('networkidle');
   await page.screenshot({path:'/tmp/coptic-learning-complete.png',fullPage:true});
   // Replay slowly uses the same audio file at the requested speed.
   await page.addInitScript(()=>{window.__rates=[];const start=AudioBufferSourceNode.prototype.start;AudioBufferSourceNode.prototype.start=function(...args){window.__rates.push(this.playbackRate.value);return start.apply(this,args);};});
