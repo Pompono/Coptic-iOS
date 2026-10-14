@@ -18,6 +18,7 @@ export async function finishTransfer(page,set,{newLesson=false}={}){
  const count=checkpoint?items.length:newLesson?items.length*3:Math.min(3,items.length);
  for(let index=0;index<count;index++){
   const item=items[index%items.length],kind=checkpoint?index%3:newLesson?Math.floor(index/items.length)%3:2;
+  if(kind===2){await page.getByLabel('Your answer',{exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'Show a hint',exact:true}).count(),0,'Final typed recall has no hint');}
   if(kind===0){
    const joined=!item.word.includes(' '),words=joined?item.word.startsWith('ⲡⲓ')?['ⲡⲓ',item.word.slice(2)]:Array.from(item.word):item.word.split(' ');
    for(const word of words)await page.getByRole('group',{name:'Available phrase pieces',exact:true}).getByRole('button',{name:word,exact:true}).all().then(async buttons=>{ for(const button of buttons)if(await button.isEnabled()){await button.click();break;} });

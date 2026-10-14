@@ -40,3 +40,5 @@ Dictionary preferences remove the permanent lock and transliteration paragraphs.
 Three-option questions now use a single stack in every authored renderer, including listening questions. Retry context sits above the progress track without consuming a new content row. `lesson-layout-smoke.mjs` plays a real lesson with a deliberate mistake and checks stacked choices and retry geometry with 59-point top and 34-point bottom iPhone insets.
 
 The native experience bridge also pins WKWebView’s outer scroll offset while a lesson is open and restores scrolling on other pages. This handles iOS focus panning that can bypass a fixed HTML document; only inner lesson panes should scroll. The native startup check tests pinning an attempted parent offset and restoring page scrolling. Turtle replay is half speed, with checks that normal playback returns to 1×.
+
+Final typed recall and checkpoints have no hint button. Earlier guided building/gap practice and spaced review retain their help; checked-answer explanations remain available.

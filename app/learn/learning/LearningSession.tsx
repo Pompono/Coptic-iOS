@@ -153,7 +153,7 @@ function LearningPractice({ items, lesson, title, description, onDone, review = 
           {kind==='gap' && <div className={styles.bank}>{[...new Set([...gapParts,'ⲉ','ⲟ'])].filter(ch=>ch!==' ').map(ch=><button key={ch} className="coptic-text" disabled={result!=='idle'} onClick={()=>setAnswer(ch)}>{ch}</button>)}</div>}
         </>}
       {item.audio && <AudioReplay path={item.audio}/>}
-      {result==='idle' && <button className={styles.hint} onClick={()=>setHint(true)}>Show a hint</button>}
+      {(review||(teaching&&kind!=='recall')) && result==='idle' && <button className={styles.hint} onClick={()=>setHint(true)}>Show a hint</button>}
       {hint && result==='idle' && <p>{item.explanation}</p>}
       {result!=='idle' && <div role="status" className={styles.panel}><p>{result==='correct'?'Correct.':`Not quite. ${expected}`}</p><p>{item.explanation}</p></div>}
       {session.error && <p role="alert">{session.error}</p>}
