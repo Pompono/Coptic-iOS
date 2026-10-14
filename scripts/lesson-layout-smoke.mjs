@@ -31,7 +31,7 @@ export async function checkLessonLayouts(browser,base){
    const answer=i<questions.length&&q.id===retry.id?q.choices.find(c=>c!==q.answer):q.answer;
    await page.getByRole('button',{name:answer,exact:true}).click();await page.getByRole('button',{name:'Check',exact:true}).click();
    await page.getByRole('button',{name:'Continue',exact:true}).waitFor();
-   if(q.choices.length===3)assert.ok(await choicesVisible(page),'Three choices remain visible with correct/incorrect feedback');
+   if(q.choices.length===3){await page.waitForTimeout(200);const fit=await choicesVisible(page);if(!fit){console.log('Feedback question',q.id);console.log(await page.locator('.lesson-option-button').evaluateAll(els=>els.map(el=>({text:el.textContent,box:el.getBoundingClientRect().toJSON(),parent:el.parentElement.getBoundingClientRect().toJSON()}))));await page.screenshot({path:'/tmp/coptic-feedback-failure.png'});}assert.ok(fit,'Three choices remain visible with correct/incorrect feedback');}
    await page.getByRole('button',{name:'Continue',exact:true}).click();
   }
   console.log('PASS: three-choice listening/sound stacks and real mistake-retry layouts with iPhone safe areas.');
