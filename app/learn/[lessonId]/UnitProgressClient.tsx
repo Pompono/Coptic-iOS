@@ -833,7 +833,8 @@ export default function UnitProgressClient({ focusLessonId = null }: { focusLess
         const bounds = banner.getBoundingClientRect();
         if (bounds.top >= topInset && bounds.bottom <= window.innerHeight - bottomInset) return;
         const start = window.scrollY;
-        const target = Math.max(0, bounds.top + start - topInset);
+        // The banner fades upward on entry; measure its stable section, not its animated transform.
+        const target = Math.max(0, targetNode.getBoundingClientRect().top + start - topInset);
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
           window.scrollTo({ top: target, behavior: "instant" }); return;
         }
@@ -1496,6 +1497,7 @@ export default function UnitProgressClient({ focusLessonId = null }: { focusLess
         }
 
         @media (prefers-reduced-motion: reduce) {
+          .map-top-row, .unit-banner, .group-block { opacity: 1; }
           .group-island-shell.is-current::before,
           .group-segmented-ring.is-pulsing,
           .group-popup,

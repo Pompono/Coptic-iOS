@@ -75,5 +75,10 @@ export async function checkDarkTheme(page, base) {
   await page.goto(base + '/learn/'); await page.waitForLoadState('networkidle');
   const light = await colors(page.locator('main'));
   assert.ok(light.gradient.includes('rgb(222, 217, 201)'), 'Switching back restores the existing light pathway colors');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.reload(); await page.waitForLoadState('networkidle');
+  assert.equal(await page.locator('.unit-banner').first().evaluate(node => getComputedStyle(node).opacity), '1', 'Reduced motion keeps pathway headings visible');
+  assert.equal(await page.locator('.group-block').first().evaluate(node => getComputedStyle(node).opacity), '1', 'Reduced motion keeps lesson nodes visible');
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
   console.log('PASS: dark-mode continuity across app pages and all three lesson renderers, readable answer states, and restoration of light mode.');
 }

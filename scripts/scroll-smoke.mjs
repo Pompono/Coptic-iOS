@@ -35,7 +35,7 @@ export async function checkScrollBounds(page, base) {
   assert.ok(finalY > 100, 'An off-screen in-progress unit is brought into view');
   assert.ok(positions.some(y => y > 0 && y < finalY - 10), 'The move is animated rather than a jump');
   const banner = await page.locator('.course-unit-block.is-focused .unit-banner').boundingBox();
-  assert.ok(banner.y >= 20 && banner.y <= 100, 'The complete unit heading has breathing room above it');
+  assert.ok(banner.y >= 20 && banner.y <= 100, 'The complete unit heading has breathing room above it: ' + JSON.stringify({ banner, finalY }));
   await page.evaluate(({ key, value }) => value === null ? localStorage.removeItem(key) : localStorage.setItem(key, value), { key: progressKey, value: previousProgress });
   await page.goto(base + '/settings/'); await page.waitForLoadState('networkidle');
   await page.evaluate(() => scrollTo(0, 100000));
