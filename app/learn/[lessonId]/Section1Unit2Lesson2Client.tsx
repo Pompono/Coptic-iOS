@@ -1,5 +1,7 @@
 "use client";
 
+import { LESSON_THEME } from "@/lib/lessonTheme";
+
 import Image from "next/image";
 import Link from "@/lib/AppLink";
 import { useRouter } from "next/navigation";
@@ -75,45 +77,7 @@ const COPTIC = {
 
 const SUCCESS_MESSAGES = ["Awesome!", "Excellent!", "Nice!", "Well done!", "Perfect!"] as const;
 
-const LESSON_THEME = {
-  bgTop: "#ded9c9",
-  bgBottom: "#d6d1c0",
-  textPrimary: "#2b4160",
-  textSecondary: "rgba(43, 65, 96, 0.76)",
-  progressTrack: "rgba(43, 65, 96, 0.16)",
-  progressStart: "#687e9d",
-  progressEnd: "#2b4160",
-  cardTop: "#cfd9e6",
-  cardBottom: "#bbc9dc",
-  cardInset: "rgba(94, 113, 136, 0.46)",
-  cardText: "#2b4160",
-  choiceBorder: "rgba(43, 65, 96, 0.16)",
-  choiceBg: "rgba(255, 255, 255, 0.34)",
-  choiceSelectedBorder: "#6d84a3",
-  choiceSelectedBg: "rgba(92, 112, 139, 0.14)",
-  choiceSelectedText: "#2b4160",
-  choiceCorrectBorder: "#7d8f62",
-  choiceCorrectBg: "rgba(125, 143, 98, 0.12)",
-  choiceCorrectText: "#3f5632",
-  choiceWrongBorder: "#b57b74",
-  choiceWrongBg: "rgba(137, 72, 66, 0.16)",
-  choiceWrongText: "#7b4a45",
-  actionBg: "#2b4160",
-  actionInset: "#1f3148",
-  actionText: "#dcd8c8",
-  actionDisabledBg: "rgba(93, 107, 123, 0.48)",
-  actionDisabledText: "rgba(226, 236, 245, 0.32)",
-  successBg: "rgba(95, 121, 72, 0.18)",
-  successBorder: "rgba(125, 151, 96, 0.3)",
-  errorBg: "rgba(126, 73, 68, 0.18)",
-  errorBorder: "rgba(181, 123, 116, 0.28)",
-  inputBg: "rgba(255, 255, 255, 0.4)",
-  inputBorder: "rgba(43, 65, 96, 0.18)",
-  badgeBg: "rgba(132, 98, 168, 0.12)",
-  badgeText: "#735391",
-  wordBankBorder: "rgba(43, 65, 96, 0.14)",
-  wordBankBg: "rgba(255, 255, 255, 0.26)",
-} as const;
+
 
 const QUESTIONS: LessonQuestion[] = [
   {
@@ -533,18 +497,18 @@ function LessonOutcomeCelebration({
         .lesson-outcome-ring {
           position: absolute;
           border-radius: 999px;
-          border: 2px solid ${outcomeRingBorder};
+          border: 2px solid var(--lesson-outcome-ring-border, ${outcomeRingBorder});
         }
 
         .lesson-outcome-ring-outer {
           inset: 0;
-          background: ${outcomeOuterBackground};
+          background: var(--lesson-outcome-outer, ${outcomeOuterBackground});
           box-shadow: 0 18px 36px rgba(43, 65, 96, 0.1);
         }
 
         .lesson-outcome-ring-inner {
           inset: 14px;
-          border: 10px solid ${outcomeInnerBorder};
+          border: 10px solid var(--lesson-outcome-inner-border, ${outcomeInnerBorder});
         }
 
         .lesson-outcome-core {
@@ -570,7 +534,7 @@ function LessonOutcomeCelebration({
           font-weight: 800;
           letter-spacing: 0.18em;
           text-transform: uppercase;
-          color: ${outcomeKickerColor};
+          color: var(--lesson-outcome-muted, ${outcomeKickerColor});
         }
 
         .lesson-outcome-message {
@@ -588,7 +552,7 @@ function LessonOutcomeCelebration({
           margin: -2px 0 0;
           font-size: 16px;
           line-height: 1.5;
-          color: ${outcomeSubtitleColor};
+          color: var(--lesson-outcome-muted, ${outcomeSubtitleColor});
           text-align: center;
           animation: lesson-outcome-subtitle-rise 1900ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
         }

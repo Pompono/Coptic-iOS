@@ -13,13 +13,13 @@
 .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; }
 .toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
 .file { display: none; }
-.photo { position: relative; overflow: hidden; border-radius: 16px; border: 1px solid var(--border-color); background: #ece7df; }
+.photo { position: relative; overflow: hidden; border-radius: 16px; border: 1px solid var(--border-color); background: var(--surface-2); }
 .photo img { display: block; width: 100%; height: auto; user-select: none; }
 .photo button.region { position: absolute; border: 1px solid #527a86; border-radius: 4px; padding: 0; background: rgba(60, 145, 155, .08); opacity: 1; text-align: left; }
 .photo button.region.selected { border: 2px solid #025c79; box-shadow: 0 0 0 2px rgba(255,255,255,.85); z-index: 2; }
 .marker { display: inline-flex; position: absolute; left: 0; top: 0; padding: 2px 7px; border-radius: 3px; background: #025c79; color: white; font-size: 12px; line-height: 18px; }
-.photo button.translated { color: #242020; }
-.bubble { position: absolute; left: 0; top: 0; width: max-content; min-width: 110px; max-width: min(240px, 65vw); padding: 6px 9px; background: #fff3e4; border: 1px solid #b3a696; border-radius: 6px; box-shadow: 0 2px 6px #0002; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-family: system-ui, sans-serif; font-size: 13px; line-height: 1.4; }
+.photo button.translated { color: var(--text-color); }
+.bubble { position: absolute; left: 0; top: 0; width: max-content; min-width: 110px; max-width: min(240px, 65vw); padding: 6px 9px; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 6px; box-shadow: 0 2px 6px #0002; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-family: system-ui, sans-serif; font-size: 13px; line-height: 1.4; }
 .cropping { touch-action: none; cursor: crosshair; }
 .cropBox { position: absolute; pointer-events: none; border: 2px solid #fff; box-shadow: 0 0 0 9999px rgba(0,0,0,.45); }
 .status { font-size: 14px; margin-top: 14px; min-height: 20px; color: var(--text-muted); }
@@ -66,3 +66,6 @@
   .editor { padding: 16px; }
   .toolbar { align-items: flex-start; }
 }
+
+:global(:root[data-theme="dark"]) .changedBefore { background: #47271f; color: #ffd2c6; }
+:global(:root[data-theme="dark"]) .changedAfter { background: #203b28; color: #c4edce; }

@@ -5,6 +5,7 @@ import path from 'node:path';
 import { readFile, access, stat } from 'node:fs/promises';
 import { checkScanner } from './scanner/smoke.mjs';
 import { checkReading } from './reading-smoke.mjs';
+import { checkDarkTheme } from './dark-theme-smoke.mjs';
 import { checkKeyboardPrompt } from './keyboard-prompt-smoke.mjs';
 import { checkScrollBounds } from './scroll-smoke.mjs';
 
@@ -168,6 +169,7 @@ try {
   // Warm asset caches made async startup race HTML parsing intermittently.
   await checkReading(page, base);
   await checkScrollBounds(page, base);
+  await checkDarkTheme(page, base);
   // Exercise full document startup on the routes that exposed that race.
   for (let pass = 0; pass < 4; pass++) {
     for (const route of ['/learn/', unit, '/dictionary/entry/?lemma=%E2%B2%81']) {

@@ -33,17 +33,17 @@ const bannerPalette = [
 ];
 
 const LEARN_THEME = {
-  bgTop: "#ded9c9",
-  bgBottom: "#d6d1c0",
-  textPrimary: "#2b4160",
-  activeRing: "#5e7594",
-  activeIslandTop: "#425b7d",
-  activeIslandBottom: "#2b4160",
-  popupTop: "#425b7d",
-  popupBottom: "#2b4160",
-  popupButtonTop: "#ebe6da",
-  popupButtonBottom: "#ddd6c6",
-  popupButtonText: "#2b4160",
+  bgTop: "var(--lesson-bg-top)",
+  bgBottom: "var(--lesson-bg-bottom)",
+  textPrimary: "var(--text-color)",
+  activeRing: "var(--path-active-ring, #5e7594)",
+  activeIslandTop: "var(--path-bubble-active-top, #425b7d)",
+  activeIslandBottom: "var(--path-bubble-active-bottom, #2b4160)",
+  popupTop: "var(--path-popup-top, #425b7d)",
+  popupBottom: "var(--path-popup-bottom, #2b4160)",
+  popupButtonTop: "var(--path-popup-button-top, #ebe6da)",
+  popupButtonBottom: "var(--path-popup-button-bottom, #ddd6c6)",
+  popupButtonText: "var(--path-popup-button-text, #2b4160)",
 };
 
 function getPlayableSteps(lessonId: string) {

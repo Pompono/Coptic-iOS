@@ -16,11 +16,11 @@ type GroupSelection = {
 };
 
 const UNIT_SURFACE = {
-  bgTop: "#ded9c9",
-  bgBottom: "#d6d1c0",
-  textPrimary: "#2b4160",
-  textSecondary: "rgba(43, 65, 96, 0.82)",
-  textSoft: "rgba(43, 65, 96, 0.62)",
+  bgTop: "var(--lesson-bg-top)",
+  bgBottom: "var(--lesson-bg-bottom)",
+  textPrimary: "var(--text-color)",
+  textSecondary: "var(--text-muted)",
+  textSoft: "var(--text-soft)",
 };
 
 type UnitPathTheme = {
@@ -86,22 +86,23 @@ function getUnitPathTheme(lesson: Pick<Lesson, "sectionId" | "unitNumber"> | nul
 }
 
 function getUnitThemeVars(theme: UnitPathTheme): CSSProperties {
+  const palette = theme === SECTION_1_UNIT_2_PATH_THEME ? "path-purple" : "path";
   return {
-    ["--unit-banner-top" as string]: theme.bannerTop,
-    ["--unit-banner-bottom" as string]: theme.bannerBottom,
-    ["--unit-active-ring" as string]: theme.activeRing,
-    ["--unit-active-ring-rgb" as string]: theme.activeRingRgb,
-    ["--unit-inactive-ring" as string]: theme.inactiveRing,
-    ["--unit-bubble-active-top" as string]: theme.bubbleActiveTop,
-    ["--unit-bubble-active-bottom" as string]: theme.bubbleActiveBottom,
-    ["--unit-bubble-complete-top" as string]: theme.bubbleCompleteTop,
-    ["--unit-bubble-complete-bottom" as string]: theme.bubbleCompleteBottom,
-    ["--unit-popup-top" as string]: theme.popupTop,
-    ["--unit-popup-bottom" as string]: theme.popupBottom,
-    ["--unit-popup-text" as string]: theme.popupText,
-    ["--unit-popup-button-top" as string]: theme.popupButtonTop,
-    ["--unit-popup-button-bottom" as string]: theme.popupButtonBottom,
-    ["--unit-popup-button-text" as string]: theme.popupButtonText,
+    ["--unit-banner-top" as string]: `var(--${palette}-banner-top, ${theme.bannerTop})`,
+    ["--unit-banner-bottom" as string]: `var(--${palette}-banner-bottom, ${theme.bannerBottom})`,
+    ["--unit-active-ring" as string]: `var(--${palette}-active-ring, ${theme.activeRing})`,
+    ["--unit-active-ring-rgb" as string]: `var(--${palette}-active-ring-rgb, ${theme.activeRingRgb})`,
+    ["--unit-inactive-ring" as string]: `var(--${palette}-inactive-ring, ${theme.inactiveRing})`,
+    ["--unit-bubble-active-top" as string]: `var(--${palette}-bubble-active-top, ${theme.bubbleActiveTop})`,
+    ["--unit-bubble-active-bottom" as string]: `var(--${palette}-bubble-active-bottom, ${theme.bubbleActiveBottom})`,
+    ["--unit-bubble-complete-top" as string]: `var(--${palette}-bubble-complete-top, ${theme.bubbleCompleteTop})`,
+    ["--unit-bubble-complete-bottom" as string]: `var(--${palette}-bubble-complete-bottom, ${theme.bubbleCompleteBottom})`,
+    ["--unit-popup-top" as string]: `var(--${palette}-popup-top, ${theme.popupTop})`,
+    ["--unit-popup-bottom" as string]: `var(--${palette}-popup-bottom, ${theme.popupBottom})`,
+    ["--unit-popup-text" as string]: `var(--${palette}-popup-text, ${theme.popupText})`,
+    ["--unit-popup-button-top" as string]: `var(--${palette}-popup-button-top, ${theme.popupButtonTop})`,
+    ["--unit-popup-button-bottom" as string]: `var(--${palette}-popup-button-bottom, ${theme.popupButtonBottom})`,
+    ["--unit-popup-button-text" as string]: `var(--${palette}-popup-button-text, ${theme.popupButtonText})`,
   } as CSSProperties;
 }
 
@@ -993,8 +994,8 @@ export default function UnitProgressClient({ focusLessonId = null }: { focusLess
           border-radius: 999px;
           text-decoration: none;
           color: ${UNIT_SURFACE.textPrimary};
-          border: 1px solid rgba(43, 65, 96, 0.24);
-          background: rgba(255, 255, 255, 0.18);
+          border: 1px solid var(--border-color);
+          background: var(--surface-1);
           font-size: 16px;
           font-weight: 500;
         }
@@ -1074,7 +1075,7 @@ export default function UnitProgressClient({ focusLessonId = null }: { focusLess
           margin-bottom: 10px;
           padding: 6px 12px;
           border-radius: 999px;
-          background: rgba(255, 255, 255, 0.18);
+          background: var(--surface-1);
           font-size: 12px;
           font-weight: 900;
           letter-spacing: 0.6px;
