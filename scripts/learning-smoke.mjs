@@ -24,8 +24,10 @@ export async function finishTransfer(page,set,{newLesson=false}={}){
    for(const word of words)await page.getByRole('group',{name:'Available phrase pieces',exact:true}).getByRole('button',{name:word,exact:true}).all().then(async buttons=>{ for(const button of buttons)if(await button.isEnabled()){await button.click();break;} });
   }else if(kind===1){const chars=Array.from(item.word);await page.getByLabel('Missing letter',{exact:true}).fill(chars[Math.max(0,chars.length-2)]);}
   else await page.getByLabel('Your answer',{exact:true}).fill(item.meaning.replace(/^Sound: /,''));
+  await page.evaluate(()=>{window.__transferSound=false;window.addEventListener('coptic-audio-played',()=>window.__transferSound=true,{once:true});});
   await page.getByRole('button',{name:'Check',exact:true}).click();
   await page.getByRole('status').filter({hasText:'Correct.'}).waitFor();
+  await page.waitForFunction(()=>window.__transferSound);
   await page.getByRole('button',{name:'Continue',exact:true}).click();
  }
  await page.getByRole('heading',{name:'Lesson complete',exact:true}).waitFor();
@@ -57,9 +59,15 @@ export async function checkLearning(browser,base){
   await page.goto(`${base}/learn/${unit.id}/play/${next.id}/`);
   await startLesson(page);
   await page.getByRole('heading',{name:'A quick recall',exact:true}).waitFor();
+  await page.evaluate(()=>{const shell=document.querySelector('.mobile-chin-page-shell');shell.style.paddingTop='59px';shell.style.setProperty('--page-content-height','calc(var(--interactive-viewport-height, 100svh) - 59px)');});
   await page.getByLabel('Your answer',{exact:true}).fill('wrong');
   await page.evaluate(()=>{Object.defineProperty(window.visualViewport,'height',{configurable:true,get:()=>400});window.visualViewport.dispatchEvent(new Event('resize'));});
   await page.waitForFunction(()=>document.querySelector('.mobile-chin-page-shell').dataset.keyboard==='true');
+  for(const target of [page.getByRole('link',{name:'Close lesson',exact:true}),page.getByRole('heading',{name:'A quick recall',exact:true}),page.locator('[role="group"][aria-label="Recording playback"]'),page.locator('p.coptic-text'),page.getByLabel('Your answer',{exact:true})]){
+   await page.waitForFunction(()=>document.querySelector('.mobile-chin-page-shell').dataset.keyboard==='true');
+   const box=await target.boundingBox();
+   assert.ok(box&&box.y>=59&&box.y+box.height<=400,'Header, prompt, playback and answer all fit above the keyboard with the iPhone top inset');
+  }
   const keyboardAction=await page.getByRole('button',{name:'Check',exact:true}).boundingBox();
   assert.ok(keyboardAction.y+keyboardAction.height<=400,'Lesson actions stay above the system keyboard');
   await page.waitForFunction(()=>{const field=document.querySelector('input[aria-label="Your answer"]'),pane=field.closest('[data-lesson-scroll]');const a=field.getBoundingClientRect(),b=pane.getBoundingClientRect();return a.top>=b.top&&a.bottom<=b.bottom;});
@@ -67,12 +75,15 @@ export async function checkLearning(browser,base){
   await page.evaluate(()=>window.scrollTo(0,100000));
   assert.equal(await page.evaluate(()=>scrollY),0,'An exercise cannot scroll its action into the status bar');
 
-  await page.evaluate(()=>{delete window.visualViewport.height;window.visualViewport.dispatchEvent(new Event('resize'));});
+  await page.evaluate(()=>{delete window.visualViewport.height;const shell=document.querySelector('.mobile-chin-page-shell');shell.style.paddingTop='';shell.style.removeProperty('--page-content-height');window.visualViewport.dispatchEvent(new Event('resize'));});
+  await page.evaluate(()=>{window.__feedbackPlayed=0;window.addEventListener('coptic-audio-played',()=>window.__feedbackPlayed++);});
   await page.getByRole('button',{name:'Check',exact:true}).click();
   await page.getByRole('status').filter({hasText:'Not quite.'}).waitFor();
+  await page.waitForFunction(()=>window.__feedbackPlayed===1);
   await page.getByRole('button',{name:'Try again',exact:true}).click();
   await page.getByLabel('Your answer',{exact:true}).fill('the man');await page.getByRole('button',{name:'Check',exact:true}).click();
   await page.getByRole('status').filter({hasText:'Correct.'}).waitFor();
+  await page.waitForFunction(()=>window.__feedbackPlayed===2);
   await page.getByRole('button',{name:'Continue',exact:true}).click();
   await page.getByRole('heading',{name:'Names together',exact:true}).waitFor();
   const deck=await page.evaluate(()=>JSON.parse(localStorage.getItem('coptic-vocabulary:v1')));

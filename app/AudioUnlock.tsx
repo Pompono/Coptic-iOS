@@ -1,9 +1,12 @@
 "use client";
 
+import {usePathname} from 'next/navigation';
 import { useEffect, useState } from "react";
 import { audioService } from "@/lib/audioService";
 
 export default function AudioUnlock() {
+  const pathname=usePathname();
+  useEffect(()=>()=>audioService.stopAll(),[pathname]);
   const [audioError, setAudioError] = useState("");
   useEffect(() => {
     const onFailure = (event: Event) => setAudioError((event as CustomEvent<string>).detail);

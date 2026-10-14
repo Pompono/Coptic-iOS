@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import {loadTsModule} from '../tests/tsModule.mjs';
-import {startLesson} from './learning-smoke.mjs';
+import {startLesson,finishTransfer} from './learning-smoke.mjs';
 const {lessons}=await loadTsModule('lib/lesson.ts');
 const {LESSON_EXERCISE_SETS}=await loadTsModule('lib/learning/letterExercises.ts');
 const choicesVisible=page=>page.evaluate(()=>[...document.querySelectorAll('.lesson-option-button')].every(el=>{const a=el.getBoundingClientRect();let p=el.parentElement;while(p&&p.tagName!=='MAIN'){if(['auto','hidden','scroll'].includes(getComputedStyle(p).overflowY)){const b=p.getBoundingClientRect();if(a.top<b.top-1||a.bottom>b.bottom+1)return false;}p=p.parentElement;}return true;}));
 export async function checkLessonLayouts(browser,base){
  const context=await browser.newContext({viewport:{width:393,height:852}}),page=await context.newPage();
  try{
+  await page.addInitScript(()=>{window.__audioStops=0;const stop=AudioBufferSourceNode.prototype.stop;AudioBufferSourceNode.prototype.stop=function(...args){window.__audioStops++;return stop.apply(this,args);};});
   const unit=lessons[0],step=unit.progressionGroups.flatMap(g=>g.lessons).find(s=>{
    const list=LESSON_EXERCISE_SETS[s.exerciseSet];return list&&list.every(q=>q.kind!=='matching-pairs')&&list.some(q=>q.kind==='hear-and-choose'&&q.choices.length===3);
   });
@@ -32,8 +33,11 @@ export async function checkLessonLayouts(browser,base){
    await page.getByRole('button',{name:answer,exact:true}).click();await page.getByRole('button',{name:'Check',exact:true}).click();
    await page.getByRole('button',{name:'Continue',exact:true}).waitFor();
    if(q.choices.length===3){await page.waitForTimeout(200);const fit=await choicesVisible(page);if(!fit){console.log('Feedback question',q.id);console.log(await page.locator('.lesson-option-button').evaluateAll(els=>els.map(el=>({text:el.textContent,box:el.getBoundingClientRect().toJSON(),parent:el.parentElement.getBoundingClientRect().toJSON()}))));await page.screenshot({path:'/tmp/coptic-feedback-failure.png'});}assert.ok(fit,'Three choices remain visible with correct/incorrect feedback');}
+   const stopsBefore=await page.evaluate(()=>window.__audioStops);
    await page.getByRole('button',{name:'Continue',exact:true}).click();
+   if(i===queue.length-1){await page.getByRole('heading',{name:'Put it together',exact:true}).waitFor();assert.equal(await page.evaluate(()=>window.__audioStops),stopsBefore,'The final answer sound is not stopped by the transfer transition');}
   }
+  await finishTransfer(page,step.exerciseSet);
   console.log('PASS: three-choice listening/sound stacks and real mistake-retry layouts with iPhone safe areas.');
  }finally{await context.close();}
 }

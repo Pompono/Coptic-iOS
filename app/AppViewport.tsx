@@ -1,4 +1,6 @@
 "use client";
+import {Keyboard} from '@capacitor/keyboard';
+import {Capacitor,type PluginListenerHandle} from '@capacitor/core';
 import {setNativeExerciseMode} from "@/lib/nativeExperience";
 import {usePathname} from 'next/navigation';
 import {useEffect,useLayoutEffect,useRef,useState,type ReactNode} from 'react';
@@ -15,13 +17,15 @@ export default function AppViewport({children}:{children:ReactNode}){
  useEffect(()=>{
   const viewport=window.visualViewport;
   if(!viewport)return;
-  let restingHeight=window.innerHeight,frame=0,settledFrame=0;
+  let restingHeight=window.innerHeight,frame=0,settledFrame=0,nativeKeyboardHeight=0,disposed=false;
+  const listeners:PluginListenerHandle[]=[];
   const update=()=>{
    const active=document.activeElement;
    const editing=active instanceof HTMLTextAreaElement||(active instanceof HTMLInputElement&&!['checkbox','radio','button'].includes(active.type));
    if(!editing)restingHeight=window.innerHeight;
-   const open=editing&&Math.max(restingHeight,window.innerHeight)-viewport.height>120&&viewport.scale<=1.05;
-   shell.current?.style.setProperty('--interactive-viewport-height',`${viewport.height}px`);
+   const visibleHeight=Math.min(viewport.height,window.innerHeight-nativeKeyboardHeight);
+   const open=editing&&Math.max(restingHeight,window.innerHeight)-visibleHeight>120&&viewport.scale<=1.05;
+   shell.current?.style.setProperty('--interactive-viewport-height',`${visibleHeight}px`);
    setKeyboardOpen(open);
    cancelAnimationFrame(frame);cancelAnimationFrame(settledFrame);
    // Wait for the keyboard-sized flex layout, then scroll only the lesson pane.
@@ -34,10 +38,15 @@ export default function AppViewport({children}:{children:ReactNode}){
     else if(field.top<bounds.top+12)pane.scrollTop-=bounds.top-field.top+12;
    });});
   };
+  if(Capacitor.getPlatform()==='ios'){
+   const keep=(handle:PluginListenerHandle)=>{if(disposed)void handle.remove();else listeners.push(handle);};
+   void Keyboard.addListener('keyboardWillShow',info=>{nativeKeyboardHeight=info.keyboardHeight;update();}).then(keep);
+   void Keyboard.addListener('keyboardWillHide',()=>{nativeKeyboardHeight=0;update();}).then(keep);
+  }
   update();
   viewport.addEventListener('resize',update);viewport.addEventListener('scroll',update);
   document.addEventListener('focusin',update);document.addEventListener('focusout',update);
-  return()=>{cancelAnimationFrame(frame);cancelAnimationFrame(settledFrame);viewport.removeEventListener('resize',update);viewport.removeEventListener('scroll',update);document.removeEventListener('focusin',update);document.removeEventListener('focusout',update);};
+  return()=>{disposed=true;for(const listener of listeners)void listener.remove();cancelAnimationFrame(frame);cancelAnimationFrame(settledFrame);viewport.removeEventListener('resize',update);viewport.removeEventListener('scroll',update);document.removeEventListener('focusin',update);document.removeEventListener('focusout',update);};
  },[]);
  return <div ref={shell} className="mobile-chin-page-shell" data-exercise={exercise} data-keyboard={keyboardOpen}>{children}</div>;
 }

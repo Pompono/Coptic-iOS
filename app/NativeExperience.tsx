@@ -1,11 +1,13 @@
 "use client";
 import {useEffect} from 'react';
 import {Capacitor,type PluginListenerHandle} from '@capacitor/core';
+import {Keyboard} from '@capacitor/keyboard';
 import {nativeExperience} from '@/lib/nativeExperience';
 /** Follow iOS's preferred text size without changing saved app preferences. */
 export default function NativeExperience(){
  useEffect(()=>{
   if(!Capacitor.isNativePlatform())return;
+  if(Capacitor.getPlatform()==='ios')void Keyboard.setAccessoryBarVisible({isVisible:false}).catch(()=>{});
   let disposed=false,listener:PluginListenerHandle|undefined;
   const apply=(scale:number)=>{if(!disposed&&Number.isFinite(scale)&&scale>0){document.documentElement.style.fontSize=`${16*scale}px`;document.documentElement.dataset.largeText=scale>1.4?'true':'false';}};
   void nativeExperience.preferences().then(p=>apply(p.textScale)).catch(()=>{});

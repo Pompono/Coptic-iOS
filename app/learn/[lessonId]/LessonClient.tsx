@@ -947,7 +947,6 @@ function PairLettersLesson({ lesson, step }: { lesson: Lesson; step: UnitLessonS
       if (pairMatchTimeoutRef.current !== null) {
         window.clearTimeout(pairMatchTimeoutRef.current);
       }
-      audioService.stopAll();
     };
   }, []);
 

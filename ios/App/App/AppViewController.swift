@@ -44,6 +44,9 @@ class AppViewController: CAPBridgeViewController {
             window.__copticAudioSmoke = { status: 'running' };
             (async () => {
               try {
+                const keyboard = await cap.nativePromise('Keyboard', 'getResizeMode', {});
+                if (keyboard.mode !== 'none') throw new Error('Keyboard must use the app viewport layout');
+                await cap.nativePromise('Keyboard', 'setAccessoryBarVisible', { isVisible: false });
                 const lockedViewport = await cap.nativePromise('AppExperience', 'exerciseMode', { active: true });
                 if (!lockedViewport.pinned || Math.abs(lockedViewport.offsetY) > 1) throw new Error('Lesson viewport moved');
                 const restoredViewport = await cap.nativePromise('AppExperience', 'exerciseMode', { active: false });

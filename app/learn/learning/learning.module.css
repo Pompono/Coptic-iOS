@@ -40,8 +40,8 @@
 .practiceScreen { height:var(--page-content-height); min-height:0; padding:16px 20px 16px; overflow:hidden; }
 .practiceLayout { height:100%; max-width:680px; margin:auto; display:flex; flex-direction:column; gap:12px; }
 .practiceContent { min-height:0; flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:16px; padding-bottom:8px; }
-.practiceContent h1 { font-size:1.75rem; font-weight:700; line-height:1.2; letter-spacing:-.035em; margin:4px 0 0; }
-.practiceContent h2 { font-size:1.125rem; font-weight:600; line-height:1.35; margin:8px 0 0; }
+.practiceHeader h1 { font-size:1.75rem; font-weight:700; line-height:1.2; letter-spacing:-.035em; margin:4px 0 0; }
+.instruction h2 { font-size:1.125rem; font-weight:600; line-height:1.35; margin:8px 0 0; }
 .practiceContent p { margin:0; line-height:1.5; }
 .practiceContent>p:not(.prompt) { font-size:.9375rem; color:var(--text-muted); }
 .practiceFooter { flex-shrink:0; }
@@ -55,3 +55,24 @@
 .practiceContent .prompt { min-height:108px; padding:16px 12px; }
 
 .label input:focus { outline:none; border-color:var(--teal); box-shadow:0 0 0 1px var(--teal); }
+
+.practiceHeader { flex-shrink:0; display:flex; flex-direction:column; gap:16px; }
+.practiceHeader p { margin:0; line-height:1.5; }
+.instruction { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.instruction h2 { margin:0; min-width:0; }
+.instruction :global(.audio-replay) { width:96px; min-height:44px; }
+.instruction :global(.audio-replay)>button { width:48px; height:44px; min-height:44px; }
+:global([data-keyboard=true]) .practiceScreen { padding-block:4px 8px; }
+:global([data-keyboard=true]) .practiceLayout { gap:8px; }
+:global([data-keyboard=true]) .practiceHeader { gap:4px; }
+:global([data-keyboard=true]) .practiceHeader h1 { font-size:1.125rem; margin:0; }
+:global([data-keyboard=true]) .practiceHeader>p { display:none; }
+:global([data-keyboard=true]) .practiceContent { gap:8px; padding-bottom:2px; }
+:global([data-keyboard=true]) .practiceContent .prompt { min-height:58px; padding:4px 10px; font-size:2rem; line-height:1.5; }
+:global([data-keyboard=true]) .label { gap:4px; }
+:global([data-keyboard=true]) .label input { min-height:44px; padding:9px 12px; }
+:global([data-keyboard=true]) .practiceFooter .primary { min-height:44px; padding:10px 18px; }
+
+.practiceTools { display:flex; align-items:center; gap:12px; }
+.keyboardDone { display:none; background:transparent; color:var(--tint-color); border:0; min-height:44px; padding:8px; font-size:.9375rem; }
+:global([data-keyboard=true]) .keyboardDone { display:inline-flex; align-items:center; }
