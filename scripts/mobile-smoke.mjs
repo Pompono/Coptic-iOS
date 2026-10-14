@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import path from 'node:path';
 import { readFile, access, stat } from 'node:fs/promises';
+import { checkDictionary } from './dictionary-smoke.mjs';
 import { checkScanner } from './scanner/smoke.mjs';
 import { checkReading } from './reading-smoke.mjs';
 import { checkRecordingFailure } from './recording-failure-smoke.mjs';
@@ -31,6 +32,7 @@ let browser;
 try {
   const engine = process.env.COPTIC_BROWSER === 'webkit' ? webkit : chromium;
   browser = await engine.launch({ headless: true });
+  await checkDictionary(browser, base);
   await checkKeyboardPrompt(browser, base);
   await checkRecordingFailure(browser, base);
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });

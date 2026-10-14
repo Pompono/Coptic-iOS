@@ -2,6 +2,8 @@
 
 import Link from "@/lib/AppLink";
 import { useEffect, useMemo, useState } from "react";
+import { isBohairicOnlyEnabled } from "@/app/BohairicPreference";
+import { crossReferences, indexSearchEntry, normalizeSearch } from "@/lib/dictionary/search.mjs";
 import SaveWord from "@/app/SaveWord";
 import { resolveLessonAudio } from "@/lib/lessonAudio";
 
@@ -13,6 +15,8 @@ type BohairicEntryRaw = {
   pos?: string;
   scriptorium_tag?: string;
   greek_origin?: string;
+  crum_ref?: string;
+  etymology?: string;
   senses?: string[];
   bohairic_examples?: BohExample[];
 };
@@ -33,6 +37,8 @@ type Entry = {
   entryUrl?: string;
   tag?: string;
   greek?: string;
+  crum?: string;
+  etymology?: string;
   examples?: BohExample[];
 };
 
@@ -52,7 +58,13 @@ function uniqueStrings(arr: string[]) {
 
 export default function DictionaryEntryClient({ lemma }: { lemma: string }) {
   const [bohairicOnly, setBohairicOnly] = useState(true);
+  const [globalBohairicOnly, setGlobalBohairicOnly] = useState(true);
+  useEffect(() => {
+    const enabled = isBohairicOnlyEnabled();
+    setGlobalBohairicOnly(enabled); setBohairicOnly(enabled);
+  }, []);
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
 
   useEffect(() => {
@@ -63,11 +75,13 @@ export default function DictionaryEntryClient({ lemma }: { lemma: string }) {
         setState("loading");
 
         const bohRes = await fetch("/bohairic_dictionary.json", { cache: "no-store" });
+        if (!bohRes.ok) throw new Error("Bohairic dictionary unavailable");
         const bohRaw = (await bohRes.json()) as BohairicEntryRaw[];
 
         const comboRes = await fetch("/coptic_dictionary_combined.json", {
           cache: "no-store",
         });
+        if (!comboRes.ok) throw new Error("Combined dictionary unavailable");
         const comboRaw = (await comboRes.json()) as CombinedEntryRaw[];
 
         const bohEntries: Entry[] = bohRaw.map((r) => ({
@@ -79,6 +93,8 @@ export default function DictionaryEntryClient({ lemma }: { lemma: string }) {
           entryUrl: r.entry_url,
           tag: r.scriptorium_tag,
           greek: r.greek_origin,
+          crum: r.crum_ref,
+          etymology: r.etymology,
           examples: r.bohairic_examples ?? [],
         }));
 
@@ -105,10 +121,12 @@ export default function DictionaryEntryClient({ lemma }: { lemma: string }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadAttempt]);
+
+  const searchIndex = useMemo(() => entries.map(indexSearchEntry), [entries]);
 
   const matches = useMemo(() => {
-    const list = entries.filter((e) => e.lemma === lemma);
+    const list = entries.filter((e) => e.forms.some(form => normalizeSearch(form, false) === normalizeSearch(lemma, false)));
     const filtered = bohairicOnly ? list.filter((e) => e.dialect === "boh") : list;
 
     // Prefer Bohairic first (so “glass” shows Bohairic entries before unknown)
@@ -132,10 +150,12 @@ export default function DictionaryEntryClient({ lemma }: { lemma: string }) {
           <button
             type="button"
             onClick={() => setBohairicOnly((v) => !v)}
+            disabled={globalBohairicOnly}
+            title={globalBohairicOnly ? "Locked by global Bohairic-only mode in Settings" : "Toggle Bohairic-only entries"}
             className={[
               "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition",
               bohairicOnly
-                ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-100"
+                ? "border-[var(--bohairic-badge-border)] bg-[var(--bohairic-badge-bg)] text-[var(--bohairic-badge-text)]"
                 : "border-[var(--border-color)] bg-[var(--surface-1)] text-[var(--text-muted)] hover:bg-[var(--surface-2)]",
             ].join(" ")}
             aria-pressed={bohairicOnly}
@@ -143,7 +163,7 @@ export default function DictionaryEntryClient({ lemma }: { lemma: string }) {
             <span
               className={[
                 "h-2.5 w-2.5 rounded-full",
-                bohairicOnly ? "bg-emerald-300" : "bg-[var(--text-soft)]",
+                bohairicOnly ? "bg-[var(--bohairic-badge-dot)]" : "bg-[var(--text-soft)]",
               ].join(" ")}
             />
             Bohairic-only
@@ -155,7 +175,7 @@ export default function DictionaryEntryClient({ lemma }: { lemma: string }) {
         {state === "loading" ? (
           <p className="mt-4 text-[var(--text-muted)]">Loading…</p>
         ) : state === "error" ? (
-          <p className="mt-4 text-red-300">Failed to load dictionary files.</p>
+          <p role="alert" className="mt-4 text-[var(--lesson-choice-wrong-text)]">Failed to load dictionary files. <button type="button" onClick={() => setLoadAttempt(n => n + 1)} className="ml-2 min-h-11 underline">Retry</button></p>
         ) : matches.length === 0 ? (
           <p className="mt-4 text-[var(--text-muted)]">No entries found for this lemma.</p>
         ) : (
@@ -181,7 +201,7 @@ export default function DictionaryEntryClient({ lemma }: { lemma: string }) {
                         className={[
                           "rounded-full border px-3 py-1 text-xs",
                           e.dialect === "boh"
-                            ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-100"
+                            ? "border-[var(--bohairic-badge-border)] bg-[var(--bohairic-badge-bg)] text-[var(--bohairic-badge-text)]"
                             : "border-[var(--border-color)] bg-[var(--surface-1)] text-[var(--text-muted)]",
                         ].join(" ")}
                       >
@@ -198,16 +218,17 @@ export default function DictionaryEntryClient({ lemma }: { lemma: string }) {
                     <div className="mt-2 text-sm text-[var(--text-muted)]">
                       {e.tag ? <span className="mr-3">Tag: {e.tag}</span> : null}
                       {e.greek ? <span>Greek: {e.greek}</span> : null}
-                      {e.entryUrl?.startsWith('crum:') ? <span>Crum {e.entryUrl.slice(5)}</span> : /^https?:\/\//.test(e.entryUrl ?? '') ? (
+                      {e.crum || e.entryUrl?.startsWith('crum:') ? <span>Crum {e.crum || e.entryUrl?.slice(5)}</span> : /^https?:\/\//.test(e.entryUrl ?? '') ? (
                         <a
                           href={e.entryUrl}
-                          className="ml-3 text-[var(--text-muted)] underline decoration-[var(--text-muted)] underline-offset-4 hover:text-white"
+                          className="ml-3 text-[var(--text-muted)] underline decoration-[var(--text-muted)] underline-offset-4 hover:text-[var(--text-color)]"
                           target="_blank"
                           rel="noreferrer"
                         >
                           View entry
                         </a>
                       ) : null}
+                      {e.etymology && <p className="mt-2">Etymology: {e.etymology}</p>}
                     </div>
                   </div>
                 </div>
@@ -223,6 +244,8 @@ export default function DictionaryEntryClient({ lemma }: { lemma: string }) {
                     <div className="text-sm text-[var(--text-muted)]">No gloss.</div>
                   )}
                 </div>
+
+                {crossReferences(e, searchIndex).map(target => <Link key={target} href={`/dictionary/entry/?lemma=${encodeURIComponent(target)}`} className="coptic-text mt-3 inline-block mr-3 underline">See {target}</Link>)}
 
                 {e.gloss.length > 0 && e.pos !== "Cross-reference" && <div className="mt-4 rounded-xl border border-[var(--border-color)] p-3">
                   <SaveWord word={e.lemma} meaning={e.gloss.join('; ')} pos={e.pos}

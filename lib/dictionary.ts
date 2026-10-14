@@ -86,8 +86,9 @@ export function toEntryFromBohairic(x: BohairicRaw): DictionaryEntry {
         }))
       : undefined;
 
-  const idBase = `boh:${x.tla_id ?? ""}:${lemma}:${x.pos ?? ""}:${(x.entry_url ?? "").trim()}`;
-  const id = x.tla_id ? `boh:${x.tla_id}` : `boh:${stableHash(idBase)}`;
+  // Separate source senses even when their lemma, POS, URL or TLA id agree.
+  // Vocabulary card IDs are independent of these lookup-only record IDs.
+  const id = `boh:${x.tla_id ?? ""}:${stableHash(JSON.stringify(x))}`;
 
   return {
     id,

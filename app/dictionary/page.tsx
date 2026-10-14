@@ -1,6 +1,8 @@
 "use client";
 
 import AppIcon from "../AppIcon";
+import Link from "@/lib/AppLink";
+import { COPTIC_ALPHABET, indexSearchEntry, searchDictionary, suggestDictionary } from "@/lib/dictionary/search.mjs";
 
 import { type PointerEvent as ReactPointerEvent, type TouchEvent as ReactTouchEvent, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -20,6 +22,8 @@ type BohairicEntryRaw = {
   pos?: string;
   scriptorium_tag?: string;
   greek_origin?: string;
+  crum_ref?: string;
+  etymology?: string;
   senses?: string[];
   bohairic_examples?: BohExample[];
 };
@@ -43,6 +47,8 @@ type Entry = {
   entryUrl?: string;
   tag?: string;
   greek?: string;
+  crum?: string;
+  etymology?: string;
   examples?: BohExample[];
   searchBlob: string;
   normalizedPos: string;
@@ -223,6 +229,12 @@ const KB_SYMBOLS: KeyDef[][] = [
 
 export default function DictionaryPage() {
   const [query, setQuery] = useState("");
+  const [scope, setScope] = useState("all");
+  const [ignoreMarks, setIgnoreMarks] = useState(true);
+  const [initial, setInitial] = useState("");
+  const [spellingSuggestions, setSpellingSuggestions] = useState(true);
+  const [searchRestored, setSearchRestored] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [bohairicOnly, setBohairicOnly] = useState(true);
   const [globalBohairicOnlyEnabled, setGlobalBohairicOnlyEnabled] = useState(true);
   const [posFilter, setPosFilter] = useState("All");
@@ -245,12 +257,56 @@ export default function DictionaryPage() {
   const queryInputRef = useRef<HTMLInputElement | null>(null);
 
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [resultsLimit, setResultsLimit] = useState(80);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">(
     "loading"
   );
 
   const deferredQuery = useDeferredValue(query);
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem("coptic-dictionary-search") ?? "null");
+      if (saved) {
+        if (typeof saved.query === "string") setQuery(saved.query);
+        if (["all", "coptic", "english", "transliteration"].includes(saved.scope)) setScope(saved.scope);
+        if (typeof saved.pos === "string") setPosFilter(saved.pos);
+        if (typeof saved.initial === "string" && (saved.initial === "" || Array.from(COPTIC_ALPHABET).includes(saved.initial))) setInitial(saved.initial);
+        if (typeof saved.examplesOnly === "boolean") setExamplesOnly(saved.examplesOnly);
+      }
+      const preferences = JSON.parse(localStorage.getItem("coptic-dictionary-preferences") ?? "null");
+      if (typeof preferences?.ignoreMarks === "boolean") setIgnoreMarks(preferences.ignoreMarks);
+      if (typeof preferences?.suggestions === "boolean") setSpellingSuggestions(preferences.suggestions);
+      const recent = JSON.parse(localStorage.getItem("coptic-dictionary-recent") ?? "[]");
+      if (Array.isArray(recent)) setRecentSearches(recent.filter(x => typeof x === "string").slice(0, 8));
+    } catch { /* A damaged preference must not prevent dictionary access. */ }
+    setSearchRestored(true);
+  }, []);
+  useEffect(() => {
+    if (!searchRestored) return;
+    try {
+      sessionStorage.setItem("coptic-dictionary-search", JSON.stringify({ query, scope, pos: posFilter, initial, examplesOnly }));
+      localStorage.setItem("coptic-dictionary-preferences", JSON.stringify({ ignoreMarks, suggestions: spellingSuggestions }));
+    } catch { /* Search remains usable when storage is unavailable. */ }
+  }, [searchRestored, query, scope, posFilter, initial, examplesOnly, ignoreMarks, spellingSuggestions]);
+  const rememberSearch = () => {
+    const value = query.trim();
+    if (!value) return;
+    const recent = [value, ...recentSearches.filter(x => x !== value)].slice(0, 8);
+    setRecentSearches(recent);
+    try { localStorage.setItem("coptic-dictionary-recent", JSON.stringify(recent)); } catch {}
+  };
+  useEffect(() => {
+    const focusSearch = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f") {
+        event.preventDefault(); queryInputRef.current?.focus({ preventScroll: true });
+      }
+    };
+    window.addEventListener("keydown", focusSearch);
+    return () => window.removeEventListener("keydown", focusSearch);
+  }, []);
+
 
   useEffect(() => {
     let cancelled = false;
@@ -262,11 +318,13 @@ export default function DictionaryPage() {
         const bohRes = await fetch("/bohairic_dictionary.json", {
           cache: "no-store",
         });
+        if (!bohRes.ok) throw new Error("Bohairic dictionary unavailable");
         const bohRaw = (await bohRes.json()) as BohairicEntryRaw[];
 
         const comboRes = await fetch("/coptic_dictionary_combined.json", {
           cache: "no-store",
         });
+        if (!comboRes.ok) throw new Error("Combined dictionary unavailable");
         const comboRaw = (await comboRes.json()) as CombinedEntryRaw[];
 
         const bohEntries: Entry[] = bohRaw.map((r) => {
@@ -282,6 +340,8 @@ export default function DictionaryPage() {
             entryUrl: r.entry_url,
             tag: r.scriptorium_tag,
             greek: r.greek_origin,
+            crum: r.crum_ref,
+            etymology: r.etymology,
             examples: r.bohairic_examples ?? [],
             searchBlob: norm([r.word, ...forms, ...gloss].join(" ")),
             normalizedPos: (r.pos ?? "").trim(),
@@ -318,11 +378,11 @@ export default function DictionaryPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadAttempt]);
 
   useEffect(() => {
     setResultsLimit(80);
-  }, [deferredQuery, bohairicOnly, posFilter, examplesOnly]);
+  }, [deferredQuery, bohairicOnly, posFilter, examplesOnly, scope, ignoreMarks, initial]);
 
   useEffect(() => {
     const mql = window.matchMedia("(max-width: 768px)");
@@ -385,59 +445,21 @@ export default function DictionaryPage() {
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [entries]);
 
-  const filtered = useMemo(() => {
-    const q = norm(deferredQuery);
-
-    const byText = entries.filter((e) => {
-      if (!q) return true;
-      return e.searchBlob.includes(q);
-    });
-
-    const byDialect = bohairicOnly
-      ? byText.filter((e) => e.dialect === "boh")
-      : byText;
-
-    const byPos =
-      posFilter === "All"
-        ? byDialect
-        : byDialect.filter((e) => e.normalizedPos === posFilter);
-
-    const byExamples = examplesOnly ? byPos.filter((e) => e.hasExamples) : byPos;
-
-    return byExamples
-      .slice()
-      .sort((a, b) => {
-        if (a.dialect !== b.dialect) return a.dialect === "boh" ? -1 : 1;
-        return a.lemma.localeCompare(b.lemma);
-      });
-  }, [entries, deferredQuery, bohairicOnly, posFilter, examplesOnly]);
-
+  const searchIndex = useMemo(() => entries.map(indexSearchEntry), [entries]);
+  const searchOptions = useMemo(() => ({ query: deferredQuery, scope, ignoreMarks, initial, bohairicOnly, examplesOnly }),
+    [deferredQuery, scope, ignoreMarks, initial, bohairicOnly, examplesOnly]);
+  const textMatches = useMemo(() => searchDictionary(searchIndex, searchOptions), [searchIndex, searchOptions]);
+  const filtered = useMemo(() => posFilter === "All" ? textMatches : textMatches.filter(e => e.normalizedPos === posFilter), [textMatches, posFilter]);
+  const suggestions = useMemo(() => spellingSuggestions ? suggestDictionary(searchIndex, { ...searchOptions, pos: posFilter === "All" ? "" : posFilter }) : [],
+    [searchIndex, searchOptions, posFilter, spellingSuggestions]);
   const posCounts = useMemo(() => {
     const map = new Map<string, number>();
-    let total = 0;
-
-    const base = bohairicOnly
-      ? entries.filter((e) => e.dialect === "boh")
-      : entries.slice();
-
-    const textFiltered = base.filter((e) => {
-      const q = norm(deferredQuery);
-      if (!q) return true;
-      return e.searchBlob.includes(q);
-    });
-
-    const examplesFiltered = examplesOnly
-      ? textFiltered.filter((e) => e.hasExamples)
-      : textFiltered;
-
-    for (const e of examplesFiltered) {
+    for (const e of textMatches) {
       const p = e.normalizedPos || "(unspecified)";
       map.set(p, (map.get(p) ?? 0) + 1);
-      total += 1;
     }
-
-    return { map, total };
-  }, [entries, bohairicOnly, deferredQuery, examplesOnly]);
+    return { map, total: textMatches.length };
+  }, [textMatches]);
 
   const displayedPosOptions = useMemo(() => {
     const q = posSearch.trim().toLowerCase();
@@ -468,7 +490,7 @@ export default function DictionaryPage() {
 
   const hiddenResultsCount = filtered.length - visibleResults.length;
 
-  const totalShown = filtered.length;
+  const totalShown = visibleResults.length;
   const totalAll = posCounts.total;
 
   const page: KeyDef[][] =
@@ -683,7 +705,7 @@ export default function DictionaryPage() {
         }}
       >
         <h1 className="mt-0 text-4xl font-semibold tracking-tight">Coptic Dictionary</h1>
-        <p className="mt-2 text-[var(--text-muted)]">Search lemma, forms, or gloss</p>
+        <p className="mt-2 text-[var(--text-muted)]">Search Coptic words, English meanings, or transliteration.</p>
 
         <div className="mt-5 space-y-3">
           <div className="flex items-center gap-3 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-1)] px-4 py-3">
@@ -691,14 +713,43 @@ export default function DictionaryPage() {
               ref={queryInputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onBlur={rememberSearch}
+              onKeyDown={e => { if (e.key === "Enter") { rememberSearch(); e.currentTarget.blur(); } }}
               onPointerDownCapture={hideKeyboardOnManualInputFocus}
               readOnly={keyboardEnabled && isMobileViewport && showKeyboard}
               inputMode={keyboardEnabled && isMobileViewport && showKeyboard ? "none" : "text"}
-              placeholder="Search Coptic or English..."
+              aria-label="Dictionary search"
+              placeholder="Search Coptic, English, or transliteration..."
               className="coptic-text w-full bg-transparent text-base outline-none placeholder:text-[var(--text-soft)]"
             />
           </div>
 
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <label className="flex items-center gap-2">Search in
+              <select aria-label="Search in" value={scope} onChange={e => setScope(e.target.value)} className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-1)] p-2 text-[var(--text-color)]">
+                <option value="all">All fields</option><option value="coptic">Coptic words</option><option value="english">English meanings</option><option value="transliteration">Transliteration</option>
+              </select>
+            </label>
+            <label className="flex items-center gap-2">Initial letter
+              <select aria-label="Initial letter" value={initial} onChange={e => setInitial(e.target.value)} className="coptic-text rounded-xl border border-[var(--border-color)] bg-[var(--surface-1)] p-2 text-[var(--text-color)]">
+                <option value="">All letters</option>{Array.from(COPTIC_ALPHABET).map(letter => <option key={letter} value={letter}>{letter}</option>)}
+              </select>
+            </label>
+            <button type="button" onClick={() => { setQuery(""); setPosFilter("All"); setInitial(""); queryInputRef.current?.focus({ preventScroll: true }); }} className="rounded-xl border border-[var(--border-color)] px-3 py-2">Clear</button>
+          </div>
+          <div className="flex flex-wrap gap-4 text-sm text-[var(--text-muted)]">
+            <label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={ignoreMarks} onChange={e => setIgnoreMarks(e.target.checked)} />Search without combining marks</label>
+            <label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={spellingSuggestions} onChange={e => setSpellingSuggestions(e.target.checked)} />Spelling suggestions</label>
+          </div>
+          <p className="text-sm text-[var(--text-muted)]">English letters: agape / agapi / agapee → ⲁⲅⲁⲡⲏ. Transliteration is an approximate typing aid.</p>
+          {suggestions.length > 0 && <div className="flex flex-wrap items-center gap-2 text-sm" aria-label="Spelling suggestions">Try:
+            {suggestions.map(word => <button key={word} type="button" onClick={() => setQuery(word)} className="coptic-text rounded-xl border border-[var(--border-color)] px-3 py-2">{word}</button>)}
+          </div>}
+
+          {recentSearches.length > 0 && <details className="text-sm text-[var(--text-muted)]"><summary>Recent searches</summary>
+            <div className="mt-2 flex flex-wrap gap-2">{recentSearches.map(word => <button key={word} type="button" onClick={() => setQuery(word)} className="coptic-text rounded-xl border border-[var(--border-color)] px-3 py-2">{word}</button>)}
+              <button type="button" onClick={() => { setRecentSearches([]); try { localStorage.removeItem("coptic-dictionary-recent"); } catch {} }} className="px-3 py-2 underline">Clear recent searches</button>
+            </div></details>}
           {keyboardEnabled && !isMobileViewport ? (
           <div className="rounded-2xl border border-[var(--kb-border)] p-3"
             style={{ background: "var(--kb-shell)" }}>
@@ -963,7 +1014,7 @@ export default function DictionaryPage() {
               {loadState === "loading" ? (
                 <span>Loading…</span>
               ) : loadState === "error" ? (
-                <span className="text-red-300">Failed to load dictionary files.</span>
+                <span role="alert" className="text-[var(--lesson-choice-wrong-text)]">Failed to load dictionary files. <button type="button" onClick={() => setLoadAttempt(n => n + 1)} className="ml-2 min-h-11 underline">Retry</button></span>
               ) : (
                 <span>
                   {totalShown} shown • {totalAll} total •{" "}
@@ -984,7 +1035,8 @@ export default function DictionaryPage() {
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="coptic-text text-2xl font-semibold tracking-tight">{e.lemma}</div>
+                  <Link href={`/dictionary/entry/?lemma=${encodeURIComponent(e.lemma)}`} className="coptic-text text-2xl font-semibold tracking-tight underline-offset-4 hover:underline">{e.lemma}</Link>
+                  {e.matchLabel && <p className="mt-1 text-sm text-[var(--text-muted)]">{e.matchLabel}{e.matchEvidence ? <> · <span className="coptic-text">{e.matchEvidence}</span></> : null}</p>}
 
                   {e.forms.length > 1 && (
                     <div className="mt-1 text-sm text-[var(--text-muted)]">
@@ -1026,7 +1078,9 @@ export default function DictionaryPage() {
                   <div className="mt-2 text-sm text-[var(--text-muted)]">
                     {e.tag ? <span className="mr-3">Tag: {e.tag}</span> : null}
                     {e.greek ? <span>Greek: {e.greek}</span> : null}
-                    {e.entryUrl ? (
+                    {e.crum || e.entryUrl?.startsWith("crum:") ? <span className="ml-3">Crum {e.crum || e.entryUrl?.slice(5)}</span> : null}
+                    {e.etymology ? <span className="ml-3">Etymology: {e.etymology}</span> : null}
+                    {/^https?:\/\//.test(e.entryUrl ?? "") ? (
                       <a
                         href={e.entryUrl}
                         className="ml-3 text-[var(--text-muted)] underline decoration-[var(--text-soft)] underline-offset-4 hover:text-[var(--text-color)]"
@@ -1085,6 +1139,7 @@ export default function DictionaryPage() {
               ) : null}
             </div>
           ))}
+          {loadState === "ready" && filtered.length === 0 && <p role="status" className="rounded-2xl border border-[var(--border-color)] p-5 text-[var(--text-muted)]">No matching entries. Try a suggested spelling, change the search scope, or clear the filters.</p>}
           {hiddenResultsCount > 0 ? (
             <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-1)] p-4 text-center text-sm text-[var(--text-muted)]">
               Showing {visibleResults.length} of {filtered.length} matches.

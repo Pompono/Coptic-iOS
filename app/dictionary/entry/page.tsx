@@ -1,11 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import DictionaryEntryClient from "./DictionaryEntryClient";
 
+function EntryFromQuery() {
+  const params = useSearchParams();
+  return <DictionaryEntryClient lemma={params.get("lemma") ?? ""} />;
+}
 export default function DictionaryEntryPage() {
-  const [lemma, setLemma] = useState<string | null>(null);
-  useEffect(() => {
-    setLemma(new URLSearchParams(window.location.search).get("lemma") ?? "");
-  }, []);
-  return lemma === null ? <main>Loading entry…</main> : <DictionaryEntryClient lemma={lemma} />;
+  return <Suspense fallback={<main>Loading entry…</main>}><EntryFromQuery /></Suspense>;
 }
