@@ -57,8 +57,8 @@ class AppViewController: CAPBridgeViewController {
                   if (!(result.duration > 0)) throw new Error('Invalid recording duration: ' + name);
                   await cap.nativePromise('LessonAudio', 'stop', {});
                 }
-                const slow = await cap.nativePromise('LessonAudio', 'play', { path: '/audio/learn/shared/a.wav', rate: .75 });
-                if (Math.abs(slow.rate - .75) > .01) throw new Error('Slow replay rate was not applied');
+                const slow = await cap.nativePromise('LessonAudio', 'play', { path: '/audio/learn/shared/a.wav', rate: .5 });
+                if (Math.abs(slow.rate - .5) > .01) throw new Error('Slow replay rate was not applied');
                 await cap.nativePromise('LessonAudio', 'stop', {});
                 const normal = await cap.nativePromise('LessonAudio', 'play', { path: '/audio/learn/shared/a.wav', rate: 1 });
                 if (Math.abs(normal.rate - 1) > .01) throw new Error('Normal replay rate was not restored');

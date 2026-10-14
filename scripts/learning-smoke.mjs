@@ -92,7 +92,10 @@ export async function checkLearning(browser,base){
   await page.addInitScript(()=>{window.__rates=[];const start=AudioBufferSourceNode.prototype.start;AudioBufferSourceNode.prototype.start=function(...args){window.__rates.push(this.playbackRate.value);return start.apply(this,args);};});
   await page.goto(base+'/learn/section-1-unit-01-pair-letters-and-sounds/play/lesson-1-a-o-d/');
   await page.getByRole('button',{name:'Play recording slowly',exact:true}).first().click();
-  await page.waitForFunction(()=>window.__rates.includes(.75));
+  await page.waitForFunction(()=>window.__rates.includes(.5));
+  await page.getByRole('button',{name:'Play recording',exact:true}).first().click();
+  await page.waitForFunction(()=>window.__rates.at(-1)===1);
+
   await startLesson(page);
   assert.equal(await page.getByText('Lesson guide',{exact:true}).count(),0);
   await page.getByRole('button',{name:'ⲁ',exact:true}).click();

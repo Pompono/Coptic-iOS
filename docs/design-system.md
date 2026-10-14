@@ -31,7 +31,7 @@ Physical iPhone review remains necessary for VoiceOver navigation, the largest D
 
 ## Playback and viewport polish
 
-`AudioReplay` supplies paired speaker and turtle-with-sound-wave controls throughout guides, exercises, reading and vocabulary. Both use the original recording at 1× and .75×, with accessible labels and no visible text captions. `RecordingCard` replaces the separate speaker renderers and removes duplicate speaker glyphs from listening questions. Authored exercises reserve less empty heading/footer space, giving three-choice questions room without clipped corners.
+`AudioReplay` supplies paired speaker and turtle-with-sound-wave controls throughout guides, exercises, reading and vocabulary. Both use the original recording at 1× and .5×, with accessible labels and no visible text captions. `RecordingCard` replaces the separate speaker renderers and removes duplicate speaker glyphs from listening questions. Authored exercises reserve less empty heading/footer space, giving three-choice questions room without clipped corners.
 
 Exercise routes lock the outer document to the viewport; only the guide, question or practice pane scrolls. Keyboard resizing waits for the flex layout before moving the active answer into view inside its own pane. The regression check verifies the actual answer bounds and zero outer document scrolling, as well as the footer.
 

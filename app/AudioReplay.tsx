@@ -14,7 +14,7 @@ export default function AudioReplay({ path, onPlay, card = false }: { path?: str
   if (!path) return null;
   return <div className="audio-replay" role="group" aria-label="Recording playback">
     <button type="button" className={card?'lesson-audio-card':undefined} aria-label="Play recording" onClick={onPlay??(()=>void audioService.play(path,path,1).catch(reportAudioFailure))}><PlaybackIcon/></button>
-    <button type="button" aria-label="Play recording slowly" onClick={()=>void audioService.play(path,path,.75).catch(reportAudioFailure)}><PlaybackIcon slow/></button>
+    <button type="button" aria-label="Play recording slowly" aria-description="Half speed" title="Half speed" onClick={()=>void audioService.play(path,path,.5).catch(reportAudioFailure)}><PlaybackIcon slow/></button>
   </div>;
 }
 
