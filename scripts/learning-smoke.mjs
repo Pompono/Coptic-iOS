@@ -10,7 +10,7 @@ export async function startLesson(page) {
  assert.ok(footer.y+footer.height<=await page.evaluate(()=>innerHeight),'Ready button remains visible');
  await ready.click();
 }
-export async function finishTransfer(page,set,{newLesson=false}={}){
+export async function finishTransfer(page,set,{newLesson=false,verifyKeyboardLayout=false}={}){
  const items=getCourseItems(set);
  if(!newLesson)await page.getByRole('heading',{name:'Put it together',exact:true}).waitFor();
  await page.getByRole('button',{name:'Continue',exact:true}).click();
@@ -19,6 +19,21 @@ export async function finishTransfer(page,set,{newLesson=false}={}){
  for(let index=0;index<count;index++){
   const item=items[index%items.length],kind=checkpoint?index%3:newLesson?Math.floor(index/items.length)%3:2;
   if(kind===2){await page.getByLabel('Your answer',{exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'Show a hint',exact:true}).count(),0,'Final typed recall has no hint');}
+  if(verifyKeyboardLayout&&index===0&&kind===2){
+   const title=page.getByRole('heading',{name:'Put it together',exact:true}),field=page.getByLabel('Your answer',{exact:true}),prompt=page.locator('p.coptic-text');
+   const before=await Promise.all([title.boundingBox(),field.boundingBox(),prompt.boundingBox()]);
+   await field.focus();
+   await page.evaluate(()=>{const s=document.querySelector('.mobile-chin-page-shell');s.style.paddingBottom='0';s.style.setProperty('--page-content-height','calc(var(--interactive-viewport-height,100svh) - 59px)');Object.defineProperty(visualViewport,'height',{configurable:true,get:()=>560});visualViewport.dispatchEvent(new Event('resize'));});
+   await page.waitForFunction(()=>document.querySelector('.mobile-chin-page-shell').dataset.keyboard==='true');
+   await page.waitForTimeout(100);
+   const after=await Promise.all([title.boundingBox(),field.boundingBox(),prompt.boundingBox()]);
+   await page.screenshot({path:"/tmp/coptic-stable-typing-keyboard.png"});
+   if(before.some((b,n)=>Math.abs(b.y-after[n].y)>=1))console.log("Keyboard geometry",{before,after},await field.evaluate(el=>({pane:el.closest("[data-lesson-scroll]").getBoundingClientRect().toJSON(),scroll:el.closest("[data-lesson-scroll]").scrollTop})));
+   for(let n=0;n<before.length;n++){assert.ok(Math.abs(before[n].height-after[n].height)<1,'Keyboard keeps normal element heights');assert.ok(Math.abs(before[n].y-after[n].y)<1,'Opening a typical iPhone keyboard does not jump the exercise content');}
+   const action=await page.getByRole('button',{name:'Check',exact:true}).boundingBox();assert.ok(action.y+action.height<=560,'Only the action moves above the keyboard');
+   await page.screenshot({path:'/tmp/coptic-stable-typing-keyboard.png'});
+   await page.evaluate(()=>{delete visualViewport.height;const s=document.querySelector('.mobile-chin-page-shell');s.style.paddingBottom='34px';s.style.setProperty('--page-content-height','calc(var(--interactive-viewport-height,100svh) - 93px)');document.activeElement.blur();visualViewport.dispatchEvent(new Event('resize'));});
+  }
   if(kind===0){
    const joined=!item.word.includes(' '),words=joined?item.word.startsWith('ⲡⲓ')?['ⲡⲓ',item.word.slice(2)]:Array.from(item.word):item.word.split(' ');
    for(const word of words)await page.getByRole('group',{name:'Available phrase pieces',exact:true}).getByRole('button',{name:word,exact:true}).all().then(async buttons=>{ for(const button of buttons)if(await button.isEnabled()){await button.click();break;} });

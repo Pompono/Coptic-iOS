@@ -38,7 +38,7 @@ export async function checkLessonLayouts(browser,base){
    await page.getByRole('button',{name:'Continue',exact:true}).click();
    if(i===queue.length-1){await page.getByRole('heading',{name:'Put it together',exact:true}).waitFor();assert.equal(await page.evaluate(()=>window.__audioStops),stopsBefore,'The final answer sound is not stopped by the transfer transition');}
   }
-  await finishTransfer(page,step.exerciseSet);
+  await finishTransfer(page,step.exerciseSet,{verifyKeyboardLayout:true});
   await page.setViewportSize({width:393,height:500});
   const summary=page.getByLabel('Lesson summary',{exact:true});
   await summary.hover();await page.mouse.wheel(0,1000);

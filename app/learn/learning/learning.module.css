@@ -37,10 +37,10 @@
 .introScreen { height:var(--page-content-height); display:flex; flex-direction:column; box-sizing:border-box; background:var(--bg-color); color:var(--text-color); padding:16px 20px 20px; }
 .introBody { width:100%; max-width:680px; margin:0 auto; flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:20px; }
 .introFooter { width:100%; max-width:680px; margin:0 auto; padding-top:16px; flex-shrink:0; }
-.practiceScreen { height:var(--page-content-height); min-height:0; padding:16px 20px 16px; overflow:hidden; }
-.practiceLayout { height:100%; max-width:680px; margin:auto; display:flex; flex-direction:column; gap:12px; }
-.practiceContent { min-height:0; flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:16px; padding-bottom:8px; }
-.practiceContent h1 { font-size:1.75rem; font-weight:700; line-height:1.2; letter-spacing:-.035em; margin:4px 0 0; }
+.practiceScreen { height:var(--page-content-height); min-height:0; padding:12px 20px; overflow:hidden; }
+.practiceLayout { height:100%; max-width:680px; margin:auto; display:flex; flex-direction:column; gap:8px; }
+.practiceContent { min-height:0; flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding-bottom:8px; }
+.practiceContent h1 { font-size:1.75rem; font-weight:700; line-height:1.2; letter-spacing:-.035em; margin:0; }
 .instruction h2 { font-size:1.125rem; font-weight:600; line-height:1.35; margin:8px 0 0; }
 .practiceContent p { margin:0; line-height:1.5; }
 .practiceContent>p:not(.prompt) { font-size:.9375rem; color:var(--text-muted); }
@@ -56,8 +56,7 @@
 
 .label input:focus { outline:none; border-color:var(--teal); box-shadow:0 0 0 1px var(--teal); }
 
-.practiceHeader { flex-shrink:0; display:flex; flex-direction:column; gap:16px; }
-.practiceContent p { margin:0; line-height:1.5; }
+.practiceHeader { flex-shrink:0; display:flex; flex-direction:column; gap:8px; }
 .instruction { display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .instruction h2 { margin:0; min-width:0; }
 .instruction :global(.audio-replay) { width:96px; min-height:44px; }

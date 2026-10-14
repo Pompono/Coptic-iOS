@@ -34,8 +34,8 @@ export default function AppViewport({children}:{children:ReactNode}){
     const pane=active?.closest<HTMLElement>('[data-lesson-scroll]');
     if(!pane)return;
     const field=active.getBoundingClientRect(),bounds=pane.getBoundingClientRect();
-    if(field.bottom>bounds.bottom-12)pane.scrollTop+=field.bottom-bounds.bottom+12;
-    else if(field.top<bounds.top+12)pane.scrollTop-=bounds.top-field.top+12;
+    if(field.bottom>bounds.bottom)pane.scrollTop+=field.bottom-bounds.bottom+4;
+    else if(field.top<bounds.top)pane.scrollTop-=bounds.top-field.top+4;
    });});
   };
   if(Capacitor.getPlatform()==='ios'){
