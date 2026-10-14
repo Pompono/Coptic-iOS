@@ -47,7 +47,7 @@ export default function MobileChinDock() {
     let restingHeight = window.innerHeight;
     const update = () => {
       const active = document.activeElement;
-      const editing = active instanceof HTMLTextAreaElement || active instanceof HTMLInputElement;
+      const editing = active instanceof HTMLTextAreaElement || (active instanceof HTMLInputElement && !["checkbox", "radio", "button"].includes(active.type));
       if (!editing) restingHeight = window.innerHeight;
       setKeyboardOpen(editing && Math.max(restingHeight, window.innerHeight) - viewport.height > 120 && viewport.scale <= 1.05);
     };

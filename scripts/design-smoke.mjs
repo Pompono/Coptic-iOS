@@ -32,7 +32,17 @@ export async function checkDesign(browser,base){
    await page.evaluate(theme=>{document.documentElement.dataset.theme=theme;document.documentElement.style.fontSize='24px';},theme);
    const ready=await page.getByRole('button',{name:'I’m ready',exact:true}).boundingBox();
    assert.ok(ready.y+ready.height<=640,'Guide action remains visible at larger type');
+   await page.evaluate(()=>{const shell=document.querySelector('.mobile-chin-page-shell');shell.style.paddingTop='59px';shell.style.paddingBottom='34px';shell.style.setProperty('--page-content-height','calc(100svh - 93px)');});
+   const insetReady=await page.getByRole('button',{name:'I’m ready',exact:true}).boundingBox();
+   assert.ok(insetReady.y+insetReady.height<=606&&insetReady.y+insetReady.height>=582,'The bottom safe area is reserved once, not twice');
   }
+  await page.goto(base+'/translator/');await page.waitForLoadState('networkidle');
+  await page.getByRole('textbox',{name:'Coptic text',exact:true}).focus();
+  await page.evaluate(()=>{Object.defineProperty(window.visualViewport,'height',{configurable:true,get:()=>400});window.visualViewport.dispatchEvent(new Event('resize'));});
+  await page.waitForFunction(()=>document.querySelector('.mobile-chin-page-shell').dataset.keyboard==='true');
+  assert.equal(await page.getByRole('navigation',{name:'Mobile navigation'}).count(),0,'Tabs make room for the system keyboard');
+  assert.equal(await page.locator('.mobile-chin-page-shell').evaluate(el=>getComputedStyle(el).paddingBottom),'0px');
+  await page.evaluate(()=>{delete window.visualViewport.height;window.visualViewport.dispatchEvent(new Event('resize'));});
   await page.waitForLoadState('networkidle');assert.deepEqual(errors,[]);
   console.log('PASS: real home continuation, course lock/review links, labelled tabs, Coptic reading size, and small-phone light/dark layouts at larger text sizes.');
  }finally{await context.close();}

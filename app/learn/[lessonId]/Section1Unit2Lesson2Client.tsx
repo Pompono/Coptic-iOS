@@ -162,7 +162,7 @@ function LessonOutcomeCelebration({
 
   return (
     <>
-      <main className="lesson-outcome-screen">
+      <main className={`lesson-outcome-screen ${icon === "cross" ? "is-failure" : ""}`}>
         <div className="lesson-outcome-shell">
           <div className="lesson-outcome-stage" aria-hidden="true">
             <div className="lesson-outcome-badge">

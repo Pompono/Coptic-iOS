@@ -249,13 +249,14 @@ export default function UnitProgressClient({ focusLessonId = null }: { focusLess
     <div className="course-map-shell">
       {visibleLessonStates.map(unitState => {
         const focused=unitState.lesson.id===targetLesson?.id;
-        const total=unitState.groups.reduce((n,g)=>n+g.totalLessons,0);
-        const complete=unitState.groups.reduce((n,g)=>n+(unitState.completedByGroupId.get(g.id)??0),0);
+        const availableSteps=unitState.groups.flatMap(g=>g.lessons).filter(step=>step.exerciseSet);
+        const total=availableSteps.length;
+        const complete=availableSteps.filter(step=>unitState.completedSet.has(step.id)).length;
         return <section key={unitState.lesson.id} ref={node=>{unitSectionRefs.current[unitState.lesson.id]=node;}} className={`course-unit-block ${focused?'is-focused':''} ${unitState.unitUnlocked?'':'is-locked'}`}>
           <header className="unit-banner"><div className="eyebrow">{unitState.lesson.sectionTitle} · UNIT {unitState.lesson.unitNumber}</div>
             <h2 className="unit-banner-title">{unitState.lesson.title.replace(/^Unit \d+: /,'')}</h2>
-            <div className="unit-progress-caption"><span>{unitState.isUnitFullyCompleted?'Completed':unitState.unitUnlocked?'In progress':'Upcoming'}</span><span>{complete} / {total} lessons</span></div>
-            <progress className="unit-progress" value={complete} max={Math.max(1,total)} aria-label={`Unit ${unitState.lesson.unitNumber} completion`}/>
+            <div className="unit-progress-caption"><span>{unitState.isUnitFullyCompleted?'Completed':unitState.unitUnlocked?total>0&&complete===total?'Available practice complete':'In progress':'Upcoming'}</span><span>{total?`${complete} / ${total} lessons`:'Content coming soon'}</span></div>
+            {total>0&&<progress className="unit-progress" value={complete} max={total} aria-label={`Unit ${unitState.lesson.unitNumber} completion`}/>}
             <UnitMastery unitId={unitState.lesson.id}/>
           </header>
           <ol className="course-timeline">
@@ -269,8 +270,8 @@ export default function UnitProgressClient({ focusLessonId = null }: { focusLess
               const action=completed?(group.reviewStep?'Review':'Replay lesson'):selection.hasCurrentLessonFailed?'Try Again':'Start';
               return <li key={group.id} className={`course-row ${current?'is-current':''} ${completed?'is-completed':''}`}>
                 <span className="course-row-marker" aria-hidden="true">{completed?<AppIcon name="check" size={18}/>:!unlocked?<AppIcon name="lock" size={15}/>:index+1}</span>
-                <div className="course-row-content"><div className="course-row-status">{completed?'Completed':current?'Next lesson':unlocked?'Ready':'Locked'}</div><h3>{group.kind==='review'?group.title:group.subtitle}</h3>
-                  <p>{group.kind==='review'?group.subtitle:`Lesson ${selection.currentLessonNumber} of ${group.totalLessons}`}</p>
+                <div className="course-row-content"><div className="course-row-status">{completed?'Completed':current?'Next lesson':unlocked?'Ready':'Locked'}</div><h3>{group.kind==='review'?`Unit ${unitState.lesson.unitNumber} review`:group.subtitle}</h3>
+                  <p>{!actionStep?.exerciseSet?'In preparation':group.kind==='review'?group.subtitle:`Lesson ${selection.currentLessonNumber} of ${group.totalLessons}`}</p>
                   {actionStep?.exerciseSet&&<p className="course-row-summary">{actionStep.summary}</p>}
                   {playable?<Link className={current?'ui-primary':'ui-secondary'} href={`/learn/${unitState.lesson.id}/play/${actionStep.id}/`}>{action}<AppIcon name="arrow" size={16}/></Link>:<span className="course-unavailable">{unlocked?'Content coming soon':'Complete earlier lessons to unlock'}</span>}
                 </div>

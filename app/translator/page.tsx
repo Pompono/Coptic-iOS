@@ -2,6 +2,7 @@
 
 import AppIcon from "../AppIcon";
 import Link from "@/lib/AppLink";
+import {copyText} from "@/lib/nativeExperience";
 import ReferenceDetails from "./ReferenceDetails";
 
 import { translationRequest } from "@/lib/translationService";
@@ -540,9 +541,9 @@ export default function TranslatorPage() {
         {currentState==='error'&&<p role="alert" className="translation-error">{currentError}</p>}
         <section className="translation-result" aria-label="Translation result" aria-live="polite">
           <div className="translation-result-header"><span>{isCopticToEnglish&&currentOutput?outputMethod==='published'?'Published translation · Coptic Corpora / Tasbeha':'Unverified AI draft':'TRANSLATION'}</span>
-            {currentOutput&&<button type="button" aria-label="Copy translation" onClick={()=>{void navigator.clipboard.writeText(currentOutput).then(()=>setCopyStatus('Copied')).catch(()=>setCopyStatus('Could not copy. Select the text to copy it.'));}}><AppIcon name="copy" size={16}/>{copyStatus==='Copied'?'Copied':'Copy'}</button>}</div>
+            {currentOutput&&<button type="button" aria-label="Copy translation" onClick={()=>{void copyText(currentOutput).then(()=>setCopyStatus('Copied')).catch(()=>setCopyStatus('Could not copy. Select the text to copy it.'));}}><AppIcon name="copy" size={16}/>{copyStatus==='Copied'?'Copied':'Copy'}</button>}</div>
           <p className={!isCopticToEnglish&&currentOutput?'coptic-text':!currentOutput?'text-[var(--text-muted)]':''}>{currentOutput||'Your translation will appear here.'}</p>
-          {copyStatus&&<span role="status" className="text-sm">{copyStatus}</span>}
+          {copyStatus&&<span role="status" className={copyStatus==='Copied'?'sr-only':'text-sm'}>{copyStatus}</span>}
           {isCopticToEnglish&&currentOutput&&outputMethod==='published'&&<ReferenceDetails {...referenceDetails}/>}
           {isCopticToEnglish&&currentOutput&&outputMethod==='experimental'&&<p className="translation-help">Experimental translation. Check the meaning before relying on it.</p>}
           {isCopticToEnglish&&currentOutput&&outputMethod==='experimental'&&draftSegments.length>1&&<details className="translation-help"><summary>Review each draft passage</summary>{draftSegments.map((segment,index)=><div key={index}><p className="coptic-text">{segment.text}</p><p>{segment.translation}</p></div>)}</details>}

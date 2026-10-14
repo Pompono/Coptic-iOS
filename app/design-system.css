@@ -3,7 +3,7 @@
 :root {
  --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:20px;--space-6:24px;--space-8:32px;
  --radius-control:12px;--radius-card:18px;--radius-sheet:24px;
- --bg-color:#F8F7F3;--text-color:#24344A;--text-muted:#5E6B7A;--text-soft:#6C7785;
+ --bg-color:#F8F7F3;--text-color:#24344A;--text-muted:#5E6B7A;--text-soft:#5F6C7B;
  --accent-color:#24344A;--accent-contrast-color:#FFFFFF;--border-color:#DFE2E2;
  --surface-1:#FFFFFF;--surface-2:#EDF0ED;--panel-bg:#FFFFFF;
  --teal:#416D66;--teal-surface:#EAF1EE;--gold:#8B6B3C;
@@ -17,7 +17,7 @@
  --lesson-choice-correct-border:#547F78;--lesson-choice-correct-bg:#EAF1EE;--lesson-choice-correct-text:#315A43;
  --lesson-choice-wrong-border:#B77065;--lesson-choice-wrong-bg:#F8ECE8;--lesson-choice-wrong-text:#874039;
  --lesson-matched-text:#586778;--lesson-matched-bg:#EEF1EF;--lesson-matched-border:#D8DFDE;--lesson-recent-match-bg:#EAF1EE;--lesson-recent-match-border:#547F78;
- --lesson-action-bg:#24344A;--lesson-action-inset:transparent;--lesson-action-text:#FFFFFF;--lesson-action-disabled-bg:#E1E5E4;--lesson-action-disabled-text:#626F79;
+ --lesson-action-bg:#24344A;--lesson-action-inset:transparent;--lesson-action-text:#FFFFFF;--lesson-action-disabled-bg:#E1E5E4;--lesson-action-disabled-text:#566470;
  --lesson-success-bg:#EAF1EE;--lesson-success-border:#D0DFD8;--lesson-error-bg:#F8ECE8;--lesson-error-border:#E7CCC5;
  --lesson-input-bg:#FFFFFF;--lesson-input-border:#D8DFDE;--lesson-badge-bg:#EAF1EE;--lesson-badge-text:#416D66;--lesson-word-bank-border:#D8DFDE;--lesson-word-bank-bg:#FFFFFF;
 }
@@ -41,9 +41,9 @@
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:1.0rem;line-height:1.5;letter-spacing:-.012em}
 h1,h2,h3{color:var(--text-color);text-wrap:balance}button,input,textarea,select{font:inherit}button,a{-webkit-tap-highlight-color:transparent}button{cursor:pointer}button:disabled{cursor:default}
 .coptic-text{line-height:1.65;letter-spacing:normal;font-weight:400}input.coptic-text{line-height:1.5}
-.app-page{max-width:760px;padding:24px 20px 32px}.app-page-header{margin-bottom:24px}.app-page-header h1{font-size:1.9375rem;font-weight:700;letter-spacing:-.04em}.app-page-header p{margin-top:8px;font-size:0.9375rem;line-height:1.55}
+.app-page{max-width:760px;padding:var(--space-6) var(--space-5) var(--space-8)}.app-page-header{margin-bottom:24px}.app-page-header h1{font-size:1.9375rem;font-weight:700;letter-spacing:-.04em}.app-page-header p{margin-top:8px;font-size:0.9375rem;line-height:1.55}
 .eyebrow{font-size:0.6875rem;font-weight:650;letter-spacing:.13em;color:var(--text-muted)}.section-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.section-heading h2{font-size:1.0625rem;font-weight:650;margin:0}
-.ui-primary{display:flex;align-items:center;justify-content:center;gap:12px;min-height:50px;border:0;border-radius:12px;background:var(--accent-color);color:var(--accent-contrast-color);font-size:1.0rem;font-weight:600;padding:12px 18px;text-decoration:none}.ui-primary:disabled{background:var(--lesson-action-disabled-bg);color:var(--lesson-action-disabled-text)}
+.ui-primary{display:flex;align-items:center;justify-content:center;gap:12px;min-height:50px;border:0;border-radius:var(--radius-control);background:var(--accent-color);color:var(--accent-contrast-color);font-size:1.0rem;font-weight:600;padding:12px 18px;text-decoration:none}.ui-primary:disabled{background:var(--lesson-action-disabled-bg);color:var(--lesson-action-disabled-text)}
 .ui-secondary{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 14px;border:1px solid var(--border-color);border-radius:12px;background:var(--surface-1);color:var(--text-color);font-size:0.875rem;font-weight:600}
 :where(a,button,input,textarea,select,summary):focus-visible{outline:2px solid var(--teal);outline-offset:3px}input[type=checkbox]{accent-color:var(--teal)}
 .home-header{display:flex;align-items:center;justify-content:space-between;padding-bottom:22px}.home-header h1{font-size:2.125rem;font-weight:700;letter-spacing:-.04em;margin:3px 0 0}.home-monogram{font-size:3.25rem;color:var(--gold);padding-right:6px}
@@ -80,3 +80,9 @@ body{font-size:1rem}.lesson-choice-button{min-height:44px}.lesson-choice-button 
 .course-row-content .course-row-summary{font-size:.8125rem;line-height:1.55;color:var(--text-muted);margin:0 0 12px;max-width:52ch}.lesson-outcome-screen .lesson-outcome-ring{box-shadow:none!important;animation:none!important}.lesson-outcome-screen .lesson-outcome-core{color:var(--teal)!important;background:var(--teal-surface)!important;box-shadow:none!important}.lesson-outcome-screen .lesson-outcome-icon{color:var(--teal)!important}
 .mobile-tab-label{font-size:clamp(10px,.625rem,12px)}.home-page{padding-bottom:20px}
 .lesson-option-button,.lesson-matching-tile{box-shadow:none!important;border-radius:14px!important;border-width:1.5px!important;transform:none!important}.lesson-option-button .coptic-text,.lesson-matching-tile .coptic-text{line-height:1.4!important;font-weight:400!important}.translation-form textarea::placeholder,.dictionary-search-input::placeholder{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:1rem;color:var(--text-soft)}
+.mobile-chin-page-shell[data-keyboard=true]{min-height:var(--interactive-viewport-height,100svh);padding-bottom:0;--page-content-height:calc(var(--interactive-viewport-height,100svh) - env(safe-area-inset-top,0px))}.mobile-chin-page-shell[data-keyboard=true] .translation-form textarea{min-height:96px}
+.translation-result>p{white-space:pre-line}.home-header>div,.home-review>span:nth-child(2),.home-reader>span{min-width:0}h1,h2,h3,strong,label,button{overflow-wrap:anywhere}
+:root[data-large-text=true] .home-monogram{display:none}:root[data-large-text=true] .home-tools{grid-template-columns:1fr}:root[data-large-text=true] .settings-row{flex-wrap:wrap}:root[data-large-text=true] .settings-row select{max-width:100%}:root[data-large-text=true] .translation-options{flex-wrap:wrap}
+:root{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+:root{--coptic-font-family:"Noto Sans Coptic","Segoe UI Symbol","Arial Unicode MS","FreeSerifAvvaShenouda",serif}
+.lesson-outcome-screen.is-failure .lesson-outcome-core{background:var(--lesson-error-bg)!important;color:var(--lesson-choice-wrong-text)!important}.lesson-outcome-screen.is-failure .lesson-outcome-icon{color:var(--lesson-choice-wrong-text)!important}

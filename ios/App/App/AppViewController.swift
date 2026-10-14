@@ -44,6 +44,7 @@ class AppViewController: CAPBridgeViewController {
             window.__copticAudioSmoke = { status: 'running' };
             (async () => {
               try {
+                await cap.nativePromise('AppExperience', 'copy', { text: 'Coptic clipboard check' });
                 const preferences = await cap.nativePromise('AppExperience', 'preferences', {});
                 if (!(preferences.textScale > 0)) throw new Error('Invalid preferred text scale');
                 await cap.nativePromise('AppExperience', 'feedback', { correct: true });
@@ -107,6 +108,13 @@ public class AppIconPlugin: CAPPlugin, CAPBridgedPlugin {
         }
         DispatchQueue.main.async {
             let app = UIApplication.shared
+            // Keep native pickers, the system keyboard and status-bar contrast
+            // aligned with the app's explicit appearance preference.
+            for scene in app.connectedScenes.compactMap({ $0 as? UIWindowScene }) {
+                for window in scene.windows {
+                    window.overrideUserInterfaceStyle = theme == "dark" ? .dark : .light
+                }
+            }
             guard app.supportsAlternateIcons else {
                 call.reject("This device does not support alternate app icons")
                 return
@@ -229,6 +237,7 @@ public class AppExperiencePlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "AppExperience"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "preferences", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "copy", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "feedback", returnType: CAPPluginReturnPromise)
     ]
     private var textObserver: NSObjectProtocol?
@@ -241,6 +250,16 @@ public class AppExperiencePlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func preferences(_ call: CAPPluginCall) {
         DispatchQueue.main.async {
             call.resolve(["textScale": UIFont.preferredFont(forTextStyle: .body).pointSize / 17.0])
+        }
+    }
+    @objc func copy(_ call: CAPPluginCall) {
+        guard let text = call.getString("text") else {
+            call.reject("Expected text to copy")
+            return
+        }
+        DispatchQueue.main.async {
+            UIPasteboard.general.string = text
+            call.resolve()
         }
     }
     @objc func feedback(_ call: CAPPluginCall) {

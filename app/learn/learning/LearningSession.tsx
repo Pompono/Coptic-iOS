@@ -37,7 +37,8 @@ export function LearningSession({ lesson, step, children, newLesson = false }: {
   const [error, setError] = useState('');
   const [data, setData] = useState<any>({version:1,skills:{}});
   const attempts = useRef(new Set<string>());
-  useLayoutEffect(()=>{window.scrollTo({top:0,left:0,behavior:'instant'});},[phase]);
+  const guideContent = useRef<HTMLDivElement>(null);
+  useLayoutEffect(()=>{window.scrollTo({top:0,left:0,behavior:'instant'});guideContent.current?.scrollTo({top:0,left:0,behavior:'instant'});},[phase,step.id]);
   const items = useMemo(() => getCourseItems(step.exerciseSet ?? ''), [step.exerciseSet]);
   useEffect(() => {
     try {
@@ -78,7 +79,7 @@ export function LearningSession({ lesson, step, children, newLesson = false }: {
   return <SessionContext.Provider value={{record,finish,error}}>
     {phase === 'loading' ? <main className={styles.screen}><p>Preparing your lesson…</p></main>
       : phase === 'guide' ? <main className={styles.introScreen}>
-        <div className={styles.introBody}>
+        <div ref={guideContent} className={styles.introBody}>
           <div className={styles.top}><Link href={`/learn/${lesson.id}/`}>Close lesson</Link><span>Lesson guide</span></div>
           <h1>{step.title}</h1>
           <p>{lessonNote(step)}</p>
@@ -108,7 +109,8 @@ function LearningPractice({ items, lesson, title, description, onDone, review = 
   const [index,setIndex] = useState(0), [reading,setReading] = useState(!review), [selected,setSelected] = useState<number|null>(null);
   const [answer,setAnswer] = useState(''), [result,setResult] = useState<'idle'|'correct'|'wrong'>('idle');
   const [bank,setBank] = useState<number[]>([]), [hint,setHint] = useState(false);
-  useLayoutEffect(()=>{window.scrollTo({top:0,left:0,behavior:'instant'});},[index,reading]);
+  const practiceContent = useRef<HTMLDivElement>(null);
+  useLayoutEffect(()=>{window.scrollTo({top:0,left:0,behavior:'instant'});practiceContent.current?.scrollTo({top:0,left:0,behavior:'instant'});},[index,reading]);
   const selectedEntries = selected === null ? [] : [...new Map(items[selected].word.split(' ').flatMap(word=>{const found=lookupWord(wordIndex,word);return [...found.matches,...found.analyses.flatMap(analysis=>analysis.entries)];}).map(entry=>[entry.id,entry])).values()] as DictionaryEntry[];
   const count = checkpoint ? items.length : teaching ? items.length * 3 : Math.min(3,items.length);
   const item = items[index % items.length];
@@ -133,7 +135,7 @@ function LearningPractice({ items, lesson, title, description, onDone, review = 
     setIndex(i=>i+1); setResult('idle'); setAnswer(''); setBank([]); setHint(false);
   };
   if (!items.length) return <main className={styles.screen}><div className={styles.inner}><p>This lesson’s practice is ready.</p><button className={styles.primary} onClick={onDone}>Continue</button></div></main>;
-  return <main className={`${styles.screen} ${styles.practiceScreen}`}><div className={styles.practiceLayout}><div className={styles.practiceContent}>
+  return <main className={`${styles.screen} ${styles.practiceScreen}`}><div className={styles.practiceLayout}><div ref={practiceContent} className={styles.practiceContent}>
     <div className={styles.top}><Link href={`/learn/${lesson.id}/`}>Close lesson</Link><span>{reading ? 'Read' : `${index+1} of ${count}`}</span></div>
     <h1>{title}</h1><p className={styles.muted}>{description}</p>
     {reading ? <>

@@ -51,6 +51,7 @@ try {
   });
   await context.addInitScript(() => {
     window.__lessonAudioStarts = [];
+    Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{if(window.__copyFails)throw new Error('Clipboard failure');window.__copiedTranslation=text;}}});
     const start = AudioBufferSourceNode.prototype.start;
     AudioBufferSourceNode.prototype.start = function (...args) {
       if (this.buffer?.duration > .01) window.__lessonAudioStarts.push({ duration: this.buffer.duration, state: this.context.state });
@@ -119,6 +120,12 @@ try {
     await page.getByRole('button', { name: 'Translate', exact: true }).click();
     await page.getByText('You are the flower, of incense, that has blossomed, from the root of Jesse.').waitFor();
     await page.getByText(/Published translation · Coptic Corpora/).waitFor();
+    await page.getByRole('button',{name:'Copy translation',exact:true}).click();
+    await page.waitForFunction(()=>window.__copiedTranslation==='You are the flower, of incense, that has blossomed, from the root of Jesse.');
+    await page.evaluate(()=>window.__copyFails=true);
+    await page.getByRole('button',{name:'Copy translation',exact:true}).click();
+    await page.getByRole('status').filter({hasText:'Could not copy.'}).waitFor();
+    await page.evaluate(()=>window.__copyFails=false);
     await page.getByRole('textbox', {name:'Coptic text', exact:true}).fill('[[ⲑⲟ ⲧⲉ ϯϩⲣⲏⲣⲓ');
     assert.equal(await page.getByText('You are the flower, of incense, that has blossomed, from the root of Jesse.').count(), 0, 'Editing text invalidates the previous published result immediately');
     await page.getByRole('button', { name: 'Translate', exact: true }).click();

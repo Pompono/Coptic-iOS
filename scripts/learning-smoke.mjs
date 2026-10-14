@@ -56,7 +56,13 @@ export async function checkLearning(browser,base){
   await page.goto(`${base}/learn/${unit.id}/play/${next.id}/`);
   await startLesson(page);
   await page.getByRole('heading',{name:'A quick recall',exact:true}).waitFor();
-  await page.getByLabel('Your answer',{exact:true}).fill('wrong');await page.getByRole('button',{name:'Check',exact:true}).click();
+  await page.getByLabel('Your answer',{exact:true}).fill('wrong');
+  await page.evaluate(()=>{Object.defineProperty(window.visualViewport,'height',{configurable:true,get:()=>400});window.visualViewport.dispatchEvent(new Event('resize'));});
+  await page.waitForFunction(()=>document.querySelector('.mobile-chin-page-shell').dataset.keyboard==='true');
+  const keyboardAction=await page.getByRole('button',{name:'Check',exact:true}).boundingBox();
+  assert.ok(keyboardAction.y+keyboardAction.height<=400,'Lesson actions stay above the system keyboard');
+  await page.evaluate(()=>{delete window.visualViewport.height;window.visualViewport.dispatchEvent(new Event('resize'));});
+  await page.getByRole('button',{name:'Check',exact:true}).click();
   await page.getByRole('status').filter({hasText:'Not quite.'}).waitFor();
   await page.getByRole('button',{name:'Try again',exact:true}).click();
   await page.getByLabel('Your answer',{exact:true}).fill('the man');await page.getByRole('button',{name:'Check',exact:true}).click();
