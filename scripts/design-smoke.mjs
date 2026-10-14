@@ -22,11 +22,13 @@ export async function checkDesign(browser,base){
   await page.goto(base+'/read/');await page.waitForLoadState('networkidle');
   assert.ok(await page.getByRole('button',{name:/Look up/}).first().evaluate(el=>parseFloat(getComputedStyle(el).fontSize))>=30,'Passage buttons retain their Coptic type size');
   for(const theme of ['light','dark']){
-   for(const route of ['/','/dictionary/','/translator/','/settings/','/read/','/vocabulary/','/translator/scanner/']){
+   for(const route of ['/','/dictionary/','/dictionary/settings/','/dictionary/entry/?lemma=ⲁ','/translator/','/settings/','/read/','/vocabulary/','/translator/scanner/','/learn/']){
     await page.goto(base+route);await page.waitForLoadState('networkidle');
-    await page.evaluate(theme=>{document.documentElement.dataset.theme=theme;document.documentElement.style.fontSize='24px';},theme);
     await page.setViewportSize({width:360,height:640});
-    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),theme+route+' fits a small phone at larger type');
+    for(const size of [24,40]){
+     await page.evaluate(({theme,size})=>{document.documentElement.dataset.theme=theme;document.documentElement.style.fontSize=size+'px';document.documentElement.dataset.largeText=size>24?'true':'false';},{theme,size});
+     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),theme+route+' fits a small phone at '+size+'px type');
+    }
    }
    await page.goto(base+'/learn/'+first.id+'/play/lesson-1-a-o-d/');await page.waitForLoadState('networkidle');
    await page.evaluate(theme=>{document.documentElement.dataset.theme=theme;document.documentElement.style.fontSize='24px';},theme);
