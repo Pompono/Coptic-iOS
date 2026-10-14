@@ -444,19 +444,13 @@ function LessonOutcomeCelebration({
   icon: "check" | "cross";
   isFailure?: boolean;
 }) {
-  const outcomeRingBorder = isFailure ? "rgba(125, 74, 69, 0.2)" : "rgba(43, 65, 96, 0.14)";
-  const outcomeOuterBackground = isFailure
-    ? "radial-gradient(circle at center, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 70%), linear-gradient(180deg, rgba(236, 224, 214, 0.94) 0%, rgba(223, 203, 191, 0.78) 100%)"
-    : "radial-gradient(circle at center, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0) 70%), linear-gradient(180deg, rgba(235, 230, 218, 0.92) 0%, rgba(221, 214, 198, 0.72) 100%)";
-  const outcomeInnerBorder = isFailure ? "rgba(125, 74, 69, 0.11)" : "rgba(43, 65, 96, 0.08)";
-  const outcomeCoreBackground = isFailure
-    ? "linear-gradient(180deg, #8c5e57 0%, #70443f 100%)"
-    : "linear-gradient(180deg, #40597a 0%, #2b4160 100%)";
-  const outcomeCoreShadow = isFailure
-    ? "inset 0 -8px 0 rgba(79, 45, 40, 0.22), 0 8px 18px rgba(112, 68, 63, 0.14)"
-    : "inset 0 -8px 0 rgba(20, 32, 48, 0.24), 0 8px 18px rgba(43, 65, 96, 0.12)";
-  const outcomeKickerColor = isFailure ? "rgba(112, 68, 63, 0.7)" : "rgba(43, 65, 96, 0.62)";
-  const outcomeSubtitleColor = isFailure ? "rgba(112, 68, 63, 0.72)" : "rgba(43, 65, 96, 0.62)";
+  const outcomeRingBorder = "var(--border-color)";
+  const outcomeOuterBackground = "var(--surface-1)";
+  const outcomeInnerBorder = "var(--border-color)";
+  const outcomeCoreBackground = "var(--teal-surface)";
+  const outcomeCoreShadow = "none";
+  const outcomeKickerColor = "var(--text-muted)";
+  const outcomeSubtitleColor = "var(--text-muted)";
 
   return (
     <>

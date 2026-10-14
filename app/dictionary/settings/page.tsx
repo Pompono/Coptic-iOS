@@ -10,7 +10,7 @@ export default function AdvancedDictionarySettings(){
  useEffect(()=>{const global=isBohairicOnlyEnabled();setLocked(global);const saved=readDictionaryOptions();setOptions({...saved,bohairicOnly:global||saved.bohairicOnly});let cancelled=false;loadReadingDictionary().then(entries=>{if(!cancelled)setParts([...new Set(entries.map(e=>(e.pos??'').trim()).filter(Boolean))].sort());}).catch(()=>{if(!cancelled)setError('Parts of speech could not be loaded. Other search settings remain available.');});return()=>{cancelled=true;};},[]);
  function update(change:Partial<DictionaryOptions>){const next={...options,...change};setOptions(next);try{writeDictionaryOptions(next);setError('');}catch{setError('Could not save dictionary settings.');}}
  const selectClass='w-full rounded-xl border border-[var(--border-color)] bg-[var(--surface-1)] px-3 py-3 text-[var(--text-color)]';
- return <main className="app-page" style={{maxWidth:680,margin:'0 auto',paddingBottom:32}}>
+ return <main className="app-page dictionary-settings" style={{maxWidth:680,margin:'0 auto',paddingBottom:32}}>
   <Link href="/dictionary/" className="inline-flex min-h-11 items-center text-sm underline">← Back to dictionary</Link>
   <h1 className="mt-3 text-3xl font-semibold">Advanced dictionary settings</h1>
   <p className="mt-2 text-[var(--text-muted)]">Fine-tune your search. Changes apply when you return to the dictionary.</p>

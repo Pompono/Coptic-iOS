@@ -4,6 +4,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { readFile, access, stat } from 'node:fs/promises';
 import { startLesson, checkLearning, finishTransfer } from './learning-smoke.mjs';
+import { checkDesign } from './design-smoke.mjs';
 import { checkDictionary } from './dictionary-smoke.mjs';
 import { checkScanner } from './scanner/smoke.mjs';
 import { checkReading } from './reading-smoke.mjs';
@@ -33,6 +34,7 @@ let browser;
 try {
   const engine = process.env.COPTIC_BROWSER === 'webkit' ? webkit : chromium;
   browser = await engine.launch({ headless: true });
+  await checkDesign(browser, base);
   await checkLearning(browser, base);
   await checkDictionary(browser, base);
   await checkKeyboardPrompt(browser, base);
@@ -96,13 +98,13 @@ try {
     }
     if (route === '/dictionary/') await page.getByText(/shown.*total/).waitFor();
     if (route === '/settings/') {
-      await page.getByRole('button', { name: 'Dark', exact: true }).click();
+      await page.getByRole('combobox', { name: 'App theme', exact: true }).selectOption('dark');
       await page.waitForLoadState('networkidle');
       await page.reload();
       await page.waitForLoadState('networkidle');
       await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark');
       assert.equal(await page.evaluate(() => localStorage.getItem('theme-mode')), 'dark');
-      await page.getByRole('button', { name: 'Light', exact: true }).click();
+      await page.getByRole('combobox', { name: 'App theme', exact: true }).selectOption('light');
     }
     // WebKit reports aborted speculative fetches as page errors if a test
     // tears down the document while Next's link prefetches are still running.
@@ -113,11 +115,11 @@ try {
     await page.evaluate(() => Object.defineProperty(navigator, 'onLine', { get: () => false }));
   }
   if (localModel) {
-    await page.locator('input').first().fill('ⲛⲑⲟ ⲧⲉ ϯϩⲣⲏⲣⲓ: ⲛ̀ⲧⲉ ⲡⲓⲥⲑⲟⲓⲛⲟⲩϥⲓ: ⲑⲏⲉⲧⲁⲥⲫⲓⲣⲓ ⲉ̀ⲃⲟⲗ: ϧⲉⲛ ⲑⲛⲟⲩⲛⲓ ⲛ̀ⲓⲉⲥⲥⲉ.');
+    await page.getByRole('textbox', {name:'Coptic text', exact:true}).fill('ⲛⲑⲟ ⲧⲉ ϯϩⲣⲏⲣⲓ: ⲛ̀ⲧⲉ ⲡⲓⲥⲑⲟⲓⲛⲟⲩϥⲓ: ⲑⲏⲉⲧⲁⲥⲫⲓⲣⲓ ⲉ̀ⲃⲟⲗ: ϧⲉⲛ ⲑⲛⲟⲩⲛⲓ ⲛ̀ⲓⲉⲥⲥⲉ.');
     await page.getByRole('button', { name: 'Translate', exact: true }).click();
     await page.getByText('You are the flower, of incense, that has blossomed, from the root of Jesse.').waitFor();
     await page.getByText(/Published translation · Coptic Corpora/).waitFor();
-    await page.locator('input').first().fill('[[ⲑⲟ ⲧⲉ ϯϩⲣⲏⲣⲓ');
+    await page.getByRole('textbox', {name:'Coptic text', exact:true}).fill('[[ⲑⲟ ⲧⲉ ϯϩⲣⲏⲣⲓ');
     assert.equal(await page.getByText('You are the flower, of incense, that has blossomed, from the root of Jesse.').count(), 0, 'Editing text invalidates the previous published result immediately');
     await page.getByRole('button', { name: 'Translate', exact: true }).click();
     await page.getByText(/No unambiguous published translation/).waitFor();
@@ -125,22 +127,22 @@ try {
     await page.getByLabel('Translation method').selectOption('experimental');
     console.log('PASS: source-matched flower/incense/Jesse stanza and explicit refusal of damaged OCR.');
   }
-  await page.locator('input').first().fill('ⲡⲉⲛⲛⲟⲩϯ');
+  await page.getByRole('textbox', {name:'Coptic text', exact:true}).fill('ⲡⲉⲛⲛⲟⲩϯ');
   await page.getByRole('button', { name: 'Translate', exact: true }).click();
   if (localModel) {
     await page.getByRole('button', { name: 'Translate', exact: true }).waitFor({ timeout: 180000 });
     assert.match(await page.locator('body').innerText(), /our God/i);
-    await page.locator('input').first().fill('ⲓⲏⲥ ⲡⲭⲥ');
+    await page.getByRole('textbox', {name:'Coptic text', exact:true}).fill('ⲓⲏⲥ ⲡⲭⲥ');
     await page.getByRole('button', { name: 'Translate', exact: true }).click();
     await page.getByRole('button', { name: 'Translate', exact: true }).waitFor({ timeout: 180000 });
     assert.match(await page.locator('body').innerText(), /Jesus Christ/i);
     console.log('PASS: both model translations ran with navigator.onLine=false and external requests blocked.');
-    await page.locator('input').first().fill('ⲛⲑⲟ ⲧⲉ ⲧϣⲉⲣⲓ');
+    await page.getByRole('textbox', {name:'Coptic text', exact:true}).fill('ⲛⲑⲟ ⲧⲉ ⲧϣⲉⲣⲓ');
     await page.getByRole('button', { name: 'Translate', exact: true }).click();
     await page.getByRole('button', { name: 'Translate', exact: true }).waitFor({ timeout: 180000 });
     assert.match(await page.locator('body').innerText(), /You are the daughter/i);
     console.log('PASS: beam decoder preserves daughter rather than the old greedy Son output.');
-    await page.locator('input').first().fill('ⲁⲛⲟⲕ ⲟⲩⲣⲱⲙⲓ ⲡⲉ. ⲛⲑⲟ ⲟⲩⲥϩⲓⲙⲓ ⲧⲉ.');
+    await page.getByRole('textbox', {name:'Coptic text', exact:true}).fill('ⲁⲛⲟⲕ ⲟⲩⲣⲱⲙⲓ ⲡⲉ. ⲛⲑⲟ ⲟⲩⲥϩⲓⲙⲓ ⲧⲉ.');
     await page.getByRole('button', { name: 'Translate', exact: true }).click();
     await page.getByRole('button', { name: 'Translate', exact: true }).waitFor({ timeout: 180000 });
     await page.getByText('Review each draft passage', { exact: true }).click();
@@ -148,17 +150,17 @@ try {
     assert.match(await page.locator('body').innerText(), /(?:you are|thou art) a woman/i);
     await page.getByText('Unverified AI draft', { exact: true }).waitFor();
     console.log('PASS: unfamiliar composed text translates through the model in two complete passages.');
-    await page.locator('input').first().fill('ⲁ'.repeat(700));
+    await page.getByRole('textbox', {name:'Coptic text', exact:true}).fill('ⲁ'.repeat(700));
     await page.getByRole('button', { name: 'Translate', exact: true }).click();
     await page.getByText(/One sentence exceeds the local model’s trained length/).waitFor();
     assert.equal(await page.getByText('Unverified AI draft', { exact: true }).count(), 0, 'An overlength failure clears earlier English instead of accepting partial output');
 
 
 
-    await page.locator('input').first().fill('ⲉ 4 ⲙⲁⲣⲓⲁ: ⲍ □ ⲛⲁⲛ');
+    await page.getByRole('textbox', {name:'Coptic text', exact:true}).fill('ⲉ 4 ⲙⲁⲣⲓⲁ: ⲍ □ ⲛⲁⲛ');
     await page.getByRole('button', { name: 'Translate', exact: true }).click();
     await page.getByText(/Correct the Coptic text before translating/).waitFor();
-    await page.locator('input').first().fill('ⲛⲑⲟ ⲧⲉ ⲧϣⲏⲣⲓ: ⲛ̀ⲧⲉ ⲡⲓⲑⲙⲏⲓⲛⲟⲩϯ: ⲑⲏⲉⲧⲁⲥϥⲓⲣⲓ ⲉ̀ⲃⲟⲗ: ϧⲉⲛ ⲑⲛⲟⲩⲛⲓ ⲛ̀ⲓⲉⲥⲥⲉ.');
+    await page.getByRole('textbox', {name:'Coptic text', exact:true}).fill('ⲛⲑⲟ ⲧⲉ ⲧϣⲏⲣⲓ: ⲛ̀ⲧⲉ ⲡⲓⲑⲙⲏⲓⲛⲟⲩϯ: ⲑⲏⲉⲧⲁⲥϥⲓⲣⲓ ⲉ̀ⲃⲟⲗ: ϧⲉⲛ ⲑⲛⲟⲩⲛⲓ ⲛ̀ⲓⲉⲥⲥⲉ.');
     await page.getByRole('button', { name: 'Translate', exact: true }).click();
     await page.getByRole('button', { name: 'Translate', exact: true }).waitFor({ timeout: 180000 });
     console.log('Photo passage with manually transcribed Coptic:', await page.locator('body').innerText());

@@ -1,7 +1,9 @@
 // app/layout.tsx
 import "./globals.css";
+import "./design-system.css";
 import type { Metadata, Viewport } from "next";
 import KeyboardInstallPrompt from "./KeyboardInstallPrompt";
+import NativeExperience from "./NativeExperience";
 import AudioUnlock from "./AudioUnlock";
 import CopticFontPreference from "./CopticFontPreference";
 import MobileChinDock from "./MobileChinDock";
@@ -29,6 +31,7 @@ export default function RootLayout({
       <body>
         <div className="status-bar-backdrop" aria-hidden="true" />
         <AudioUnlock />
+        <NativeExperience />
         <CopticFontPreference />
         <ThemePreference />
         <NavigationScrollReset />

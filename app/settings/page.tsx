@@ -130,44 +130,6 @@ export default function SettingsPage() {
     router.push(`/learn/${selectedLesson.id}/play/${devStepId}`);
   };
 
-  const toggleButtonStyle = (active: boolean) => ({
-    minWidth: 76,
-    minHeight: 44,
-    padding: "8px 12px",
-    border: "none",
-    cursor: "pointer",
-    background: active ? "var(--toggle-active-bg)" : "transparent",
-    color: active ? "var(--toggle-active-text)" : "var(--text-color)",
-    fontWeight: 700,
-    fontSize: 13,
-    lineHeight: 1.2,
-    textAlign: "center" as const,
-    fontFamily: "inherit",
-  });
-
-  const toggleRowStyle = {
-    display: "grid",
-    gridTemplateColumns: isNarrowLayout ? "1fr" : "minmax(160px, max-content) auto",
-    alignItems: "center",
-    columnGap: 10,
-    rowGap: isNarrowLayout ? 8 : 0,
-  } as const;
-
-  const toggleLabelStyle = {
-    fontSize: 14,
-    fontWeight: 600,
-    maxWidth: "100%",
-    overflowWrap: "anywhere" as const,
-  } as const;
-
-  const toggleControlStyle = {
-    display: "inline-flex",
-    border: "1px solid var(--border-color)",
-    borderRadius: 12,
-    overflow: "hidden",
-    justifySelf: "end",
-  } as const;
-
   const devActionButtonStyle = {
     padding: "10px 14px",
     borderRadius: 10,
@@ -189,65 +151,14 @@ export default function SettingsPage() {
     fontSize: 14,
   } as const;
 
-  return (
-    <main className="app-page settings-page"
-      style={{
-        maxWidth: 900,
-        margin: "0 auto",
-        minHeight: "var(--page-content-height)",
-        display: "grid",
-        alignContent: "start",
-        gap: 20,
-      }}
-    >
-      <div className="app-page-header">
-        <h1 style={{ marginTop: 0, marginBottom: 8, fontSize: 34, fontWeight: 800 }}>Settings</h1>
-        <p style={{ marginBottom: 0, opacity: 0.85 }}>Make Coptic feel right for you.</p>
-      </div>
-
-      <section className="settings-panel"
-        style={{
-          display: "grid",
-          gap: 20,
-          border: "1px solid var(--border-color)",
-          borderRadius: 20,
-          padding: 20,
-          background: "var(--panel-bg)",
-        }}
-      >
-        <div style={toggleRowStyle} aria-label="Theme toggle">
-          <span style={toggleLabelStyle}>App Theme</span>
-          <div style={toggleControlStyle}>
-            <button type="button" onClick={() => onToggleTheme("light")} aria-pressed={themeMode === "light"} style={toggleButtonStyle(themeMode === "light")}>
-              Light
-            </button>
-            <button type="button" onClick={() => onToggleTheme("dark")} aria-pressed={themeMode === "dark"} style={toggleButtonStyle(themeMode === "dark")}>
-              Dark
-            </button>
-          </div>
-        </div>
-
-        <div style={toggleRowStyle} aria-label="Developer tools toggle">
-          <span style={toggleLabelStyle}>Developer Tools</span>
-
-          <div style={toggleControlStyle}>
-            <button
-              type="button"
-              onClick={() => onToggleDevTools(false)}
-              aria-pressed={!devToolsEnabled} style={toggleButtonStyle(!devToolsEnabled)}
-            >
-              Off
-            </button>
-            <button
-              type="button"
-              onClick={() => onToggleDevTools(true)}
-              aria-pressed={devToolsEnabled} style={toggleButtonStyle(devToolsEnabled)}
-            >
-              On
-            </button>
-          </div>
-        </div>
-
+  return <main className="app-page settings-page" style={{display:'grid',alignContent:'start'}}>
+    <header className="app-page-header"><h1>Settings</h1><p>Make Coptic feel right for you.</p></header>
+    <section><h2 className="settings-section-title">APPEARANCE</h2><div className="settings-group">
+      <div className="settings-row" aria-label="Theme toggle"><label htmlFor="theme-choice">App theme</label><select id="theme-choice" aria-label="App theme" value={themeMode} onChange={e=>onToggleTheme(e.target.value as ThemeMode)}><option value="light">Light</option><option value="dark">Dark</option></select></div>
+      <div className="settings-row"><label htmlFor="font-choice">Coptic font</label><select id="font-choice" value={fontMode} onChange={e=>onToggleFont(e.target.value as CopticFontMode)}><option value="unicode">Standard</option><option value="avva">Avva Shenouda</option></select></div>
+    </div></section>
+    <section><h2 className="settings-section-title">LANGUAGE</h2><div className="settings-group"><div className="settings-row"><label htmlFor="bohairic-switch">Bohairic-only mode</label><input id="bohairic-switch" type="checkbox" role="switch" checked={bohairicOnlyEnabled} onChange={e=>onToggleBohairicOnlyEnabled(e.target.checked)}/></div></div><p className="settings-note">Use verified Bohairic entries and keep the translator in Bohairic.</p></section>
+    <section><h2 className="settings-section-title">DEVELOPER</h2><div className="settings-group"><div className="settings-row" aria-label="Developer tools toggle"><label htmlFor="developer-switch">Developer tools</label><input id="developer-switch" type="checkbox" role="switch" checked={devToolsEnabled} onChange={e=>onToggleDevTools(e.target.checked)}/></div></div>
         {devToolsEnabled ? (
           <div
             style={{
@@ -349,70 +260,7 @@ export default function SettingsPage() {
           </div>
         ) : null}
 
-        <div style={toggleRowStyle} aria-label="Coptic font toggle">
-          <span style={toggleLabelStyle}>Coptic Font</span>
-
-          <div style={toggleControlStyle}>
-            <button type="button" onClick={() => onToggleFont("unicode")} aria-pressed={fontMode === "unicode"} style={toggleButtonStyle(fontMode === "unicode")}>
-              Standard
-            </button>
-            <button type="button" onClick={() => onToggleFont("avva")} aria-pressed={fontMode === "avva"} style={toggleButtonStyle(fontMode === "avva")}>
-              New
-            </button>
-          </div>
-        </div>
-
-        <div style={toggleRowStyle} aria-label="Bohairic-only mode toggle">
-          <span style={toggleLabelStyle}>Global Bohairic-only Mode</span>
-
-          <div style={toggleControlStyle}>
-            <button
-              type="button"
-              onClick={() => onToggleBohairicOnlyEnabled(false)}
-              aria-pressed={!bohairicOnlyEnabled} style={toggleButtonStyle(!bohairicOnlyEnabled)}
-            >
-              Off
-            </button>
-            <button
-              type="button"
-              onClick={() => onToggleBohairicOnlyEnabled(true)}
-              aria-pressed={bohairicOnlyEnabled} style={toggleButtonStyle(bohairicOnlyEnabled)}
-            >
-              On
-            </button>
-          </div>
-        </div>
-
-
-      </section>
-
-      <div
-        style={{
-          display: "grid",
-          justifyItems: "center",
-          gap: 10,
-          paddingTop: 4,
-        }}
-      >
-        <p style={{ margin: 0, fontSize: 13, opacity: 0.8, textAlign: "center" }}>
-          Prefer the system Coptic keyboard?
-        </p>
-        <a
-          href={COPTIC_KEYBOARD_APP_STORE_URL}
-          target="_blank"
-          rel="noreferrer"
-          aria-label="Download the Coptic Keyboard app on the App Store"
-          style={{ display: "inline-flex", lineHeight: 0 }}
-        >
-          <Image
-            src="/download-on-the-app-store-badge.svg"
-            alt="Download on the App Store"
-            width={180}
-            height={60}
-            style={{ width: 180, height: "auto", display: "block" }}
-          />
-        </a>
-      </div>
-    </main>
-  );
+    </section>
+    <section><h2 className="settings-section-title">COPTIC KEYBOARD</h2><div className="settings-group keyboard-resource"><span>Type with the iOS<br/>Coptic keyboard</span><a href={COPTIC_KEYBOARD_APP_STORE_URL} target="_blank" rel="noreferrer" aria-label="Download the Coptic Keyboard app on the App Store"><Image src="/download-on-the-app-store-badge.svg" alt="Download on the App Store" width={130} height={44}/></a></div><p className="settings-note">An optional system keyboard, available separately on the App Store.</p></section>
+  </main>;
 }

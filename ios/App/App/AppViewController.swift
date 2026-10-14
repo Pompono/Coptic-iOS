@@ -7,6 +7,7 @@ class AppViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         super.capacitorDidLoad()
         bridge?.registerPluginInstance(AppIconPlugin())
+        bridge?.registerPluginInstance(AppExperiencePlugin())
         bridge?.registerPluginInstance(LessonAudioPlugin())
         // Keep normal content scrolling, but never rubber-band past its bounds.
         webView?.scrollView.bounces = false
@@ -43,6 +44,10 @@ class AppViewController: CAPBridgeViewController {
             window.__copticAudioSmoke = { status: 'running' };
             (async () => {
               try {
+                const preferences = await cap.nativePromise('AppExperience', 'preferences', {});
+                if (!(preferences.textScale > 0)) throw new Error('Invalid preferred text scale');
+                await cap.nativePromise('AppExperience', 'feedback', { correct: true });
+                await cap.nativePromise('AppExperience', 'feedback', { correct: false });
                 await cap.nativePromise('LessonAudio', 'activate', {});
                 for (const name of ['a.wav', 'correct-answer.wav', 'incorrect-answer.wav']) {
                   const path = '/audio/learn/shared/' + name;
@@ -211,6 +216,37 @@ public class LessonAudioPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc public func stop(_ call: CAPPluginCall) {
         DispatchQueue.main.async {
             for player in self.players.values { player.stop(); player.currentTime = 0 }
+            call.resolve()
+        }
+    }
+}
+
+
+/// Native accessibility preferences and restrained lesson-result feedback.
+@objc(AppExperiencePlugin)
+public class AppExperiencePlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "AppExperiencePlugin"
+    public let jsName = "AppExperience"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "preferences", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "feedback", returnType: CAPPluginReturnPromise)
+    ]
+    private var textObserver: NSObjectProtocol?
+    public override func load() {
+        textObserver = NotificationCenter.default.addObserver(forName: UIContentSizeCategory.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.notifyListeners("textScaleChanged", data: ["scale": UIFont.preferredFont(forTextStyle: .body).pointSize / 17.0])
+        }
+    }
+    deinit { if let observer = textObserver { NotificationCenter.default.removeObserver(observer) } }
+    @objc func preferences(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            call.resolve(["textScale": UIFont.preferredFont(forTextStyle: .body).pointSize / 17.0])
+        }
+    }
+    @objc func feedback(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(call.getBool("correct") == true ? .success : .error)
             call.resolve()
         }
     }

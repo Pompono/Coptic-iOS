@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "@/lib/AppLink";
 import AppIcon from "../AppIcon";
+import Link from "@/lib/AppLink";
 import ReferenceDetails from "./ReferenceDetails";
 
 import { translationRequest } from "@/lib/translationService";
@@ -148,7 +148,7 @@ export default function TranslatorPage() {
     setDraftSegments([]); setReferenceDetails({}); setOutputMethod('');
   }, [translationInput, translatorDialect]);
   useEffect(() => { setEnglishOutput(''); setEnglishConfidence(null); setEnglishError(''); }, [englishInput, translatorDialect]);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const lastShiftTapRef = useRef<number>(0);
   const mobileKeyboardTouchStartRef = useRef<{ x: number; y: number } | null>(null);
   const mobileKeyboardCloseTimerRef = useRef<number | null>(null);
@@ -192,7 +192,7 @@ export default function TranslatorPage() {
     };
   }, []);
 
-  const hideKeyboardOnManualInputFocus = (event: ReactPointerEvent<HTMLInputElement>) => {
+  const hideKeyboardOnManualInputFocus = (event: ReactPointerEvent<HTMLTextAreaElement>) => {
     if (!keyboardEnabled || !isMobileViewport || !showKeyboard) return;
     event.currentTarget.readOnly = false;
     event.currentTarget.inputMode = "text";
@@ -331,6 +331,7 @@ export default function TranslatorPage() {
   };
 
   const runCurrentTranslation = () => {
+    setCopyStatus('');
     if (isCopticToEnglish) {
       void runTranslation();
       return;
@@ -343,8 +344,8 @@ export default function TranslatorPage() {
     runCurrentTranslation();
   };
 
-  const handleInputKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
-    if (event.key !== "Enter" || currentState === "loading") {
+  const handleInputKeyDown = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== "Enter" || !(event.metaKey || event.ctrlKey) || currentState === "loading") {
       return;
     }
 
@@ -483,6 +484,7 @@ export default function TranslatorPage() {
     }
   };
 
+  const [copyStatus,setCopyStatus] = useState("");
   const dialectLabel = translatorDialect === "bohairic" ? "Bohairic" : "Sahidic";
   const isCopticToEnglish = direction === "copticToEnglish";
   const currentInput = isCopticToEnglish ? translationInput : englishInput;
@@ -493,6 +495,7 @@ export default function TranslatorPage() {
 
   const handleSwitchDirection = () => {
     if (translationState === "loading" || englishState === "loading") return;
+    setCopyStatus('');
     setDirection((current) => (current === "copticToEnglish" ? "englishToCoptic" : "copticToEnglish"));
   };
 
@@ -520,143 +523,33 @@ export default function TranslatorPage() {
           paddingBottom: isMobileViewport && showKeyboard ? "calc(24px + env(safe-area-inset-bottom, 0px))" : undefined,
         }}
       >
-        <h1 className="text-4xl font-semibold tracking-tight">Coptic Translator (Beta)</h1>
-        <Link href="/translator/scanner/" className="mt-4 inline-flex rounded-xl border border-[var(--border-color)] bg-[var(--surface-1)] px-4 py-3 text-sm font-semibold">Scan a Coptic photo →</Link>
-         <p className="mt-2 text-[var(--text-muted)]">
-          {isCopticToEnglish ? "Coptic → English translator" : "English → Coptic translator"}
-        </p>
-
-        {isCopticToEnglish && localTranslationEnabled ? (
-          <p className="mt-2 text-sm text-[var(--text-muted)]">
-            Translates on this device, including offline. Published-text matches work offline; AI drafts remain experimental.
-          </p>
-        ) : null}
-
-        {isCopticToEnglish && localTranslationEnabled && <label className="mt-4 block">Translation method
-          <select aria-label="Translation method" value={translationMethod} disabled={currentState === 'loading'}
-            onChange={event => { setTranslationMethod(event.target.value as typeof translationMethod); setTranslationOutput(''); setTranslationError(''); }}
-            className="ml-2 rounded-xl border border-[var(--border-color)] bg-[var(--surface-1)] p-2">
-            <option value="published">Published text</option><option value="experimental">Experimental AI draft</option>
-          </select>
-          <p className="mt-2 text-sm text-[var(--text-muted)]">Published text returns an existing translation when the letters match a supported passage. It does not guess missing text. AI drafts can contain wrong meanings.</p>
-        </label>}
-
-        <div className="mt-5 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-1)] p-4">
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-[var(--text-muted)]">Dialect</span>
-            <button
-              type="button"
-              onClick={handleDialectToggle}
-              disabled={bohairicOnlyEnabled || currentState === "loading"}
-              className={[
-                "rounded-full border border-[var(--border-color)] px-3 py-1 text-xs",
-                bohairicOnlyEnabled
-                  ? "cursor-not-allowed opacity-90"
-                  : "bg-[var(--surface-2)] text-[var(--text-color)] hover:bg-[var(--surface-1)]",
-              ].join(" ")}
-              style={
-                bohairicOnlyEnabled
-                  ? {
-                      borderColor: "var(--bohairic-badge-border)",
-                      background: "var(--bohairic-badge-bg)",
-                      color: "var(--bohairic-badge-text)",
-                    }
-                  : undefined
-              }
-              title={
-                bohairicOnlyEnabled
-                  ? "Disabled while global Bohairic-only mode is enabled"
-                  : "Toggle translator dialect"
-              }
-              aria-disabled={bohairicOnlyEnabled}
-            >
-              {bohairicOnlyEnabled ? "Bohairic-only" : dialectLabel}
-            </button>
-            {bohairicOnlyEnabled ? (
-              <span className="text-xs text-[var(--text-muted)]">Locked by Settings</span>
-            ) : null}
-          </div>
-
-          <form className="mt-3 flex flex-wrap items-center gap-2" onSubmit={handleSubmit}>
-            <button
-              type="button"
-              onClick={handleSwitchDirection}
-              disabled={translationState === "loading" || englishState === "loading"}
-              className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-2)] px-3 py-2 text-sm font-semibold text-[var(--text-color)] hover:bg-[var(--surface-1)]"
-              title="Switch translation direction"
-              aria-label="Switch translation direction"
-            >
-              ⇄
-            </button>
-            <input
-              ref={inputRef}
-              disabled={currentState === "loading"}
-              value={currentInput}
-              onChange={(e) => {
-                if (isCopticToEnglish) {
-                  setTranslationInput(e.target.value);
-                  return;
-                }
-                setEnglishInput(e.target.value);
-              }}
-              onKeyDown={handleInputKeyDown}
-              onPointerDownCapture={hideKeyboardOnManualInputFocus}
-              placeholder={isCopticToEnglish ? "Type Coptic text..." : "Type English text..."}
-              enterKeyHint="go"
-              className="min-w-[260px] flex-1 rounded-xl border border-[var(--border-color)] bg-transparent px-3 py-2 text-sm text-[var(--text-color)] outline-none placeholder:text-[var(--text-soft)]"
-            />
-            <button
-              type="submit"
-              disabled={currentState === "loading"}
-              className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-2)] px-4 py-2 text-sm font-semibold text-[var(--text-color)] hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {currentState === "loading" ? "Translating…" : "Translate"}
-            </button>
-          </form>
-
-          {isCopticToEnglish && currentState === "loading" && <p role="status" className="mt-3 text-sm">{translationProgress}</p>}
-          {currentState === "error" ? (
-            <p className="mt-3 text-xs text-rose-300">{currentError}</p>
-          ) : null}
-
-          <div className="mt-4 rounded-xl border border-[var(--border-color)] bg-[var(--surface-2)] p-4">
-            <p className="text-xs text-[var(--text-muted)]">{isCopticToEnglish && currentOutput ? outputMethod === "published" ? "Published translation · Coptic Corpora / Tasbeha" : "Unverified AI draft" : "Output"}</p>
-            <p className={`mt-2 whitespace-pre-line text-lg text-[var(--text-color)] ${!isCopticToEnglish && currentOutput ? "coptic-text" : ""}`}>
-              {currentOutput || "Translation will appear here."}
-            </p>
-            {isCopticToEnglish && currentOutput && outputMethod === "published" && <ReferenceDetails {...referenceDetails} />}
-            {isCopticToEnglish && currentOutput && outputMethod === 'experimental' && draftSegments.length > 1 && <details className="mt-3 text-sm">
-              <summary>Review each draft passage</summary>
-              {draftSegments.map((segment, index) => <div key={index} className="mt-3">
-                <p className="coptic-text">{segment.text}</p><p>{segment.translation}</p>
-              </div>)}
-            </details>}
-            {currentConfidence !== null ? (
-              <p className="mt-2 text-xs text-[var(--text-muted)]">
-                Confidence: {(currentConfidence * 100).toFixed(1)}%
-              </p>
-            ) : null}
-          </div>
-
-            {keyboardEnabled && !isMobileViewport && isCopticToEnglish ? (
-            <div className="mt-4 rounded-2xl border border-[var(--kb-border)] p-3" style={{ background: "var(--kb-shell)" }}>
-              <div className="mb-3 flex items-center justify-between">
-                <span className="text-sm text-[var(--text-muted)]">Coptic keyboard</span>
-                <button
-                  type="button"
-                  onClick={() => setKeyboardVisibility(!showKeyboard)}
-                  className="rounded-full border border-[var(--border-color)] bg-[var(--surface-1)] px-3 py-1 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-2)]"
-                >
-                  {showKeyboard ? "Hide" : "Show"}
-                </button>
-              </div>
-
-              {showKeyboard ? (
-                <KeyboardGrid page={page} handleKey={handleKey} displayKey={displayKey} shiftMode={shiftMode} />
-              ) : null}
-            </div>
-          ) : null}
+        <header className="translation-header"><h1>Translator</h1><Link href="/translator/scanner/"><AppIcon name="scan"/>Scan a photo</Link></header>
+        <p>Coptic and English, side by side.</p>
+        <div className="translation-options">
+          {isCopticToEnglish&&localTranslationEnabled?<label>Translation method<select aria-label="Translation method" value={translationMethod} disabled={currentState==='loading'} onChange={event=>{setTranslationMethod(event.target.value as typeof translationMethod);setTranslationOutput('');setTranslationError('');setCopyStatus('');}}><option value="published">Published text</option><option value="experimental">Experimental AI draft</option></select></label>:<span>Translation</span>}
+          <div><button type="button" onClick={handleDialectToggle} disabled={bohairicOnlyEnabled||currentState==='loading'} aria-label="Translator dialect" title={bohairicOnlyEnabled?'Locked by global Bohairic-only mode in Settings':'Change dialect'}>{bohairicOnlyEnabled?'Bohairic-only':dialectLabel}</button>{bohairicOnlyEnabled&&<small>Locked by Settings</small>}</div>
         </div>
+        <section className="translation-input-panel" aria-label="Translation input">
+          <div className="translation-direction"><span>{isCopticToEnglish?'Coptic → English':'English → Coptic'}</span><button type="button" onClick={handleSwitchDirection} disabled={currentState==='loading'} aria-label="Switch translation direction"><AppIcon name="translate"/></button></div>
+          <form className="translation-form" onSubmit={handleSubmit}>
+            <textarea ref={inputRef} aria-label={isCopticToEnglish?'Coptic text':'English text'} disabled={currentState==='loading'} value={currentInput} onChange={event=>{setCopyStatus('');if(isCopticToEnglish)setTranslationInput(event.target.value);else setEnglishInput(event.target.value);}} onKeyDown={handleInputKeyDown} onPointerDownCapture={hideKeyboardOnManualInputFocus} placeholder={isCopticToEnglish?'Type Coptic text...':'Type English text...'} className={isCopticToEnglish?'coptic-text':''} autoCorrect="off" autoCapitalize="none" spellCheck={false}/>
+            <button type="submit" className="ui-primary" disabled={currentState==='loading'}>{currentState==='loading'?'Translating…':'Translate'}{currentState!=='loading'&&<AppIcon name="arrow" size={18}/>}</button>
+          </form>
+          {isCopticToEnglish&&currentState==='loading'&&<p role="status" className="mt-3 text-sm">{translationProgress}</p>}
+        </section>
+        {currentState==='error'&&<p role="alert" className="translation-error">{currentError}</p>}
+        <section className="translation-result" aria-label="Translation result" aria-live="polite">
+          <div className="translation-result-header"><span>{isCopticToEnglish&&currentOutput?outputMethod==='published'?'Published translation · Coptic Corpora / Tasbeha':'Unverified AI draft':'TRANSLATION'}</span>
+            {currentOutput&&<button type="button" aria-label="Copy translation" onClick={()=>{void navigator.clipboard.writeText(currentOutput).then(()=>setCopyStatus('Copied')).catch(()=>setCopyStatus('Could not copy. Select the text to copy it.'));}}><AppIcon name="copy" size={16}/>{copyStatus==='Copied'?'Copied':'Copy'}</button>}</div>
+          <p className={!isCopticToEnglish&&currentOutput?'coptic-text':!currentOutput?'text-[var(--text-muted)]':''}>{currentOutput||'Your translation will appear here.'}</p>
+          {copyStatus&&<span role="status" className="text-sm">{copyStatus}</span>}
+          {isCopticToEnglish&&currentOutput&&outputMethod==='published'&&<ReferenceDetails {...referenceDetails}/>}
+          {isCopticToEnglish&&currentOutput&&outputMethod==='experimental'&&<p className="translation-help">Experimental translation. Check the meaning before relying on it.</p>}
+          {isCopticToEnglish&&currentOutput&&outputMethod==='experimental'&&draftSegments.length>1&&<details className="translation-help"><summary>Review each draft passage</summary>{draftSegments.map((segment,index)=><div key={index}><p className="coptic-text">{segment.text}</p><p>{segment.translation}</p></div>)}</details>}
+          {currentConfidence!==null&&<p className="translation-help">Confidence: {(currentConfidence*100).toFixed(1)}%</p>}
+        </section>
+        <details className="translation-help"><summary>About translation & offline use</summary><p>Published text returns an existing translation when the letters match a supported passage. It does not guess missing text. Experimental AI drafts can contain wrong meanings.</p><p>Coptic → English runs on this device, including offline, when the translation model is installed. English → Coptic uses the configured online service. Bohairic-only mode follows Settings.</p></details>
+
       </div>
 
       {keyboardEnabled && isMobileViewport && showKeyboard && isCopticToEnglish ? (

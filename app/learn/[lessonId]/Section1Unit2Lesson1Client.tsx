@@ -127,15 +127,13 @@ function LessonOutcomeCelebration({
   subtitle: string;
   icon: "check" | "cross";
 }) {
-  const outcomeRingBorder = "rgba(43, 65, 96, 0.14)";
-  const outcomeOuterBackground =
-    "radial-gradient(circle at center, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0) 70%), linear-gradient(180deg, rgba(235, 230, 218, 0.92) 0%, rgba(221, 214, 198, 0.72) 100%)";
-  const outcomeInnerBorder = "rgba(43, 65, 96, 0.08)";
-  const outcomeCoreBackground = "linear-gradient(180deg, #40597a 0%, #2b4160 100%)";
-  const outcomeCoreShadow =
-    "inset 0 -8px 0 rgba(20, 32, 48, 0.24), 0 8px 18px rgba(43, 65, 96, 0.12)";
-  const outcomeKickerColor = "rgba(43, 65, 96, 0.62)";
-  const outcomeSubtitleColor = "rgba(43, 65, 96, 0.62)";
+  const outcomeRingBorder = "var(--border-color)";
+  const outcomeOuterBackground = "var(--surface-1)";
+  const outcomeInnerBorder = "var(--border-color)";
+  const outcomeCoreBackground = "var(--teal-surface)";
+  const outcomeCoreShadow = "none";
+  const outcomeKickerColor = "var(--text-muted)";
+  const outcomeSubtitleColor = "var(--text-muted)";
 
   return (
     <>

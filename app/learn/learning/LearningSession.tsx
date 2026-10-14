@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from '@/lib/AppLink';
 import { useRouter } from 'next/navigation';
+import { resultFeedback } from "@/lib/nativeExperience";
 import { audioService, reportAudioFailure } from '@/lib/audioService';
 import { clearStepFailed, markStepCompleted } from '../progress';
 import { createCard, gradeCard, cardId } from '@/lib/vocabulary/schedule.mjs';
@@ -48,6 +49,7 @@ export function LearningSession({ lesson, step, children, newLesson = false }: {
   const record = (id: string, concepts: LearningItem[], correct: boolean, assisted = false) => {
     const initialAttempt = !attempts.current.has(id);
     const firstTry = initialAttempt && !assisted; attempts.current.add(id);
+    if (initialAttempt) void resultFeedback(correct);
     try {
       let latest = parseLearning(localStorage.getItem(LEARNING_KEY));
       for (const item of concepts) latest = recordAttempt(latest, {...item, unitId:item.unitId ?? lesson.id}, correct, firstTry);
@@ -131,14 +133,14 @@ function LearningPractice({ items, lesson, title, description, onDone, review = 
     setIndex(i=>i+1); setResult('idle'); setAnswer(''); setBank([]); setHint(false);
   };
   if (!items.length) return <main className={styles.screen}><div className={styles.inner}><p>This lesson’s practice is ready.</p><button className={styles.primary} onClick={onDone}>Continue</button></div></main>;
-  return <main className={styles.screen}><div className={styles.inner}>
+  return <main className={`${styles.screen} ${styles.practiceScreen}`}><div className={styles.practiceLayout}><div className={styles.practiceContent}>
     <div className={styles.top}><Link href={`/learn/${lesson.id}/`}>Close lesson</Link><span>{reading ? 'Read' : `${index+1} of ${count}`}</span></div>
     <h1>{title}</h1><p className={styles.muted}>{description}</p>
     {reading ? <>
       <p>{items.every(i=>i.pos === 'Letter / syllable') ? 'Read these sound patterns from left to right. Tap a pattern to check its sound label.' : 'These are short practice phrases. Tap a word or phrase to see how it works.'}</p>
       <div className={styles.reading}>{items.slice(0, teaching || checkpoint ? 6 : 3).map((entry,i)=><button key={learningId(entry)} className="coptic-text" aria-pressed={selected===i} onClick={()=>setSelected(i)}>{entry.word}</button>)}</div>
       {selected !== null && <div className={styles.panel}><p>{items[selected].meaning}</p><p>{items[selected].explanation}</p><SlowReplay path={items[selected].audio} />{selectedEntries.slice(0,3).map(entry=><div key={entry.id}><p>Dictionary headword: <span className="coptic-text">{entry.lemma}</span></p><p>{entry.gloss.join('; ')}</p>{entry.forms.length>1&&<p>Listed forms: <span className="coptic-text">{entry.forms.filter(form=>form!==entry.lemma).join(', ')}</span></p>}<Link className={styles.entryLink} href={`/dictionary/entry/?lemma=${encodeURIComponent(entry.lemma)}`}>Dictionary details</Link></div>)}</div>}
-      <button className={styles.primary} onClick={()=>{setReading(false);setSelected(null);}}>Continue</button>
+
     </> : <>
       <h2>{kind === 'build' ? 'Build the Coptic phrase' : kind === 'gap' ? 'Fill the missing letter' : listening ? 'Listen and translate' : item.pos === 'Letter / syllable' ? 'Write the sound label' : 'Translate this phrase'}</h2>
       {kind === 'build' ? <><p>{plainMeaning(item)}</p><div className={styles.bank} role="group" aria-label="Your assembled phrase">{bank.map((i,n)=><button key={n} className="coptic-text" disabled={result!=='idle'} onClick={()=>setBank(list=>list.filter((_,at)=>at!==n))}>{bankWords[i]}</button>)}</div>
@@ -153,7 +155,6 @@ function LearningPractice({ items, lesson, title, description, onDone, review = 
       {hint && result==='idle' && <p>{item.explanation}</p>}
       {result!=='idle' && <div role="status" className={styles.panel}><p>{result==='correct'?'Correct.':`Not quite. ${expected}`}</p><p>{item.explanation}</p></div>}
       {session.error && <p role="alert">{session.error}</p>}
-      <button className={styles.primary} disabled={result==='idle' && !(kind==='build'?bank.length:answer.trim())} onClick={result==='idle'?check:next}>{result==='idle'?'Check':result==='wrong'?'Try again':'Continue'}</button>
     </>}
-  </div></main>;
+  </div><footer className={styles.practiceFooter}><button className={styles.primary} disabled={!reading&&result==='idle'&&!(kind==='build'?bank.length:answer.trim())} onClick={reading?()=>{setReading(false);setSelected(null);}:result==='idle'?check:next}>{reading?'Continue':result==='idle'?'Check':result==='wrong'?'Try again':'Continue'}</button></footer></div></main>;
 }

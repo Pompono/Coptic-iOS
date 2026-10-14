@@ -137,7 +137,7 @@ export default function DictionaryEntryClient({ lemma }: { lemma: string }) {
   }, [entries, lemma, bohairicOnly]);
 
   return (
-    <main className="min-h-screen bg-[var(--bg-color)] text-[var(--text-color)]">
+    <main className="dictionary-detail min-h-screen bg-[var(--bg-color)] text-[var(--text-color)]">
       <div className="mx-auto max-w-3xl px-5 py-8">
         <div className="flex items-center justify-between gap-4">
           <Link
@@ -183,7 +183,7 @@ export default function DictionaryEntryClient({ lemma }: { lemma: string }) {
             {matches.map((e, idx) => (
               <div
                 key={`${e.dialect}-${e.lemma}-${e.pos}-${idx}`}
-                className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-1)] p-5 shadow-[0_10px_40px_rgba(0,0,0,0.6)]"
+                className="dictionary-entry-card"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>

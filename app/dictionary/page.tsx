@@ -676,7 +676,7 @@ export default function DictionaryPage() {
 
   return (
     <main
-      className="min-h-screen bg-[var(--bg-color)] text-[var(--text-color)]"
+      className="dictionary-page min-h-screen bg-[var(--bg-color)] text-[var(--text-color)]"
       style={{
         paddingBottom:
           keyboardEnabled && isMobileViewport && showKeyboard
@@ -709,7 +709,7 @@ export default function DictionaryPage() {
               inputMode={keyboardEnabled && isMobileViewport && showKeyboard ? "none" : "text"}
               aria-label="Dictionary search"
               placeholder="Search Coptic, English, or transliteration..."
-              className="dictionary-search-input coptic-text w-full min-w-0 bg-transparent text-base outline-none placeholder:text-[var(--text-soft)]"
+              className={`dictionary-search-input ${/\p{Script=Coptic}/u.test(query) ? "coptic-text" : ""} w-full min-w-0 bg-transparent text-base outline-none placeholder:text-[var(--text-soft)]`}
             />
           </div>
 
@@ -741,11 +741,11 @@ export default function DictionaryPage() {
             </div>
         </div>
 
-        <div className="mt-6 space-y-4">
+        <div className="dictionary-results">
           {visibleResults.map((e, idx) => (
             <div
               key={`${e.dialect}-${e.lemma}-${e.pos}-${idx}`}
-              className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-1)] p-5 shadow-[0_10px_40px_rgba(0,0,0,0.6)]"
+              className="dictionary-entry-card"
             >
               <div className="flex items-start justify-between gap-4">
                 <div>

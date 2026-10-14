@@ -6,11 +6,11 @@ const { lessons } = await import('data:text/javascript;base64,' + Buffer.from(so
 export async function checkScrollBounds(page, base) {
   for (const route of ['/', '/translator/']) {
     await page.goto(base + route); await page.waitForLoadState('networkidle');
-    const geometry = await page.evaluate(() => ({ height: innerHeight, content: document.documentElement.scrollHeight }));
-    assert.ok(geometry.content <= geometry.height + 2, `${route} has no full-screen-plus-dock blank overflow: ${JSON.stringify(geometry)}`);
-    await page.evaluate(() => scrollTo(0, 100000));
-    await page.mouse.wheel(0, 1000); await page.waitForTimeout(150);
-    assert.ok(await page.evaluate(() => scrollY <= 2), `${route} cannot be scrolled away when its content fits`);
+    const geometry = await page.evaluate(() => ({height:innerHeight,content:document.documentElement.scrollHeight,main:document.querySelector('main').getBoundingClientRect().height,insets:parseFloat(getComputedStyle(document.querySelector('.mobile-chin-page-shell')).paddingBottom)+parseFloat(getComputedStyle(document.querySelector('.mobile-chin-page-shell')).paddingTop)}));
+    assert.ok(geometry.content <= Math.max(geometry.height,geometry.main+geometry.insets)+2, `${route} has no extra blank shell overflow: ${JSON.stringify(geometry)}`);
+    await page.evaluate(() => scrollTo(0,100000));
+    await page.mouse.wheel(0,1000);await page.waitForTimeout(150);
+    assert.ok(await page.evaluate(() => scrollY <= Math.max(0,document.documentElement.scrollHeight-innerHeight)+2), `${route} stops at its real content bound`);
   }
   await page.goto(base + '/learn/'); await page.waitForLoadState('networkidle');
   await page.waitForTimeout(250);

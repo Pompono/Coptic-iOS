@@ -1,22 +1,26 @@
 .shell { max-width: 880px; margin: auto; padding: 28px 20px 50px; color: var(--text-color); }
-.shell h1 { font-size: 32px; font-weight: 700; margin: 14px 0; }
-.shell h2 { font-size: 20px; font-weight: 650; margin: 12px 0; }
-.shell h3 { font-size: 16px; font-weight: 650; margin: 8px 0; }
+.shell h1 { font-size:2.0rem; font-weight: 700; margin: 14px 0; }
+.shell h2 { font-size:1.25rem; font-weight: 650; margin: 12px 0; }
+.shell h3 { font-size:1.0rem; font-weight: 650; margin: 8px 0; }
 .shell p { line-height: 1.7; margin: 8px 0; }
-.muted { color: var(--text-muted); font-size: 14px; }
+.muted { color: var(--text-muted); font-size:0.875rem; }
 .actions { display: flex; gap: 9px; flex-wrap: wrap; align-items: center; margin: 14px 0; }
 .shell button, .link { padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-1); color: var(--text-color); }
 .shell button:disabled { opacity: .5; }
 .shell button[aria-pressed=true], .shell .primary { border-color: var(--accent-color); background: var(--accent-color); color: var(--accent-contrast-color); }
 .shell button:focus-visible, .shell textarea:focus-visible { outline: 3px solid var(--accent-color); outline-offset: 3px; }
 .panel { padding: 18px; margin: 18px 0; border: 1px solid var(--border-color); border-radius: 18px; background: var(--surface-1); }
-.shell textarea { width: 100%; min-height: 125px; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; background: var(--surface-2); color: var(--text-color); font-size: 22px; line-height: 1.7; }
-.passage { font-size: 29px; line-height: 2; white-space: pre-wrap; overflow-wrap: anywhere; }
+.shell textarea { width: 100%; min-height: 125px; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; background: var(--surface-2); color: var(--text-color); font-size:1.375rem; line-height: 1.7; }
+.passage { font-size:1.8125rem; line-height: 2; white-space: pre-wrap; overflow-wrap: anywhere; }
 .passage button { font: inherit; padding: 1px 4px; border-radius: 5px; border-color: transparent; border-bottom-color: var(--border-color); background: transparent; }
-.source { font-size: 12px; line-height: 1.6; color: var(--text-muted); overflow-wrap: anywhere; }
+.source { font-size:0.75rem; line-height: 1.6; color: var(--text-muted); overflow-wrap: anywhere; }
 .selectionPreview { margin: 12px 0; padding: 12px; border-left: 3px solid var(--accent-color); background: var(--surface-2); border-radius: 8px; }
 .error { border: 1px solid #b34b40; padding: 12px; border-radius: 12px; }
-.word { font-size: 29px; }
-.answer { font-size: 19px; }
+.word { font-size:1.8125rem; }
+.answer { font-size:1.1875rem; }
 .shell details { margin: 14px 0; }
 .shell summary { cursor: pointer; padding: 8px 0; }
+.shell{max-width:760px;padding:24px 20px 32px}.shell h1{font-size:1.9375rem;font-weight:700;letter-spacing:-.04em;margin:12px 0 8px}.shell>p{font-size:0.9375rem;color:var(--text-muted);line-height:1.6}.shell h2{font-weight:600;letter-spacing:-.025em}.shell button,.link{min-height:44px;border-radius:12px;font-size:0.875rem;padding:10px 14px}.panel{border-radius:16px;border:1px solid var(--border-color);padding:20px;background:var(--surface-1);box-shadow:none;margin:16px 0}.passage{font-size:2.0rem;line-height:1.9}.passage button{min-height:0;border:0;border-bottom:1px solid var(--border-color);border-radius:0;padding:0 3px}.passage button[aria-pressed=true]{background:var(--teal-surface);color:var(--text-color);border-color:var(--teal)}.word{font-size:2.375rem!important;line-height:1.8}.answer{font-size:1.1875rem;color:var(--text-color)}.source{font-size:0.75rem}.selectionPreview{border-color:var(--teal);background:var(--teal-surface)}.shell details{border-top:1px solid var(--border-color);padding-top:8px}.shell summary{min-height:44px;font-size:0.875rem;color:var(--text-muted)}.shell textarea{background:var(--surface-1)}
+
+.passage button{font:inherit;line-height:inherit}.shell .passage{margin:18px 0 22px}
+.shell h3:global(.coptic-text){font-size:1.5rem;line-height:1.7}.shell h2:global(.coptic-text){font-size:1.875rem;line-height:1.7}

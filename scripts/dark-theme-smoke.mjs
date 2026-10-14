@@ -22,15 +22,15 @@ async function colors(locator) {
 }
 export async function checkDarkTheme(page, base) {
   await page.goto(base + '/settings/'); await page.waitForLoadState('networkidle');
-  await page.getByRole('button', { name: 'Dark', exact: true }).click();
+  await page.getByRole('combobox', { name: 'App theme', exact: true }).selectOption('dark');
   for (const route of ['/', '/learn/', '/dictionary/', '/translator/', '/read/', '/vocabulary/', '/settings/', '/translator/scanner/']) {
     await page.goto(base + route); await page.waitForLoadState('networkidle');
     const body = await colors(page.locator('body'));
-    assert.equal(body.background, 'rgb(0, 0, 0)', `${route}: app background stays dark`);
+    assert.equal(body.background, 'rgb(16, 24, 32)', `${route}: app background stays dark`);
     assert.ok(contrast(body.text, body.background) >= 4.5, `${route}: readable page text`);
     if (route === '/learn/') {
       const main = await colors(page.locator('main'));
-      assert.ok(main.gradient.includes('rgb(0, 0, 0)'), 'Learning pathway uses the dark page palette');
+      assert.equal(main.background, body.background, 'Learning pathway uses the dark page palette');
     }
   }
   const exerciseSets = ['a-o-d-letters-and-sounds', 'section-1-unit-2-group-1-lesson-1', 'section-1-unit-2-group-1-lesson-2'];
@@ -41,8 +41,8 @@ export async function checkDarkTheme(page, base) {
     await startLesson(page);
     await page.getByRole('button', { name: 'Check', exact: true }).waitFor();
     const main = await colors(page.locator('main'));
-    assert.ok(main.gradient.includes('rgb(0, 0, 0)'), `${set}: lesson background is dark`);
-    assert.ok(contrast(main.text, 'rgb(0, 0, 0)') >= 4.5);
+    assert.ok(main.gradient.includes('rgb(16, 24, 32)'), `${set}: lesson background is dark`);
+    assert.ok(contrast(main.text, 'rgb(16, 24, 32)') >= 4.5);
     const disabled = await colors(page.getByRole('button', { name: 'Check', exact: true }));
     assert.ok(contrast(disabled.text, disabled.background) >= 4.5, 'Disabled action remains legible');
     if (set === exerciseSets[0]) {
@@ -71,18 +71,18 @@ export async function checkDarkTheme(page, base) {
       await finishTransfer(page,set);
       const outcome = page.locator('.lesson-outcome-screen');
       await outcome.waitFor();
-      assert.ok((await colors(outcome)).gradient.includes('rgb(0, 0, 0)'), 'Completion screen stays dark');
+      assert.equal((await colors(outcome)).background, 'rgb(16, 24, 32)', 'Completion screen stays dark');
     }
   }
   await page.goto(base + '/settings/'); await page.waitForLoadState('networkidle');
-  await page.getByRole('button', { name: 'Light', exact: true }).click();
+  await page.getByRole('combobox', { name: 'App theme', exact: true }).selectOption('light');
   await page.goto(base + '/learn/'); await page.waitForLoadState('networkidle');
   const light = await colors(page.locator('main'));
-  assert.ok(light.gradient.includes('rgb(222, 217, 201)'), 'Switching back restores the existing light pathway colors');
+  assert.equal(light.background, 'rgb(248, 247, 243)', 'Switching back restores the warm-white palette');
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.reload(); await page.waitForLoadState('networkidle');
   assert.equal(await page.locator('.unit-banner').first().evaluate(node => getComputedStyle(node).opacity), '1', 'Reduced motion keeps pathway headings visible');
-  assert.equal(await page.locator('.group-block').first().evaluate(node => getComputedStyle(node).opacity), '1', 'Reduced motion keeps lesson nodes visible');
+  assert.equal(await page.locator('.course-row').first().evaluate(node => getComputedStyle(node).opacity), '1', 'Reduced motion keeps lesson nodes visible');
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   console.log('PASS: dark-mode continuity across app pages and all three lesson renderers, readable answer states, and restoration of light mode.');
 }
