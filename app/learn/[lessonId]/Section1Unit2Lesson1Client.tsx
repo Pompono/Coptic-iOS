@@ -5,7 +5,7 @@ import { LESSON_THEME } from "@/lib/lessonTheme";
 import Link from "@/lib/AppLink";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { audioService } from "@/lib/audioService";
+import { audioService, reportAudioFailure } from "@/lib/audioService";
 import { resolveLessonAudio } from "../../../lib/lessonAudio";
 import { clearStepFailed, markStepCompleted, markStepFailed } from "../progress";
 import { type Lesson, type UnitLessonStep } from "../../../lib/lesson";
@@ -310,34 +310,20 @@ function normalizeAnswer(input: string) {
   return input.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
-function speakFallback(text: string) {
-  if (typeof window === "undefined" || !("speechSynthesis" in window) || !text) {
-    return;
-  }
-
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "en-US";
-  utterance.rate = 0.82;
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(utterance);
-}
 
 function playLessonAudio(lessonId: string, audioId: string, fallbackText: string) {
   const entry = resolveLessonAudio(lessonId, audioId);
-  const spokenFallback = entry?.fallbackText ?? fallbackText;
 
   if (typeof window === "undefined") {
     return;
   }
 
   if (entry?.src) {
-    void audioService.play(entry.src, entry.src).catch(() => {
-      speakFallback(spokenFallback);
-    });
+    void audioService.play(entry.src, entry.src).catch(reportAudioFailure);
     return;
   }
 
-  speakFallback(spokenFallback);
+  reportAudioFailure(new Error(`No bundled recording is available for "${audioId}".`));
 }
 
 function getQuestionAudioId(question: LessonQuestion) {

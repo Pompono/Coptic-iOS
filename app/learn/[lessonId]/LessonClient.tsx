@@ -5,7 +5,7 @@ import { LESSON_THEME } from "@/lib/lessonTheme";
 import Link from "@/lib/AppLink";
 import { useRouter } from "next/navigation";
 import { startTransition, useEffect, useRef, useState } from "react";
-import { audioService } from "@/lib/audioService";
+import { audioService, reportAudioFailure } from "@/lib/audioService";
 import { resolveLessonAudio } from "../../../lib/lessonAudio";
 import { clearStepFailed, markStepCompleted, markStepFailed } from "../progress";
 import { type ExerciseSetId, type Lesson, type UnitLessonStep } from "../../../lib/lesson";
@@ -3475,17 +3475,6 @@ function buildChoiceExerciseLayouts(exercises: PairLettersExercise[]): Record<st
   return layouts;
 }
 
-function speakPrompt(text: string) {
-  if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-    return;
-  }
-
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "en-US";
-  utterance.rate = 0.8;
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(utterance);
-}
 
 const feedbackAudioIds = ["correct-answer", "incorrect-answer", "lesson-complete"] as const;
 const LESSON_AUDIO_REWARM_MS = 15000;
@@ -3592,20 +3581,17 @@ function primeEntireLessonAudio(lessonId: string, exercises: PairLettersExercise
 
 function playLessonAudio(lessonId: string, audioId: string, fallbackText: string) {
   const entry = resolveLessonAudio(lessonId, audioId);
-  const spokenFallback = entry?.fallbackText ?? fallbackText;
 
   if (typeof window === "undefined") {
     return;
   }
 
   if (entry?.src) {
-    void audioService.play(entry.src, entry.src).catch(() => {
-      speakPrompt(spokenFallback);
-    });
+    void audioService.play(entry.src, entry.src).catch(reportAudioFailure);
     return;
   }
 
-  speakPrompt(spokenFallback);
+  reportAudioFailure(new Error(`No bundled recording is available for "${audioId}".`));
 }
 
 function IconSpeaker({ size = 26 }: { size?: number }) {
@@ -4784,7 +4770,7 @@ function PairLettersLesson({ lesson, step }: { lesson: Lesson; step: UnitLessonS
                   }
 
                   if (targetExercise.kind !== "hear-and-choose") {
-                    speakPrompt(targetExercise.display);
+                    reportAudioFailure(new Error(`No bundled recording is available for "${targetExercise.display}".`));
                   }
                 }}
                 style={{
@@ -4927,7 +4913,7 @@ function PairLettersLesson({ lesson, step }: { lesson: Lesson; step: UnitLessonS
                   }
 
                   if (targetExercise.kind !== "hear-and-choose") {
-                    speakPrompt(targetExercise.display);
+                    reportAudioFailure(new Error(`No bundled recording is available for "${targetExercise.display}".`));
                   }
                 }}
                 style={{

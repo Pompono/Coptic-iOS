@@ -18,8 +18,8 @@ bounded 180 xcrun simctl install "$device" /tmp/coptic-derived/Build/Products/De
 bounded 120 xcrun simctl launch --terminate-running-process --console "$device" com.pompono.coptic > /tmp/coptic-native-stdout.log 2> /tmp/coptic-native-stderr.log &
 launch_pid=$!
 for attempt in $(seq 1 45); do
-  if python3 -c 'from pathlib import Path; import sys; p=Path("/tmp/coptic-native-stdout.log"); sys.exit(0 if p.exists() and "COPTIC_SCROLL_BOUNDS_READY" in p.read_text() else 1)'; then
-    echo 'PASS: native iOS app launched and configured its bounded scroll view.'
+  if python3 -c 'from pathlib import Path; import sys; p=Path("/tmp/coptic-native-stdout.log"); sys.exit(0 if p.exists() and "COPTIC_SCROLL_BOUNDS_READY" in p.read_text() and "COPTIC_NATIVE_AUDIO_DECODE_READY" in p.read_text() else 1)'; then
+    echo 'PASS: native iOS app launched, configured scrolling, and decoded the bundled recording through AVAudioPlayer.'
     exit 0
   fi
   sleep 2

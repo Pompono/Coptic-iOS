@@ -1,9 +1,20 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { audioService } from "@/lib/audioService";
 
 export default function AudioUnlock() {
+  const [audioError, setAudioError] = useState("");
+  useEffect(() => {
+    const onFailure = (event: Event) => setAudioError((event as CustomEvent<string>).detail);
+    const onPlayed = () => setAudioError("");
+    window.addEventListener("coptic-audio-error", onFailure);
+    window.addEventListener("coptic-audio-played", onPlayed);
+    return () => {
+      window.removeEventListener("coptic-audio-error", onFailure);
+      window.removeEventListener("coptic-audio-played", onPlayed);
+    };
+  }, []);
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -51,5 +62,7 @@ export default function AudioUnlock() {
     };
   }, []);
 
-  return null;
+  return audioError ? <div role="alert" className="audio-error-notice">
+    <p>{audioError}</p><button onClick={() => setAudioError("")}>Dismiss</button>
+  </div> : null;
 }

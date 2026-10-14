@@ -5,6 +5,7 @@ import path from 'node:path';
 import { readFile, access, stat } from 'node:fs/promises';
 import { checkScanner } from './scanner/smoke.mjs';
 import { checkReading } from './reading-smoke.mjs';
+import { checkRecordingFailure } from './recording-failure-smoke.mjs';
 import { checkDarkTheme } from './dark-theme-smoke.mjs';
 import { checkKeyboardPrompt } from './keyboard-prompt-smoke.mjs';
 import { checkScrollBounds } from './scroll-smoke.mjs';
@@ -31,6 +32,7 @@ try {
   const engine = process.env.COPTIC_BROWSER === 'webkit' ? webkit : chromium;
   browser = await engine.launch({ headless: true });
   await checkKeyboardPrompt(browser, base);
+  await checkRecordingFailure(browser, base);
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const externalRequests = [];
   await context.route('**/*', route => {

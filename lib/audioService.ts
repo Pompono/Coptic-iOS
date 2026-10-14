@@ -1,5 +1,24 @@
 "use client";
 
+import { Capacitor, registerPlugin } from "@capacitor/core";
+const NativeAudio = registerPlugin<{
+  activate(): Promise<void>;
+  preload(options: { path: string }): Promise<{ duration: number }>;
+  play(options: { path: string }): Promise<{ duration: number }>;
+  stop(): Promise<void>;
+}>("LessonAudio");
+const usesNativeAudio = () => Capacitor.getPlatform() === "ios";
+
+function recordingStarted() {
+  if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") window.dispatchEvent(new CustomEvent("coptic-audio-played"));
+}
+
+export function reportAudioFailure(error: unknown) {
+  if (typeof window === "undefined") return;
+  const detail = error instanceof Error ? error.message : String(error);
+  window.dispatchEvent(new CustomEvent("coptic-audio-error", { detail: "The recording could not play. " + detail }));
+}
+
 type AudioContextConstructor = new () => AudioContext;
 type AudioSessionType = "auto" | "ambient" | "playback" | "play-and-record" | "transient" | "transient-solo";
 
@@ -74,6 +93,7 @@ class AudioService {
   }
 
   async unlock() {
+    if (usesNativeAudio()) return NativeAudio.activate();
     if (!this.unlockPromise) {
       this.unlockPromise = this.performUnlock().catch((error) => {
         this.unlockPromise = null;
@@ -110,7 +130,7 @@ class AudioService {
     });
   }
 
-  async preload(key: string, url = key) {
+  private async preloadWeb(key: string, url = key) {
     const cached = this.cache.get(key);
     if (cached) {
       return cached;
@@ -139,13 +159,24 @@ class AudioService {
     return pendingBuffer;
   }
 
+  preload(key: string, url = key) {
+    if (usesNativeAudio()) return NativeAudio.preload({ path: url });
+    return this.preloadWeb(key, url);
+  }
+
   async preloadMany(entries: Array<{ key: string; url: string }>) {
     await Promise.all(entries.map(({ key, url }) => this.preload(key, url)));
   }
 
   async play(key: string, url = key) {
+    if (usesNativeAudio()) {
+      const result = await NativeAudio.play({ path: url });
+      // The sentence lesson uses the recording duration to schedule its next prompt.
+      recordingStarted();
+      return { buffer: { duration: result.duration } };
+    }
     const ctx = await this.resume();
-    const buffer = await this.preload(key, url);
+    const buffer = await this.preloadWeb(key, url);
     // Loading may overlap an interruption or background/foreground transition.
     if (ctx.state !== "running") await ctx.resume();
     const source = ctx.createBufferSource();
@@ -162,10 +193,15 @@ class AudioService {
     };
 
     source.start(0);
+    recordingStarted();
     return source;
   }
 
   stopAll() {
+    if (usesNativeAudio()) {
+      void NativeAudio.stop().catch(reportAudioFailure);
+      return;
+    }
     for (const source of this.activeSources) {
       source.onended = null;
       try {
@@ -181,6 +217,7 @@ class AudioService {
   }
 
   async pause() {
+    if (usesNativeAudio()) { await NativeAudio.stop(); return; }
     this.stopAll();
     this.unlockPromise = null;
     if (this.ctx?.state === "running") {

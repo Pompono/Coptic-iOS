@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "@/lib/AppLink";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { audioService } from "@/lib/audioService";
+import { audioService, reportAudioFailure } from "@/lib/audioService";
 import { resolveLessonAudio } from "../../../lib/lessonAudio";
 import { clearStepFailed, markStepCompleted, markStepFailed } from "../progress";
 import { type Lesson, type UnitLessonStep } from "../../../lib/lesson";
@@ -258,17 +258,6 @@ function normalizeAnswer(input: string) {
   return input.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
-function speakFallback(text: string) {
-  if (typeof window === "undefined" || !("speechSynthesis" in window) || !text) {
-    return;
-  }
-
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "en-US";
-  utterance.rate = 0.82;
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(utterance);
-}
 
 function playLessonAudio(lessonId: string, audioId: string, fallbackText: string) {
   const entry = resolveLessonAudio(lessonId, audioId);
@@ -283,13 +272,13 @@ function playLessonAudio(lessonId: string, audioId: string, fallbackText: string
     return audioService
       .play(entry.src, entry.src)
       .then((source) => Math.max(fallbackDurationMs, Math.round((source.buffer?.duration ?? 0) * 1000)))
-      .catch(() => {
-        speakFallback(spokenFallback);
+      .catch(error => {
+        reportAudioFailure(error);
         return fallbackDurationMs;
       });
   }
 
-  speakFallback(spokenFallback);
+  reportAudioFailure(new Error(`No bundled recording is available for "${audioId}".`));
   return Promise.resolve(fallbackDurationMs);
 }
 
