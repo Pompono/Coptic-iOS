@@ -214,3 +214,7 @@ h1,h2,h3,strong,label,button { overflow-wrap:anywhere; }
  .lesson-answer-list[data-count="3"] { height:100%; max-height:300px; grid-template-rows:repeat(3,minmax(64px,1fr)); align-content:start; }
  .lesson-answer-list[data-count="3"]>button { min-height:64px!important; padding:10px 14px!important; }
 }
+
+/* Keep tile borders inside their scroll containers, including the first row. */
+.lesson-option-button,.lesson-matching-tile,.lesson-choice-button { transform:none!important; }
+.lesson-option-button:focus-visible,.lesson-matching-tile:focus-visible,.lesson-choice-button:focus-visible { outline-offset:-3px; }

@@ -94,10 +94,10 @@ export function LearningSession({ lesson, step, children, newLesson = false }: {
       : phase === 'lesson' ? children
       : phase === 'review' ? <LearningPractice key="review" items={reviews} lesson={lesson} title="A quick recall" description="A few things from earlier lessons are ready for another try. Then you’ll continue into this lesson." onDone={() => setPhase(newLesson ? 'transfer' : 'lesson')} review />
       : phase === 'transfer' ? <LearningPractice key="transfer" items={items} lesson={lesson} title={newLesson ? step.title : 'Put it together'} description={newLesson ? step.summary : 'Read what you have learned, then try it in a different way.'} onDone={complete} teaching={newLesson && !/checkpoint/.test(step.exerciseSet ?? '')} checkpoint={/checkpoint/.test(step.exerciseSet ?? '')} />
-      : <main className={`lesson-outcome-screen ${styles.screen}`}><div className={styles.inner}><h1>Lesson complete</h1><p>You practised {items.length} {items.some(i => i.pos !== 'Letter / syllable') ? 'words and phrases' : 'sound patterns'}.</p>
+      : <main className={`lesson-outcome-screen ${styles.introScreen}`}><div className={styles.completionBody} data-lesson-scroll aria-label="Lesson summary" tabIndex={0}><h1>Lesson complete</h1><p>You practised {items.length} {items.some(i => i.pos !== 'Letter / syllable') ? 'words and phrases' : 'sound patterns'}.</p>
         <div className={styles.skills}>{summary.map(item => <div key={learningId(item)}><span className="coptic-text">{item.word}</span><span>{item.state}</span></div>)}</div>
         <p className={styles.muted}>Secure means consistent first-try recall across at least three different days. Difficult items will return in later lessons and your review queue.</p>
-        {error && <p role="alert">{error}</p>}<button className={styles.primary} onClick={() => router.replace(`/learn/${lesson.id}/`)}>Continue</button></div></main>}
+        {error && <p role="alert">{error}</p>}</div><footer className={styles.introFooter}><button className={styles.primary} onClick={() => router.replace(`/learn/${lesson.id}/`)}>Continue</button></footer></main>}
   </SessionContext.Provider>;
 }
 
@@ -140,8 +140,8 @@ function LearningPractice({ items, lesson, title, description, onDone, review = 
   return <main className={`${styles.screen} ${styles.practiceScreen}`}><div className={styles.practiceLayout}><header className={styles.practiceHeader}>
     <div className={styles.top}><Link href={`/learn/${lesson.id}/`}><AppIcon name="close" size={16}/>Close lesson</Link><div className={styles.practiceTools}><button className={styles.keyboardDone} onClick={()=>{if(document.activeElement instanceof HTMLElement)document.activeElement.blur();}}>Done</button><span>{reading ? 'Read' : `${index+1} of ${count}`}</span></div></div>
     <progress className={styles.progress} value={reading?0:index+1} max={count} aria-label="Practice progress"/>
-    <h1>{title}</h1><p className={styles.muted}>{description}</p>
     </header><div ref={practiceContent} className={styles.practiceContent} data-lesson-scroll>
+    <h1>{title}</h1><p className={styles.muted}>{description}</p>
     {reading ? <>
       <p>{items.every(i=>i.pos === 'Letter / syllable') ? 'Read these sound patterns from left to right. Tap a pattern to check its sound label.' : 'These are short practice phrases. Tap a word or phrase to see how it works.'}</p>
       <div className={styles.reading}>{items.slice(0, teaching || checkpoint ? 6 : 3).map((entry,i)=><button key={learningId(entry)} className="coptic-text" aria-pressed={selected===i} onClick={()=>setSelected(i)}>{entry.word}</button>)}</div>

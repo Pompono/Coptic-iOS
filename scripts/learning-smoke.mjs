@@ -60,14 +60,14 @@ export async function checkLearning(browser,base){
   await startLesson(page);
   await page.getByRole('heading',{name:'A quick recall',exact:true}).waitFor();
   await page.evaluate(()=>{const shell=document.querySelector('.mobile-chin-page-shell');shell.style.paddingTop='59px';shell.style.setProperty('--page-content-height','calc(var(--interactive-viewport-height, 100svh) - 59px)');});
+  const normalSizes=await page.evaluate(()=>{const field=document.querySelector('input[aria-label="Your answer"]');const prompt=document.querySelector('p.coptic-text');const title=document.querySelector('h1');return {field:field.getBoundingClientRect().height,prompt:prompt.getBoundingClientRect().height,promptFont:getComputedStyle(prompt).fontSize,titleFont:getComputedStyle(title).fontSize};});
   await page.getByLabel('Your answer',{exact:true}).fill('wrong');
   await page.evaluate(()=>{Object.defineProperty(window.visualViewport,'height',{configurable:true,get:()=>400});window.visualViewport.dispatchEvent(new Event('resize'));});
   await page.waitForFunction(()=>document.querySelector('.mobile-chin-page-shell').dataset.keyboard==='true');
-  for(const target of [page.getByRole('link',{name:'Close lesson',exact:true}),page.getByRole('heading',{name:'A quick recall',exact:true}),page.locator('[role="group"][aria-label="Recording playback"]'),page.locator('p.coptic-text'),page.getByLabel('Your answer',{exact:true})]){
-   await page.waitForFunction(()=>document.querySelector('.mobile-chin-page-shell').dataset.keyboard==='true');
-   const box=await target.boundingBox();
-   assert.ok(box&&box.y>=59&&box.y+box.height<=400,'Header, prompt, playback and answer all fit above the keyboard with the iPhone top inset');
-  }
+  const focusedSizes=await page.evaluate(()=>{const field=document.querySelector('input[aria-label="Your answer"]');const prompt=document.querySelector('p.coptic-text');const title=document.querySelector('h1');return {field:field.getBoundingClientRect().height,prompt:prompt.getBoundingClientRect().height,promptFont:getComputedStyle(prompt).fontSize,titleFont:getComputedStyle(title).fontSize};});
+  assert.deepEqual(focusedSizes,normalSizes,'Typing keeps the normal title, prompt card and input sizes');
+  const close=await page.getByRole('link',{name:'Close lesson',exact:true}).boundingBox();
+  assert.ok(close.y>=59,'The lesson navigation stays below the iPhone status bar');
   const keyboardAction=await page.getByRole('button',{name:'Check',exact:true}).boundingBox();
   assert.ok(keyboardAction.y+keyboardAction.height<=400,'Lesson actions stay above the system keyboard');
   await page.waitForFunction(()=>{const field=document.querySelector('input[aria-label="Your answer"]'),pane=field.closest('[data-lesson-scroll]');const a=field.getBoundingClientRect(),b=pane.getBoundingClientRect();return a.top>=b.top&&a.bottom<=b.bottom;});
