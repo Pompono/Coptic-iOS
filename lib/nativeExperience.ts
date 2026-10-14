@@ -1,6 +1,6 @@
 import {Capacitor,registerPlugin,type PluginListenerHandle} from '@capacitor/core';
 export const nativeExperience=registerPlugin<{
- exerciseMode(options:{active:boolean}):Promise<{scrollEnabled:boolean;offsetY:number}>;
+ exerciseMode(options:{active:boolean}):Promise<{pinned:boolean;offsetY:number}>;
  preferences():Promise<{textScale:number}>;
  copy(options:{text:string}):Promise<void>;
  feedback(options:{correct:boolean}):Promise<void>;

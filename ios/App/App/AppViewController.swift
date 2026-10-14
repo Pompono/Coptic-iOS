@@ -45,9 +45,9 @@ class AppViewController: CAPBridgeViewController {
             (async () => {
               try {
                 const lockedViewport = await cap.nativePromise('AppExperience', 'exerciseMode', { active: true });
-                if (lockedViewport.scrollEnabled || Math.abs(lockedViewport.offsetY) > 1) throw new Error('Lesson viewport moved');
+                if (!lockedViewport.pinned || Math.abs(lockedViewport.offsetY) > 1) throw new Error('Lesson viewport moved');
                 const restoredViewport = await cap.nativePromise('AppExperience', 'exerciseMode', { active: false });
-                if (!restoredViewport.scrollEnabled) throw new Error('Page scrolling was not restored');
+                if (restoredViewport.pinned) throw new Error('Page scrolling was not restored');
                 await cap.nativePromise('AppExperience', 'copy', { text: 'Coptic clipboard check' });
                 const preferences = await cap.nativePromise('AppExperience', 'preferences', {});
                 if (!(preferences.textScale > 0)) throw new Error('Invalid preferred text scale');
@@ -267,7 +267,6 @@ public class AppExperiencePlugin: CAPPlugin, CAPBridgedPlugin {
                 call.reject("Web view is unavailable")
                 return
             }
-            scroll.isScrollEnabled = !self.exerciseActive
             if self.exerciseActive {
                 scroll.setContentOffset(.zero, animated: false)
                 #if DEBUG
@@ -276,7 +275,7 @@ public class AppExperiencePlugin: CAPPlugin, CAPBridgedPlugin {
                 }
                 #endif
             }
-            call.resolve(["scrollEnabled": scroll.isScrollEnabled, "offsetY": Double(scroll.contentOffset.y)])
+            call.resolve(["pinned": self.exerciseActive, "offsetY": Double(scroll.contentOffset.y)])
         }
     }
     @objc func preferences(_ call: CAPPluginCall) {
