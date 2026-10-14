@@ -50,7 +50,9 @@ export async function checkDictionary(browser, base) {
     await page.getByRole('heading', { name: 'ⲁ', exact: true }).waitFor();
     await page.getByText('First letter of the alphabet', { exact: true }).waitFor();
     await page.getByText('Crum 1a', { exact: true }).first().waitFor();
-    assert.ok(await page.getByRole('button', { name: 'Bohairic-only', exact: true }).isDisabled());
+    assert.equal(await page.getByRole('button', { name: 'Bohairic-only', exact: true }).getAttribute('aria-disabled'),'true');
+    await page.getByRole('button', { name: 'Bohairic-only', exact: true }).click({force:true});
+    await page.getByRole('status').filter({hasText:'This is locked by Settings.'}).waitFor();
     await page.getByRole('link', { name: '← Back', exact: true }).click();
     await query.waitFor();
     await page.waitForFunction(() => document.querySelector('[aria-label="Dictionary search"]').value === 'ⲁ');

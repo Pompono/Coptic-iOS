@@ -177,3 +177,33 @@ h1,h2,h3,strong,label,button { overflow-wrap:anywhere; }
 .authored-exercise>div>div:first-child>a { width:44px!important; height:44px!important; flex-shrink:0; }
 .lesson-progress-track { height:5px!important; }
 .lesson-action-button { text-transform:none!important; height:52px!important; min-height:50px!important; padding:12px 18px!important; font-size:1rem!important; font-weight:600!important; }
+/* Playback is one paired control everywhere: human recording at 1× and .75×. */
+.audio-replay { display:inline-flex; flex-shrink:0; align-items:stretch; width:112px; min-height:48px; overflow:hidden; border:1px solid var(--separator-color); border-radius:14px; background:var(--surface-1); color:var(--tint-color); box-shadow:none; }
+.audio-replay.audio-replay>button { display:flex; align-items:center; justify-content:center; flex:1; width:56px; height:48px; min-height:48px; padding:8px; border:0; border-radius:0!important; background:transparent; color:inherit; box-shadow:none!important; }
+.audio-replay.audio-replay>button+button { border-left:1px solid var(--separator-color); }
+.audio-replay>button:active { background:var(--teal-surface); }
+.audio-replay>button:focus-visible { outline-offset:-3px; }
+.recording-card { flex-shrink:0; overflow:hidden; }
+.recording-card__label { position:absolute; inset:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; padding:8px 12px 48px; background:transparent; color:inherit; border:0; }
+.recording-card__label span { line-height:1.35; font-weight:600; }
+.recording-card__label .coptic-text { font-weight:400; }
+.recording-card.has-label>.audio-replay { position:absolute; right:10px; bottom:8px; z-index:1; width:96px; min-height:44px; border-color:var(--lesson-choice-border); }
+.recording-card.has-label>.audio-replay>button { height:44px; min-height:44px; width:48px; }
+.recording-card.is-listening>.audio-replay { width:156px; min-height:68px; }
+.recording-card.is-listening>.audio-replay>button { height:68px; width:78px; }
+.recording-card.is-listening svg { width:36px; height:32px; }
+.settings-lock-notice { position:fixed; left:50%; bottom:calc(94px + env(safe-area-inset-bottom,0px)); transform:translate(-50%,8px); z-index:120; max-width:calc(100vw - 40px); width:max-content; padding:12px 18px; border-radius:14px; background:var(--accent-color); color:var(--accent-contrast-color); font-size:.875rem; box-shadow:0 6px 24px #0003; opacity:0; visibility:hidden; pointer-events:none; transition:opacity .15s,transform .15s,visibility .15s; }
+.settings-lock-notice.is-visible { opacity:1; visibility:visible; transform:translate(-50%,0); }
+/* An exercise has exactly one scroll owner. WKWebView must not pan its document. */
+:root[data-exercise-route=true],:root[data-exercise-route=true] body { overflow:hidden; height:100%; }
+:root[data-exercise-route=true] body { position:fixed; inset:0; width:100%; }
+.mobile-chin-page-shell[data-exercise=true] { position:fixed; top:0; left:0; right:0; height:var(--interactive-viewport-height,100svh); min-height:0; overflow:hidden; --page-content-height:calc(var(--interactive-viewport-height,100svh) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)); }
+.mobile-chin-page-shell[data-exercise=true][data-keyboard=true] { padding-bottom:0; --page-content-height:calc(var(--interactive-viewport-height,100svh) - env(safe-area-inset-top,0px)); }
+.authored-exercise .lesson-scroll-panel { padding:3px!important; margin:-3px; scrollbar-width:none; overscroll-behavior:contain; }
+.authored-exercise .lesson-scroll-panel::-webkit-scrollbar { display:none; }
+
+.recording-card.has-label>.audio-replay svg { width:28px; height:24px; }
+
+.page-toolbar { display:flex; align-items:center; justify-content:space-between; gap:16px; margin:-12px 0 8px; min-height:44px; }
+.page-toolbar .page-back { margin:0 0 0 -5px; }
+.page-toolbar .ui-text-action { font-size:1rem; font-weight:600; }

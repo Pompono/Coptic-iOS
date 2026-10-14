@@ -28,3 +28,11 @@ Dictionary data, Coptic fonts, transcription and normalization, translation mode
 The existing browser checks cover offline translation/OCR, dictionary search and source distinctions, audio failure/retry, learning completion, vocabulary persistence, dark-mode contrast and scroll bounds. `scripts/design-smoke.mjs` additionally checks real home continuation, locked and completed course routes, tab labels, Coptic reading text size, consistent heading typography and title-before-subtitle placement, preservation of the Coptic-letter tab artwork, and 360px light/dark layouts at larger text sizes. The native startup check invokes the preferred-text-size and haptic bridge before validating recordings. CI compiles the native app and runs Safari checks before producing the IPA.
 
 Physical iPhone review remains necessary for VoiceOver navigation, the largest Dynamic Type categories, system keyboard interactions, and the feel of haptics. This design does not add course content or improve experimental translation accuracy.
+
+## Playback and viewport polish
+
+`AudioReplay` supplies paired speaker and turtle-with-sound-wave controls throughout guides, exercises, reading and vocabulary. Both use the original recording at 1× and .75×, with accessible labels and no visible text captions. `RecordingCard` replaces the separate speaker renderers and removes duplicate speaker glyphs from listening questions. Authored exercises reserve less empty heading/footer space, giving three-choice questions room without clipped corners.
+
+Exercise routes lock the outer document to the viewport; only the guide, question or practice pane scrolls. Keyboard resizing waits for the flex layout before moving the active answer into view inside its own pane. The regression check verifies the actual answer bounds and zero outer document scrolling, as well as the footer.
+
+Dictionary preferences remove the permanent lock and transliteration paragraphs. `useSettingsLockNotice` shows a two-second shadowed notice when a locked control is activated, while preserving its value. Dictionary entry and translator dialect controls share the same behavior. General Settings still controls the global preference. Dictionary preferences put Done in the top navigation row rather than below the scrollable form.

@@ -1,4 +1,5 @@
 "use client";
+import useSettingsLockNotice from "../SettingsLockNotice";
 import PageHeader from "../PageHeader";
 
 import AppIcon from "../AppIcon";
@@ -117,6 +118,7 @@ const KB_SYMBOLS: KeyDef[][] = [
 ];
 
 export default function TranslatorPage() {
+  const {show:showLock,notice}=useSettingsLockNotice();
   const [localTranslationEnabled, setLocalTranslationEnabled] = useState(false);
   useEffect(() => {
     void hasLocalTranslator().then(setLocalTranslationEnabled);
@@ -504,7 +506,7 @@ export default function TranslatorPage() {
   const handleDialectToggle = () => {
     if (translationState === "loading" || englishState === "loading") return;
     if (bohairicOnlyEnabled) {
-      setTranslatorDialect("bohairic");
+      showLock();
       return;
     }
 
@@ -526,9 +528,10 @@ export default function TranslatorPage() {
         }}
       >
         <PageHeader title="Translator" description="Coptic and English, side by side." icon="translate"><Link className="ui-secondary" href="/translator/scanner/"><AppIcon name="scan"/>Scan a photo</Link></PageHeader>
+        {notice}
         <div className="translation-options">
           {isCopticToEnglish&&localTranslationEnabled?<label>Translation method<select aria-label="Translation method" value={translationMethod} disabled={currentState==='loading'} onChange={event=>{setTranslationMethod(event.target.value as typeof translationMethod);setTranslationOutput('');setTranslationError('');setCopyStatus('');}}><option value="published">Published text</option><option value="experimental">Experimental AI draft</option></select></label>:<span>Translation</span>}
-          <div><button type="button" onClick={handleDialectToggle} disabled={bohairicOnlyEnabled||currentState==='loading'} aria-label="Translator dialect" title={bohairicOnlyEnabled?'Locked by global Bohairic-only mode in Settings':'Change dialect'}>{bohairicOnlyEnabled?'Bohairic-only':dialectLabel}</button>{bohairicOnlyEnabled&&<small>Locked by Settings</small>}</div>
+          <div><button type="button" onClick={handleDialectToggle} disabled={currentState==='loading'} aria-disabled={bohairicOnlyEnabled} aria-label="Translator dialect" title={bohairicOnlyEnabled?'Locked by global Bohairic-only mode in Settings':'Change dialect'}>{bohairicOnlyEnabled?'Bohairic-only':dialectLabel}</button></div>
         </div>
         <section className="translation-input-panel" aria-label="Translation input">
           <div className="translation-direction"><span>{isCopticToEnglish?'Coptic → English':'English → Coptic'}</span><button type="button" onClick={handleSwitchDirection} disabled={currentState==='loading'} aria-label="Switch translation direction"><AppIcon name="return"/></button></div>

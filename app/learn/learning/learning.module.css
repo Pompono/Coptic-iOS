@@ -48,3 +48,8 @@
 .practiceFooter .primary,.introFooter .primary { margin-top:0; }
 .progress { appearance:none; height:4px; width:100%; background:var(--lesson-progress-track); border:0; border-radius:4px; overflow:hidden; flex-shrink:0; }
 .progress::-webkit-progress-bar { background:var(--lesson-progress-track); }.progress::-webkit-progress-value { background:var(--teal); }.progress::-moz-progress-bar { background:var(--teal); }
+/* Keep the answer, not the document, in view as the native keyboard animates. */
+.practiceContent,.introBody { overscroll-behavior:contain; scroll-padding-block:12px; scrollbar-width:none; }
+.practiceContent::-webkit-scrollbar,.introBody::-webkit-scrollbar { display:none; }
+.practiceContent>* { flex-shrink:0; }
+.practiceContent .prompt { min-height:108px; padding:16px 12px; }

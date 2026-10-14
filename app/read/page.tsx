@@ -1,4 +1,5 @@
 "use client";
+import AudioReplay from "../AudioReplay";
 import PageHeader, { PageBackLink } from "../PageHeader";
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from '@/lib/AppLink';
@@ -9,7 +10,6 @@ import { practicePassages, grammarNotes } from '@/lib/reading/passages.mjs';
 import { isBohairicOnlyEnabled } from '@/app/BohairicPreference';
 import type { DictionaryEntry } from '@/lib/dictionary';
 import { resolveLessonAudio } from '@/lib/lessonAudio';
-import { audioService } from '@/lib/audioService';
 import styles from '../reading.module.css';
 import { scrollToSection } from '@/lib/scrollToSection';
 
@@ -101,7 +101,7 @@ export default function ReaderPage() {
       {selected && result && <section aria-label="Word explanation">
         <button onClick={() => scrollToSection(passagePanel.current)}>↑ Back to passage</button>
         <h2 className="coptic-text">{selected.text}</h2>
-        {recording?.src ? <button onClick={() => void audioService.play(recording.id, recording.src).catch(() => setError('This recording could not be played.'))}>Listen to selected word or phrase</button>
+        {recording?.src ? <AudioReplay path={recording.src}/>
           : <p className={styles.muted}>No recording for this exact word yet.</p>}
         {result.ignoresMarks && <p className={styles.muted}>Spelling matches below ignore combining marks. The original text is preserved above.</p>}
         {result.matches.map(wordEntry)}

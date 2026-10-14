@@ -1,4 +1,5 @@
 "use client";
+import {RecordingCard} from "@/app/AudioReplay";
 
 import { COPTIC, QUESTIONS, type LessonQuestion } from "@/lib/learning/wordLesson2";
 import { LearningSession, LessonExplanation, useLearningSession } from "../learning/LearningSession";
@@ -97,16 +98,7 @@ function getTranslateGlossary(question: LessonQuestion) {
   }
 }
 
-function IconSpeaker({ size = 28 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M14 3.2a1 1 0 0 1 1.7.7v16.2a1 1 0 0 1-1.7.7L8.7 15H5a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h3.7L14 3.2Zm4.8 3.5a1 1 0 0 1 1.4.1 8.1 8.1 0 0 1 0 10.4 1 1 0 0 1-1.5-1.3 6.1 6.1 0 0 0 0-7.8 1 1 0 0 1 .1-1.4Zm-2.9 2.2a1 1 0 0 1 1.4.1 4.5 4.5 0 0 1 0 6 1 1 0 0 1-1.5-1.3 2.5 2.5 0 0 0 0-3.4 1 1 0 0 1 .1-1.4Z"
-      />
-    </svg>
-  );
-}
+
 
 function IconClose({ size = 28 }: { size?: number }) {
   return (
@@ -501,7 +493,7 @@ export default function Section1Unit2Lesson2Client({
         : "16px 18px"
     : "18px 20px";
   const resultPadding = compactPhone ? (tinyPhone ? 10 : ultraCompactPhone ? 12 : 14) : 18;
-  const footerShellMinHeight = compactPhone ? (tinyPhone ? 66 : ultraCompactPhone ? 114 : 124) : 156;
+  const footerShellMinHeight = compactPhone ? 76 : 100;
   const promptRowBaseHeight = compactPhone ? (tinyPhone ? 56 : ultraCompactPhone ? 70 : 82) : 116;
   const slidePanelGap = compactPhone ? (tinyPhone ? 12 : ultraCompactPhone ? 14 : 16) : 20;
   const desktopSlideViewportHeight = 520;
@@ -791,12 +783,7 @@ export default function Section1Unit2Lesson2Client({
     const labelIsCoptic = label ? containsCoptic(label) : false;
 
     return (
-      <button
-        type="button"
-        className="lesson-tap-target lesson-audio-card"
-        onClick={playCurrentAudio}
-        disabled={!resolveLessonAudio(step.id, questionAudioId)?.src}
-        style={{
+      <RecordingCard path={resolveLessonAudio(step.id,questionAudioId)?.src} label={label} coptic={labelIsCoptic} onPlay={playCurrentAudio} fontSize={labelIsCoptic?cardLabelFontSize:compactPhone?54:68} style={{
           width: "100%",
           maxWidth: isTranslateChoiceScreen ? (desktopLayout ? 460 : 400) : desktopLayout ? 420 : 380,
           minHeight: isTranslateChoiceScreen
@@ -822,42 +809,7 @@ export default function Section1Unit2Lesson2Client({
           textAlign: "center",
           transform: "translateY(0)",
           transition: "transform 150ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 150ms cubic-bezier(0.22, 1, 0.36, 1)",
-        }}
-      >
-        {label ? (
-          <span
-            className={labelIsCoptic ? "coptic-text" : undefined}
-            style={{
-              fontSize: labelIsCoptic ? cardLabelFontSize : compactPhone ? 54 : 68,
-              lineHeight: 1,
-              fontWeight: 700,
-              letterSpacing: labelIsCoptic ? 0 : "-0.02em",
-            }}
-          >
-            {label}
-          </span>
-        ) : (
-          <span
-            style={{
-              transform: `scale(${
-                isTranslateChoiceScreen ? (compactPhone ? 1.55 : 1.85) : compactPhone ? 1.3 : 1.55
-              })`,
-            }}
-          >
-            <IconSpeaker size={isTranslateChoiceScreen ? (compactPhone ? 36 : 42) : compactPhone ? 34 : 38} />
-          </span>
-        )}
-
-        {resolveLessonAudio(step.id, questionAudioId)?.src && <span
-          style={{
-            position: "absolute",
-            right: compactPhone ? 16 : 22,
-            bottom: compactPhone ? 14 : 18,
-          }}
-        >
-          <IconSpeaker size={isTranslateChoiceScreen ? (compactPhone ? 22 : 28) : compactPhone ? 26 : 32} />
-        </span>}
-      </button>
+        }}/>
     );
   };
 
@@ -1539,7 +1491,7 @@ export default function Section1Unit2Lesson2Client({
                   ) : null}
                   {isTranslateChoiceScreen ? renderTranslateGlossary() : null}
                   <div
-                    className="lesson-scroll-panel"
+                    className="lesson-scroll-panel" data-lesson-scroll
                     style={{
                       display: "grid",
                       gap: compactPhone ? 12 : 18,
@@ -1561,7 +1513,7 @@ export default function Section1Unit2Lesson2Client({
                   ) : null}
                   {isTranslateChoiceScreen ? renderTranslateGlossary() : null}
                   <div
-                    className="lesson-scroll-panel"
+                    className="lesson-scroll-panel" data-lesson-scroll
                     style={{
                       minHeight: 0,
                       overflowY: "auto",

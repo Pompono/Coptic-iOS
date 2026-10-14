@@ -1,4 +1,5 @@
 "use client";
+import {RecordingCard} from "@/app/AudioReplay";
 
 import { COPTIC, QUESTIONS, type LessonQuestion, type ImageChoice } from "@/lib/learning/wordLesson1";
 import { LearningSession, LessonExplanation, useLearningSession } from "../learning/LearningSession";
@@ -83,16 +84,7 @@ function getExpectedAnswer(question: LessonQuestion) {
   return question.answer;
 }
 
-function IconSpeaker({ size = 28 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M14 3.2a1 1 0 0 1 1.7.7v16.2a1 1 0 0 1-1.7.7L8.7 15H5a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h3.7L14 3.2Zm4.8 3.5a1 1 0 0 1 1.4.1 8.1 8.1 0 0 1 0 10.4 1 1 0 0 1-1.5-1.3 6.1 6.1 0 0 0 0-7.8 1 1 0 0 1 .1-1.4Zm-2.9 2.2a1 1 0 0 1 1.4.1 4.5 4.5 0 0 1 0 6 1 1 0 0 1-1.5-1.3 2.5 2.5 0 0 0 0-3.4 1 1 0 0 1 .1-1.4Z"
-      />
-    </svg>
-  );
-}
+
 
 function IconClose({ size = 28 }: { size?: number }) {
   return (
@@ -472,8 +464,8 @@ export default function Section1Unit2Lesson1Client({
         : "16px 18px"
     : "18px 20px";
   const resultPadding = compactPhone ? (tinyPhone ? 10 : ultraCompactPhone ? 12 : 14) : 18;
-  const footerShellMinHeight = compactPhone ? (tinyPhone ? 66 : ultraCompactPhone ? 114 : 124) : 156;
-  const promptRowHeight = compactPhone ? (tinyPhone ? 56 : ultraCompactPhone ? 70 : 82) : 116;
+  const footerShellMinHeight = compactPhone ? 76 : 100;
+  const promptRowHeight = compactPhone ? (tinyPhone ? 52 : 64) : 96;
   const slidePanelGap = compactPhone ? (tinyPhone ? 12 : ultraCompactPhone ? 14 : 16) : 20;
   const desktopSlideViewportHeight = 520;
   const imageChoiceMinHeight = compactPhone ? (tinyPhone ? 126 : ultraCompactPhone ? 142 : 150) : 236;
@@ -656,11 +648,7 @@ export default function Section1Unit2Lesson1Client({
     const labelIsCoptic = label ? containsCoptic(label) : false;
 
     return (
-      <button
-        type="button"
-        className="lesson-tap-target lesson-audio-card"
-        onClick={playCurrentAudio}
-        style={{
+      <RecordingCard path={resolveLessonAudio(step.id,questionAudioId)?.src} label={label} coptic={labelIsCoptic} onPlay={playCurrentAudio} fontSize={labelIsCoptic?cardLabelFontSize:compactPhone?54:68} style={{
           width: "100%",
           maxWidth: desktopLayout ? 420 : 380,
           minHeight: cardMinHeight,
@@ -678,36 +666,7 @@ export default function Section1Unit2Lesson1Client({
           textAlign: "center",
           transform: "translateY(0)",
           transition: "transform 150ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 150ms cubic-bezier(0.22, 1, 0.36, 1)",
-        }}
-      >
-        {label ? (
-          <span
-            className={labelIsCoptic ? "coptic-text" : undefined}
-            style={{
-              fontSize: labelIsCoptic ? cardLabelFontSize : compactPhone ? 54 : 68,
-              lineHeight: 1,
-              fontWeight: 700,
-              letterSpacing: labelIsCoptic ? 0 : "-0.02em",
-            }}
-          >
-            {label}
-          </span>
-        ) : (
-          <span style={{ transform: `scale(${compactPhone ? 1.3 : 1.55})` }}>
-            <IconSpeaker size={compactPhone ? 34 : 38} />
-          </span>
-        )}
-
-        <span
-          style={{
-            position: "absolute",
-            right: compactPhone ? 16 : 22,
-            bottom: compactPhone ? 14 : 18,
-          }}
-        >
-          <IconSpeaker size={compactPhone ? 26 : 32} />
-        </span>
-      </button>
+        }}/>
     );
   };
 
@@ -1196,7 +1155,7 @@ export default function Section1Unit2Lesson1Client({
                 >
                   <div style={{ display: "flex", justifyContent: "center", minHeight: 0 }}>{renderAudioCard()}</div>
                   <div
-                    className="lesson-scroll-panel"
+                    className="lesson-scroll-panel" data-lesson-scroll
                     style={{
                       display: "grid",
                       gap: compactPhone ? 12 : 18,
@@ -1213,7 +1172,7 @@ export default function Section1Unit2Lesson1Client({
                 <>
                   <div style={{ display: "flex", justifyContent: "center", minHeight: 0 }}>{renderAudioCard()}</div>
                   <div
-                    className="lesson-scroll-panel"
+                    className="lesson-scroll-panel" data-lesson-scroll
                     style={{
                       minHeight: 0,
                       overflowY: "auto",

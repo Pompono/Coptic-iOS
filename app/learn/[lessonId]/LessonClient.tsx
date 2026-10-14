@@ -1,4 +1,5 @@
 "use client";
+import {RecordingCard} from "@/app/AudioReplay";
 
 import { LESSON_EXERCISE_SETS, PAIR_LETTERS_EXERCISES, type PairLettersExercise } from "@/lib/learning/letterExercises";
 import { LearningSession, LessonExplanation, useLearningSession } from "../learning/LearningSession";
@@ -246,16 +247,7 @@ function playLessonAudio(lessonId: string, audioId: string, fallbackText: string
   reportAudioFailure(new Error(`No bundled recording is available for "${audioId}".`));
 }
 
-function IconSpeaker({ size = 26 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M14 3.2a1 1 0 0 1 1.7.7v16.2a1 1 0 0 1-1.7.7L8.7 15H5a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h3.7L14 3.2Zm4.8 3.5a1 1 0 0 1 1.4.1 8.1 8.1 0 0 1 0 10.4 1 1 0 0 1-1.5-1.3 6.1 6.1 0 0 0 0-7.8 1 1 0 0 1 .1-1.4Zm-2.9 2.2a1 1 0 0 1 1.4.1 4.5 4.5 0 0 1 0 6 1 1 0 0 1-1.5-1.3 2.5 2.5 0 0 0 0-3.4 1 1 0 0 1 .1-1.4Z"
-      />
-    </svg>
-  );
-}
+
 
 function IconClose({ size = 28 }: { size?: number }) {
   return (
@@ -1017,8 +1009,8 @@ function PairLettersLesson({ lesson, step }: { lesson: Lesson; step: UnitLessonS
   const resultPadding = compactPhone ? (tinyPhone ? 10 : ultraCompactPhone ? 12 : 14) : 18;
   const actionButtonPadding = compactPhone ? (tinyPhone ? "12px 14px" : ultraCompactPhone ? "14px 16px" : "16px 18px") : "18px 20px";
   const actionButtonFontSize = compactPhone ? (tinyPhone ? 16 : ultraCompactPhone ? 18 : 20) : 22;
-  const footerShellMinHeight = compactPhone ? (tinyPhone ? 66 : ultraCompactPhone ? 114 : 124) : 156;
-  const promptRowHeight = compactPhone ? (tinyPhone ? 56 : ultraCompactPhone ? 70 : 82) : 116;
+  const footerShellMinHeight = compactPhone ? 76 : 100;
+  const promptRowHeight = compactPhone ? (tinyPhone ? 52 : 64) : 96;
   const slidePanelGap = compactPhone ? (tinyPhone ? 12 : ultraCompactPhone ? 14 : 16) : 20;
   const desktopSlideViewportHeight = 520;
 
@@ -1403,10 +1395,7 @@ function PairLettersLesson({ lesson, step }: { lesson: Lesson; step: UnitLessonS
             }}
           >
             <div style={{ display: "flex", justifyContent: "center", minHeight: 0 }}>
-              <button
-                type="button"
-                className="lesson-tap-target lesson-audio-card"
-                onClick={() => {
+              <RecordingCard path={resolveLessonAudio(audioContextId,panelExerciseAudioId)?.src} label={panelCardLabel} coptic={panelCardLabelIsCoptic} onPlay={() => {
                   if (panelExerciseAudioId) {
                     playLessonAudio(audioContextId, panelExerciseAudioId, panelExerciseAudioFallback);
                     return;
@@ -1415,8 +1404,7 @@ function PairLettersLesson({ lesson, step }: { lesson: Lesson; step: UnitLessonS
                   if (targetExercise.kind !== "hear-and-choose") {
                     reportAudioFailure(new Error(`No bundled recording is available for "${targetExercise.display}".`));
                   }
-                }}
-                style={{
+                }} fontSize={cardLabelFontSize} style={{
                   width: "100%",
                   maxWidth: 420,
                   minHeight: cardMinHeight,
@@ -1436,30 +1424,7 @@ function PairLettersLesson({ lesson, step }: { lesson: Lesson; step: UnitLessonS
                   transition: performanceMode
                     ? "background-color 100ms ease, color 100ms ease"
                     : "transform 150ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 150ms cubic-bezier(0.22, 1, 0.36, 1)",
-                }}
-              >
-                {panelCardLabel ? (
-                  <span
-                    className={panelCardLabelIsCoptic ? "coptic-text" : undefined}
-                    style={{
-                      fontSize: cardLabelFontSize,
-                      lineHeight: 1,
-                      fontWeight: 700,
-                      textAlign: "center",
-                    }}
-                  >
-                    {panelCardLabel}
-                  </span>
-                ) : (
-                  <span style={{ transform: `scale(${speakerScale})` }}>
-                    <IconSpeaker size={compactPhone ? 30 : 38} />
-                  </span>
-                )}
-
-                <span style={{ position: "absolute", right: compactPhone ? 16 : 24, bottom: compactPhone ? 14 : 20 }}>
-                  <IconSpeaker size={compactPhone ? 28 : 38} />
-                </span>
-              </button>
+                }}/>
             </div>
 
             <div
@@ -1547,10 +1512,7 @@ function PairLettersLesson({ lesson, step }: { lesson: Lesson; step: UnitLessonS
         ) : (
           <>
             <div style={{ display: "flex", justifyContent: "center", minHeight: 0 }}>
-              <button
-                type="button"
-                className="lesson-tap-target lesson-audio-card"
-                onClick={() => {
+              <RecordingCard path={resolveLessonAudio(audioContextId,panelExerciseAudioId)?.src} label={panelCardLabel} coptic={panelCardLabelIsCoptic} onPlay={() => {
                   if (panelExerciseAudioId) {
                     playLessonAudio(audioContextId, panelExerciseAudioId, panelExerciseAudioFallback);
                     return;
@@ -1559,8 +1521,7 @@ function PairLettersLesson({ lesson, step }: { lesson: Lesson; step: UnitLessonS
                   if (targetExercise.kind !== "hear-and-choose") {
                     reportAudioFailure(new Error(`No bundled recording is available for "${targetExercise.display}".`));
                   }
-                }}
-                style={{
+                }} fontSize={cardLabelFontSize} style={{
                   width: "100%",
                   maxWidth: 420,
                   minHeight: cardMinHeight,
@@ -1580,30 +1541,7 @@ function PairLettersLesson({ lesson, step }: { lesson: Lesson; step: UnitLessonS
                   transition: performanceMode
                     ? "background-color 100ms ease, color 100ms ease"
                     : "transform 150ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 150ms cubic-bezier(0.22, 1, 0.36, 1)",
-                }}
-              >
-                {panelCardLabel ? (
-                  <span
-                    className={panelCardLabelIsCoptic ? "coptic-text" : undefined}
-                    style={{
-                      fontSize: cardLabelFontSize,
-                      lineHeight: 1,
-                      fontWeight: 700,
-                      textAlign: "center",
-                    }}
-                  >
-                    {panelCardLabel}
-                  </span>
-                ) : (
-                  <span style={{ transform: `scale(${speakerScale})` }}>
-                    <IconSpeaker size={compactPhone ? 30 : 38} />
-                  </span>
-                )}
-
-                <span style={{ position: "absolute", right: compactPhone ? 16 : 24, bottom: compactPhone ? 14 : 20 }}>
-                  <IconSpeaker size={compactPhone ? 28 : 38} />
-                </span>
-              </button>
+                }}/>
             </div>
 
             <div

@@ -1,10 +1,11 @@
 "use client";
+import AudioReplay from "@/app/AudioReplay";
 import AppIcon from "@/app/AppIcon";
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from '@/lib/AppLink';
 import { useRouter } from 'next/navigation';
 import { resultFeedback } from "@/lib/nativeExperience";
-import { audioService, reportAudioFailure } from '@/lib/audioService';
+import { audioService } from '@/lib/audioService';
 import { clearStepFailed, markStepCompleted } from '../progress';
 import { createCard, gradeCard, cardId } from '@/lib/vocabulary/schedule.mjs';
 import { readVocabulary, writeVocabulary } from '@/lib/vocabulary/store';
@@ -24,10 +25,7 @@ export function LessonExplanation({ question, wrong }: { question: any; wrong: b
   const items = itemsForQuestion(question);
   return <>{wrong && items[0] && <p className={styles.explanation}>{items[0].explanation}</p>}{session.error && <p role="alert" className={styles.error}>{session.error}</p>}</>;
 }
-export function SlowReplay({ path }: { path?: string }) {
-  if (!path) return null;
-  return <button type="button" className={styles.slow} onClick={() => void audioService.play(path, path, .75).catch(reportAudioFailure)} aria-label="Play recording slowly">Listen at 0.75×</button>;
-}
+
 function normalizeAnswer(text: string) { return text.normalize('NFKC').trim().toLowerCase().replace(/[.!?,:;]+$/u,'').replace(/\s+/gu,' '); }
 function plainMeaning(item: LearningItem) { return item.meaning.replace(/^Sound: /,''); }
 
@@ -80,13 +78,13 @@ export function LearningSession({ lesson, step, children, newLesson = false }: {
   return <SessionContext.Provider value={{record,finish,error}}>
     {phase === 'loading' ? <main className={styles.screen}><p>Preparing your lesson…</p></main>
       : phase === 'guide' ? <main className={styles.introScreen}>
-        <div ref={guideContent} className={styles.introBody}>
+        <div ref={guideContent} className={styles.introBody} data-lesson-scroll>
           <div className={styles.top}><Link href={`/learn/${lesson.id}/`}><AppIcon name="close" size={16}/>Close lesson</Link><span>Lesson guide</span></div>
           <h1>{step.title}</h1>
           <p>{lessonNote(step)}</p>
           <div className={styles.skills}>{items.slice(0,3).map(item => <div key={learningId(item)}>
             <div><span className="coptic-text">{item.word}</span><p>{plainMeaning(item)}</p></div>
-            {item.audio && <SlowReplay path={item.audio} />}
+            {item.audio && <AudioReplay path={item.audio} />}
           </div>)}</div>
           {error && <p role="alert">{error}</p>}
         </div>
@@ -136,14 +134,14 @@ function LearningPractice({ items, lesson, title, description, onDone, review = 
     setIndex(i=>i+1); setResult('idle'); setAnswer(''); setBank([]); setHint(false);
   };
   if (!items.length) return <main className={styles.screen}><div className={styles.inner}><p>This lesson’s practice is ready.</p><button className={styles.primary} onClick={onDone}>Continue</button></div></main>;
-  return <main className={`${styles.screen} ${styles.practiceScreen}`}><div className={styles.practiceLayout}><div ref={practiceContent} className={styles.practiceContent}>
+  return <main className={`${styles.screen} ${styles.practiceScreen}`}><div className={styles.practiceLayout}><div ref={practiceContent} className={styles.practiceContent} data-lesson-scroll>
     <div className={styles.top}><Link href={`/learn/${lesson.id}/`}><AppIcon name="close" size={16}/>Close lesson</Link><span>{reading ? 'Read' : `${index+1} of ${count}`}</span></div>
     <progress className={styles.progress} value={reading?0:index+1} max={count} aria-label="Practice progress"/>
     <h1>{title}</h1><p className={styles.muted}>{description}</p>
     {reading ? <>
       <p>{items.every(i=>i.pos === 'Letter / syllable') ? 'Read these sound patterns from left to right. Tap a pattern to check its sound label.' : 'These are short practice phrases. Tap a word or phrase to see how it works.'}</p>
       <div className={styles.reading}>{items.slice(0, teaching || checkpoint ? 6 : 3).map((entry,i)=><button key={learningId(entry)} className="coptic-text" aria-pressed={selected===i} onClick={()=>setSelected(i)}>{entry.word}</button>)}</div>
-      {selected !== null && <div className={styles.panel}><p>{items[selected].meaning}</p><p>{items[selected].explanation}</p><SlowReplay path={items[selected].audio} />{selectedEntries.slice(0,3).map(entry=><div key={entry.id}><p>Dictionary headword: <span className="coptic-text">{entry.lemma}</span></p><p>{entry.gloss.join('; ')}</p>{entry.forms.length>1&&<p>Listed forms: <span className="coptic-text">{entry.forms.filter(form=>form!==entry.lemma).join(', ')}</span></p>}<Link className={styles.entryLink} href={`/dictionary/entry/?lemma=${encodeURIComponent(entry.lemma)}`}>Dictionary details</Link></div>)}</div>}
+      {selected !== null && <div className={styles.panel}><p>{items[selected].meaning}</p><p>{items[selected].explanation}</p><AudioReplay path={items[selected].audio} />{selectedEntries.slice(0,3).map(entry=><div key={entry.id}><p>Dictionary headword: <span className="coptic-text">{entry.lemma}</span></p><p>{entry.gloss.join('; ')}</p>{entry.forms.length>1&&<p>Listed forms: <span className="coptic-text">{entry.forms.filter(form=>form!==entry.lemma).join(', ')}</span></p>}<Link className={styles.entryLink} href={`/dictionary/entry/?lemma=${encodeURIComponent(entry.lemma)}`}>Dictionary details</Link></div>)}</div>}
 
     </> : <>
       <h2>{kind === 'build' ? 'Build the Coptic phrase' : kind === 'gap' ? 'Fill the missing letter' : listening ? 'Listen and translate' : item.pos === 'Letter / syllable' ? 'Write the sound label' : 'Translate this phrase'}</h2>
@@ -154,7 +152,7 @@ function LearningPractice({ items, lesson, title, description, onDone, review = 
           <label className={styles.label}>{kind === 'gap' ? 'Missing letter' : 'Your answer'}<input aria-label={kind==='gap'?'Missing letter':'Your answer'} value={answer} disabled={result!=='idle'} onChange={e=>setAnswer(e.target.value)} onKeyDown={e=>{if(e.key==='Enter' && answer.trim() && result==='idle')check();}} autoCapitalize="none" autoCorrect="off" spellCheck={false} /></label>
           {kind==='gap' && <div className={styles.bank}>{[...new Set([...gapParts,'ⲉ','ⲟ'])].filter(ch=>ch!==' ').map(ch=><button key={ch} className="coptic-text" disabled={result!=='idle'} onClick={()=>setAnswer(ch)}>{ch}</button>)}</div>}
         </>}
-      {item.audio && <div className={styles.listen}><button onClick={()=>void audioService.play(item.audio,item.audio).catch(reportAudioFailure)}><AppIcon name="play" size={16}/>Replay recording</button><SlowReplay path={item.audio}/></div>}
+      {item.audio && <AudioReplay path={item.audio}/>}
       {result==='idle' && <button className={styles.hint} onClick={()=>setHint(true)}>Show a hint</button>}
       {hint && result==='idle' && <p>{item.explanation}</p>}
       {result!=='idle' && <div role="status" className={styles.panel}><p>{result==='correct'?'Correct.':`Not quite. ${expected}`}</p><p>{item.explanation}</p></div>}

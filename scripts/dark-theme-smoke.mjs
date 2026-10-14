@@ -46,7 +46,7 @@ export async function checkDarkTheme(page, base) {
     const disabled = await colors(page.getByRole('button', { name: 'Check', exact: true }));
     assert.ok(contrast(disabled.text, disabled.background) >= 4.5, 'Disabled action remains legible');
     if (set === exerciseSets[0]) {
-      const card = await colors(page.locator('.lesson-audio-card').first());
+      const card = await colors(page.locator('.recording-card').first());
       const cardBackground = card.gradient.match(/rgb\([^)]*\)/)[0];
       assert.ok(contrast(card.text, cardBackground) >= 4.5, 'Prompt card contrast');
       const wrong = page.getByRole('button', { name: 'ⲟ', exact: true });

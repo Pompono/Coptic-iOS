@@ -19,6 +19,15 @@ export async function checkDesign(browser,base){
   assert.match(await unit.getByRole('link',{name:'Review',exact:true}).getAttribute('href'),/group-1-review/,'Completed groups keep their review lesson');
   assert.match(await unit.getByRole('link',{name:'Start',exact:true}).getAttribute('href'),/lesson-6-a-ou-da/);
   assert.ok(await unit.getByText('Complete earlier lessons to unlock',{exact:true}).count()>0);
+  await page.goto(base+'/dictionary/settings/');await page.waitForLoadState('networkidle');
+  assert.equal(await page.getByText(/Transliteration accepts spellings/).count(),0);
+  const lockedSwitch=page.getByRole('switch',{name:'Bohairic-only',exact:true});
+  await lockedSwitch.click({force:true});assert.equal(await lockedSwitch.isChecked(),true,'A locked switch stays on');
+  await page.getByRole('status').filter({hasText:'This is locked by Settings.'}).waitFor();
+  await page.waitForFunction(()=>!document.querySelector('.settings-lock-notice').classList.contains('is-visible'));
+  await lockedSwitch.focus();await page.keyboard.press('Space');
+  await page.getByRole('status').filter({hasText:'This is locked by Settings.'}).waitFor();
+  assert.equal(await lockedSwitch.isChecked(),true,'Keyboard activation also respects the settings lock');
   // Catch the inconsistent hierarchy and missing heritage artwork from the last revision.
   const headings=[];
   for(const route of ['/','/learn/','/dictionary/','/translator/','/settings/','/read/','/vocabulary/','/translator/scanner/']){

@@ -1,4 +1,5 @@
 "use client";
+import useSettingsLockNotice from "../../SettingsLockNotice";
 
 import Link from "@/lib/AppLink";
 import { useEffect, useMemo, useState } from "react";
@@ -57,6 +58,7 @@ function uniqueStrings(arr: string[]) {
 }
 
 export default function DictionaryEntryClient({ lemma }: { lemma: string }) {
+  const {show:showLock,notice}=useSettingsLockNotice();
   const [bohairicOnly, setBohairicOnly] = useState(true);
   const [globalBohairicOnly, setGlobalBohairicOnly] = useState(true);
   useEffect(() => {
@@ -138,6 +140,7 @@ export default function DictionaryEntryClient({ lemma }: { lemma: string }) {
 
   return (
     <main className="dictionary-detail min-h-screen bg-[var(--bg-color)] text-[var(--text-color)]">
+      {notice}
       <div className="mx-auto max-w-3xl px-5 py-8">
         <div className="flex items-center justify-between gap-4">
           <Link
@@ -149,8 +152,8 @@ export default function DictionaryEntryClient({ lemma }: { lemma: string }) {
 
           <button
             type="button"
-            onClick={() => setBohairicOnly((v) => !v)}
-            disabled={globalBohairicOnly}
+            onClick={() => globalBohairicOnly ? showLock() : setBohairicOnly((v) => !v)}
+            aria-disabled={globalBohairicOnly}
             title={globalBohairicOnly ? "Locked by global Bohairic-only mode in Settings" : "Toggle Bohairic-only entries"}
             className={[
               "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition",

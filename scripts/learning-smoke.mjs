@@ -61,6 +61,11 @@ export async function checkLearning(browser,base){
   await page.waitForFunction(()=>document.querySelector('.mobile-chin-page-shell').dataset.keyboard==='true');
   const keyboardAction=await page.getByRole('button',{name:'Check',exact:true}).boundingBox();
   assert.ok(keyboardAction.y+keyboardAction.height<=400,'Lesson actions stay above the system keyboard');
+  await page.waitForFunction(()=>{const field=document.querySelector('input[aria-label="Your answer"]'),pane=field.closest('[data-lesson-scroll]');const a=field.getBoundingClientRect(),b=pane.getBoundingClientRect();return a.top>=b.top&&a.bottom<=b.bottom;});
+  assert.equal(await page.evaluate(()=>scrollY),0,'The keyboard never scrolls the outer lesson document');
+  await page.evaluate(()=>window.scrollTo(0,100000));
+  assert.equal(await page.evaluate(()=>scrollY),0,'An exercise cannot scroll its action into the status bar');
+
   await page.evaluate(()=>{delete window.visualViewport.height;window.visualViewport.dispatchEvent(new Event('resize'));});
   await page.getByRole('button',{name:'Check',exact:true}).click();
   await page.getByRole('status').filter({hasText:'Not quite.'}).waitFor();

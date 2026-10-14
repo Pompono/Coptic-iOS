@@ -1,10 +1,10 @@
 "use client";
+import AudioReplay from "../AudioReplay";
 import PageHeader, { PageBackLink } from "../PageHeader";
 import { useEffect, useMemo, useState } from 'react';
 import Link from '@/lib/AppLink';
 import { dueCards, gradeCard } from '@/lib/vocabulary/schedule.mjs';
 import { readVocabulary, writeVocabulary, type VocabularyCard } from '@/lib/vocabulary/store';
-import { audioService } from '@/lib/audioService';
 import styles from '../reading.module.css';
 
 export default function VocabularyPage() {
@@ -65,7 +65,7 @@ export default function VocabularyPage() {
           <button aria-pressed={mode === 'quiz'} disabled={choices.length < 2} onClick={() => { setMode('quiz'); setChoice(null); setRevealed(false); }}>Meaning quiz</button></div>
         <p className={styles.muted}>{current.dialect === 'bohairic' ? 'Bohairic' : 'Dialect not specified'} · {current.pos || 'Dictionary word'}{current.lapses > 0 ? ` · ${current.lapses} difficult reviews` : ''}</p>
         <h2 className={`${styles.word} coptic-text`}>{current.word}</h2>
-        {current.audio && <button onClick={() => void audioService.play(current.audio).catch(() => setError('The recording could not be played.'))}>Listen to word</button>}
+        {current.audio && <AudioReplay path={current.audio}/>}
         {mode === 'recall' ? <>
           {!revealed ? <button className={styles.primary} onClick={() => setRevealed(true)}>Reveal meaning</button>
             : <><p className={styles.answer}>{current.meaning}</p><div className={styles.actions}>
