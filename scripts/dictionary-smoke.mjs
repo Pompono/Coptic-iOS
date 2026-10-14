@@ -13,11 +13,25 @@ export async function checkDictionary(browser, base) {
     await page.getByText(/shown.*total/).waitFor();
     const query = page.getByRole('textbox', { name: 'Dictionary search' });
     const cards = page.locator('a[href^="/dictionary/entry/"]');
-    await page.getByLabel('Search in', { exact: true }).selectOption('transliteration');
+    assert.equal(await page.locator('select, input[type=checkbox]').count(), 0);
+    await query.focus();
+    assert.equal(await query.evaluate(el => getComputedStyle(el).outlineStyle), 'none');
+    const settings = async (update) => {
+      await page.getByRole('link', { name: 'Advanced dictionary settings', exact: true }).click();
+      await page.getByRole('heading', { name: 'Advanced dictionary settings', exact: true }).waitFor();
+      await page.waitForLoadState('networkidle');
+      assert.ok(await page.getByLabel('Part of speech', {exact:true}).locator('option').count() > 1, 'Parts of speech populate from the dictionary');
+      assert.equal(await page.getByRole('alert').filter({hasText:'Parts of speech could not be loaded'}).count(), 0);
+      await update();
+      await page.getByRole('link', { name: 'Done', exact: true }).click();
+      await page.getByText(/shown.*total/).waitFor();
+      await page.waitForLoadState('networkidle');
+    };
+    await settings(() => page.getByLabel('Search in', { exact: true }).selectOption('transliteration'));
     await query.fill('agapi');
     await page.getByText('Transliteration · approximate spelling', { exact: false }).first().waitFor();
     await page.locator('a[href^="/dictionary/entry/"]').filter({ hasText: 'ⲁⲅⲁⲡⲏ' }).first().waitFor();
-    await page.getByLabel('Search in', { exact: true }).selectOption('english');
+    await settings(() => page.getByLabel('Search in', { exact: true }).selectOption('english'));
     await query.fill('god love');
     await page.getByText('Definition · whole words', { exact: false }).first().waitFor();
     assert.ok(await cards.count() > 0);
@@ -26,9 +40,9 @@ export async function checkDictionary(browser, base) {
     assert.equal(await query.inputValue(), 'lvoe', 'Suggestions do not silently rewrite input');
     await page.getByRole('button', { name: 'love', exact: true }).click();
     await page.getByText('English meaning · exact', { exact: true }).first().waitFor();
-    await page.getByLabel('Search in', { exact: true }).selectOption('coptic');
+    await settings(() => page.getByLabel('Search in', { exact: true }).selectOption('coptic'));
     await query.fill('ⲁ');
-    await page.getByLabel('Search without combining marks').uncheck();
+    await settings(() => page.getByLabel('Search without combining marks').uncheck());
     await page.waitForTimeout(250);
     assert.ok(!(await cards.allTextContents()).includes('ⲁ̄'));
     assert.equal(await page.locator('a[href^="crum:"]').count(), 0);
@@ -40,8 +54,11 @@ export async function checkDictionary(browser, base) {
     await page.getByRole('link', { name: '← Back', exact: true }).click();
     await query.waitFor();
     await page.waitForFunction(() => document.querySelector('[aria-label="Dictionary search"]').value === 'ⲁ');
-    assert.equal(await page.getByLabel('Search in', { exact: true }).inputValue(), 'coptic');
-    assert.ok(!(await page.getByLabel('Search without combining marks').isChecked()));
+    await settings(async () => {
+      assert.equal(await page.getByLabel('Search in', { exact: true }).inputValue(), 'coptic');
+      assert.ok(!(await page.getByLabel('Search without combining marks').isChecked()));
+    });
+    assert.equal(await query.inputValue(), 'ⲁ', 'Settings preserve the current search');
     await page.getByRole('button', { name: 'Clear', exact: true }).click();
     await query.fill('zzzz_no_such_word_zzzz');
     await page.getByRole('status').filter({ hasText: 'No matching entries' }).waitFor();

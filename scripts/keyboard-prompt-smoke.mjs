@@ -15,10 +15,21 @@ export async function checkKeyboardPrompt(browser, base) {
     await page.reload(); await page.waitForLoadState('networkidle');
     assert.equal(await prompt.count(), 0, 'Permanent dismissal survives relaunch');
     await page.goto(base + '/settings/'); await page.waitForLoadState('networkidle');
-    assert.equal(await page.getByRole('button', { name: 'Disabled', exact: true }).getAttribute('aria-pressed'), 'true', 'Mobile keyboard defaults disabled');
-    await page.getByRole('button', { name: 'Enabled', exact: true }).click();
-    await page.reload(); await page.waitForLoadState('networkidle');
-    assert.equal(await page.getByRole('button', { name: 'Enabled', exact: true }).getAttribute('aria-pressed'), 'true', 'An explicit keyboard preference remains saved');
+    assert.equal(await page.getByText('On-screen Coptic Keyboard', {exact:true}).count(), 0);
+    const developer = await page.getByLabel('Developer tools toggle').boundingBox();
+    const dock = await page.getByRole('navigation', {name:'Mobile navigation'}).boundingBox();
+    assert.ok(developer.y + developer.height < dock.y, 'Developer controls are visible above the dock');
+    await page.evaluate(() => {localStorage.setItem('coptic-keyboard-enabled','true');sessionStorage.setItem('coptic-keyboard-visible-session','true');});
+    for (const width of [390,1024]) {
+      await page.setViewportSize({width,height:844});
+      for (const route of ['/dictionary/','/translator/']) {
+        await page.goto(base + route); await page.waitForLoadState('networkidle');
+        assert.equal(await page.getByRole('button', {name:/Show Coptic keyboard|Hide Coptic keyboard/i}).count(),0);
+        assert.equal(await page.locator('.coptic-keyboard').count(),0);
+      }
+    }
+    await page.setViewportSize({width:390,height:844});
+    await page.goto(base + '/settings/'); await page.waitForLoadState('networkidle');
     const tabs = page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link');
     assert.equal(await tabs.nth(2).getAttribute('aria-label'), 'Home', 'Home is the middle tab');
     await page.evaluate(() => localStorage.removeItem('coptic-ios-keyboard-prompt-dismissed'));
@@ -26,6 +37,6 @@ export async function checkKeyboardPrompt(browser, base) {
     await prompt.getByRole('button', { name: 'Already installed' }).click();
     await page.reload(); await page.waitForLoadState('networkidle');
     assert.equal(await prompt.count(), 0);
-    console.log('PASS: iOS keyboard prompt repeats after temporary dismissal, saves permanent dismissal, and respects mobile defaults and opt-in.');
+    console.log('PASS: iOS keyboard prompt repeats after temporary dismissal, saves permanent dismissal, and keeps the built-in keyboard disabled even with legacy enabled preferences.');
   } finally { await context.close(); }
 }

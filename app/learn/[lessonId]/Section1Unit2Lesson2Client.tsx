@@ -1,7 +1,7 @@
 "use client";
 
 import { COPTIC, QUESTIONS, type LessonQuestion } from "@/lib/learning/wordLesson2";
-import { LearningSession, LessonCoach, LessonExplanation, SlowReplay, useLearningSession } from "../learning/LearningSession";
+import { LearningSession, LessonExplanation, useLearningSession } from "../learning/LearningSession";
 import { itemsForQuestion } from "@/lib/learning/content";
 import { LESSON_THEME } from "@/lib/lessonTheme";
 
@@ -1431,8 +1431,6 @@ export default function Section1Unit2Lesson2Client({
             />
           </div>
         </div>
-
-        <LessonCoach step={step} index={index} audioPath={resolveLessonAudio(step.id, questionAudioId)?.src} />
 
         <div
           style={{

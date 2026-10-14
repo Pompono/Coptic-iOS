@@ -11,10 +11,6 @@ import {
   COPTIC_FONT_STORAGE_KEY,
   type CopticFontMode,
 } from "../CopticFontPreference";
-import {
-  COPTIC_KEYBOARD_ENABLED_STORAGE_KEY,
-  isCopticKeyboardEnabled,
-} from "../CopticKeyboardPreference";
 import { applyThemeMode, THEME_STORAGE_KEY, type ThemeMode } from "../ThemePreference";
 import {
   BOHAIRIC_ONLY_STORAGE_KEY,
@@ -28,7 +24,6 @@ export default function SettingsPage() {
   const router = useRouter();
   const [fontMode, setFontMode] = useState<CopticFontMode>("avva");
   const [themeMode, setThemeMode] = useState<ThemeMode>("light");
-  const [keyboardEnabled, setKeyboardEnabled] = useState(false);
   const [bohairicOnlyEnabled, setBohairicOnlyEnabled] = useState(true);
   const [devToolsEnabled, setDevToolsEnabled] = useState(false);
   const [devLessonId, setDevLessonId] = useState(lessons[0]?.id ?? "");
@@ -48,7 +43,6 @@ export default function SettingsPage() {
     setThemeMode(theme);
     applyThemeMode(theme);
 
-    setKeyboardEnabled(isCopticKeyboardEnabled());
     setBohairicOnlyEnabled(isBohairicOnlyEnabled());
   }, []);
 
@@ -91,11 +85,6 @@ export default function SettingsPage() {
     setThemeMode(nextMode);
     localStorage.setItem(THEME_STORAGE_KEY, nextMode);
     applyThemeMode(nextMode);
-  };
-
-  const onToggleKeyboardEnabled = (nextEnabled: boolean) => {
-    setKeyboardEnabled(nextEnabled);
-    localStorage.setItem(COPTIC_KEYBOARD_ENABLED_STORAGE_KEY, String(nextEnabled));
   };
 
   const onToggleBohairicOnlyEnabled = (nextEnabled: boolean) => {
@@ -238,61 +227,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div style={toggleRowStyle} aria-label="Coptic font toggle">
-          <span style={toggleLabelStyle}>Coptic Font</span>
-
-          <div style={toggleControlStyle}>
-            <button type="button" onClick={() => onToggleFont("unicode")} aria-pressed={fontMode === "unicode"} style={toggleButtonStyle(fontMode === "unicode")}>
-              Standard
-            </button>
-            <button type="button" onClick={() => onToggleFont("avva")} aria-pressed={fontMode === "avva"} style={toggleButtonStyle(fontMode === "avva")}>
-              New
-            </button>
-          </div>
-        </div>
-
-        <div style={toggleRowStyle} aria-label="Bohairic-only mode toggle">
-          <span style={toggleLabelStyle}>Global Bohairic-only Mode</span>
-
-          <div style={toggleControlStyle}>
-            <button
-              type="button"
-              onClick={() => onToggleBohairicOnlyEnabled(false)}
-              aria-pressed={!bohairicOnlyEnabled} style={toggleButtonStyle(!bohairicOnlyEnabled)}
-            >
-              Off
-            </button>
-            <button
-              type="button"
-              onClick={() => onToggleBohairicOnlyEnabled(true)}
-              aria-pressed={bohairicOnlyEnabled} style={toggleButtonStyle(bohairicOnlyEnabled)}
-            >
-              On
-            </button>
-          </div>
-        </div>
-
-        <div style={toggleRowStyle} aria-label="On-screen Coptic keyboard toggle">
-          <span style={toggleLabelStyle}>On-screen Coptic Keyboard</span>
-
-          <div style={toggleControlStyle}>
-            <button
-              type="button"
-              onClick={() => onToggleKeyboardEnabled(false)}
-              aria-pressed={!keyboardEnabled} style={toggleButtonStyle(!keyboardEnabled)}
-            >
-              Disabled
-            </button>
-            <button
-              type="button"
-              onClick={() => onToggleKeyboardEnabled(true)}
-              aria-pressed={keyboardEnabled} style={toggleButtonStyle(keyboardEnabled)}
-            >
-              Enabled
-            </button>
-          </div>
-        </div>
-
         <div style={toggleRowStyle} aria-label="Developer tools toggle">
           <span style={toggleLabelStyle}>Developer Tools</span>
 
@@ -414,6 +348,42 @@ export default function SettingsPage() {
             </div>
           </div>
         ) : null}
+
+        <div style={toggleRowStyle} aria-label="Coptic font toggle">
+          <span style={toggleLabelStyle}>Coptic Font</span>
+
+          <div style={toggleControlStyle}>
+            <button type="button" onClick={() => onToggleFont("unicode")} aria-pressed={fontMode === "unicode"} style={toggleButtonStyle(fontMode === "unicode")}>
+              Standard
+            </button>
+            <button type="button" onClick={() => onToggleFont("avva")} aria-pressed={fontMode === "avva"} style={toggleButtonStyle(fontMode === "avva")}>
+              New
+            </button>
+          </div>
+        </div>
+
+        <div style={toggleRowStyle} aria-label="Bohairic-only mode toggle">
+          <span style={toggleLabelStyle}>Global Bohairic-only Mode</span>
+
+          <div style={toggleControlStyle}>
+            <button
+              type="button"
+              onClick={() => onToggleBohairicOnlyEnabled(false)}
+              aria-pressed={!bohairicOnlyEnabled} style={toggleButtonStyle(!bohairicOnlyEnabled)}
+            >
+              Off
+            </button>
+            <button
+              type="button"
+              onClick={() => onToggleBohairicOnlyEnabled(true)}
+              aria-pressed={bohairicOnlyEnabled} style={toggleButtonStyle(bohairicOnlyEnabled)}
+            >
+              On
+            </button>
+          </div>
+        </div>
+
+
       </section>
 
       <div

@@ -17,14 +17,6 @@ import styles from './learning.module.css';
 type Session = { record: (id: string, items: LearningItem[], correct: boolean, assisted?: boolean) => void; finish: () => void; error: string; };
 const SessionContext = createContext<Session>({ record: () => {}, finish: () => {}, error: '' });
 export const useLearningSession = () => useContext(SessionContext);
-export function LessonCoach({ step, index = 0, audioPath }: { step: UnitLessonStep; index?: number; audioPath?:string }) {
-  const items = getCourseItems(step.exerciseSet ?? '');
-  const checkpoint = /review|checkpoint/.test(step.exerciseSet ?? '');
-  return <div className={styles.guideRow}><details key={step.id + ':' + index} className={styles.guide} open={index === 0 && !checkpoint}>
-    <summary>{checkpoint ? 'Checkpoint focus' : 'Lesson guide'}</summary>
-    <div><p>{lessonNote(step)}</p>{!checkpoint && items.slice(0,3).map(item => <span className={styles.example} key={learningId(item)}><span className="coptic-text">{item.word}</span> · {item.meaning.replace(/^Sound: /,'')}</span>)}</div>
-  </details><SlowReplay path={audioPath} /></div>;
-}
 export function LessonExplanation({ question, wrong }: { question: any; wrong: boolean }) {
   const session = useLearningSession();
   const items = itemsForQuestion(question);
@@ -39,7 +31,7 @@ function plainMeaning(item: LearningItem) { return item.meaning.replace(/^Sound:
 
 export function LearningSession({ lesson, step, children, newLesson = false }: { lesson: Lesson; step: UnitLessonStep; children?: ReactNode; newLesson?: boolean }) {
   const router = useRouter();
-  const [phase, setPhase] = useState<'loading'|'review'|'lesson'|'transfer'|'complete'>('loading');
+  const [phase, setPhase] = useState<'loading'|'guide'|'review'|'lesson'|'transfer'|'complete'>('loading');
   const [reviews, setReviews] = useState<LearningItem[]>([]);
   const [error, setError] = useState('');
   const [data, setData] = useState<any>({version:1,skills:{}});
@@ -50,8 +42,8 @@ export function LearningSession({ lesson, step, children, newLesson = false }: {
     try {
       const progress = parseLearning(localStorage.getItem(LEARNING_KEY)); setData(progress);
       const due = dueLearningItems(progress, Object.keys(progress.skills)).map(skill => ({...skill, explanation:skill.explanation ?? 'Read the complete expression and compare it with the meaning you learned.'}));
-      setReviews(due); setPhase(due.length ? 'review' : newLesson ? 'transfer' : 'lesson');
-    } catch (failure) { setError(failure instanceof Error ? failure.message : 'Learning progress could not be loaded.'); setPhase(newLesson ? 'transfer' : 'lesson'); }
+      setReviews(due); setPhase('guide');
+    } catch (failure) { setError(failure instanceof Error ? failure.message : 'Learning progress could not be loaded.'); setPhase('guide'); }
   }, [step.id, newLesson]);
   const record = (id: string, concepts: LearningItem[], correct: boolean, assisted = false) => {
     const initialAttempt = !attempts.current.has(id);
@@ -83,6 +75,19 @@ export function LearningSession({ lesson, step, children, newLesson = false }: {
   const summary = items.map(item => ({...item,state:masteryState(data.skills[learningId(item)])}));
   return <SessionContext.Provider value={{record,finish,error}}>
     {phase === 'loading' ? <main className={styles.screen}><p>Preparing your lesson…</p></main>
+      : phase === 'guide' ? <main className={styles.introScreen}>
+        <div className={styles.introBody}>
+          <div className={styles.top}><Link href={`/learn/${lesson.id}/`}>Close lesson</Link><span>Lesson guide</span></div>
+          <h1>{step.title}</h1>
+          <p>{lessonNote(step)}</p>
+          <div className={styles.skills}>{items.slice(0,3).map(item => <div key={learningId(item)}>
+            <div><span className="coptic-text">{item.word}</span><p>{plainMeaning(item)}</p></div>
+            {item.audio && <SlowReplay path={item.audio} />}
+          </div>)}</div>
+          {error && <p role="alert">{error}</p>}
+        </div>
+        <div className={styles.introFooter}><button className={styles.primary} onClick={() => { audioService.stopAll(); setPhase(reviews.length ? 'review' : newLesson ? 'transfer' : 'lesson'); }}>I’m ready</button></div>
+      </main>
       : phase === 'lesson' ? children
       : phase === 'review' ? <LearningPractice key="review" items={reviews} lesson={lesson} title="A quick recall" description="A few things from earlier lessons are ready for another try. Then you’ll continue into this lesson." onDone={() => setPhase(newLesson ? 'transfer' : 'lesson')} review />
       : phase === 'transfer' ? <LearningPractice key="transfer" items={items} lesson={lesson} title={newLesson ? step.title : 'Put it together'} description={newLesson ? step.summary : 'Read what you have learned, then try it in a different way.'} onDone={complete} teaching={newLesson && !/checkpoint/.test(step.exerciseSet ?? '')} checkpoint={/checkpoint/.test(step.exerciseSet ?? '')} />

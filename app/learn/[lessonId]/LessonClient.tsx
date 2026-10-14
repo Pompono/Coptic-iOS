@@ -1,7 +1,7 @@
 "use client";
 
 import { LESSON_EXERCISE_SETS, PAIR_LETTERS_EXERCISES, type PairLettersExercise } from "@/lib/learning/letterExercises";
-import { LearningSession, LessonCoach, LessonExplanation, SlowReplay, useLearningSession } from "../learning/LearningSession";
+import { LearningSession, LessonExplanation, useLearningSession } from "../learning/LearningSession";
 import { itemsForQuestion } from "@/lib/learning/content";
 import { LESSON_THEME } from "@/lib/lessonTheme";
 
@@ -1830,8 +1830,6 @@ function PairLettersLesson({ lesson, step }: { lesson: Lesson; step: UnitLessonS
             Retry round{retryQuestionsRemaining > 0 ? ` · ${retryQuestionsRemaining} left` : ""}
           </div>
         ) : null}
-
-        <LessonCoach step={step} index={exerciseIndex} audioPath={resolveLessonAudio(audioContextId, getExerciseAudioId(exercise) ?? "")?.src} />
 
         <div
           style={{

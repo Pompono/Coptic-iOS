@@ -2,6 +2,14 @@ import assert from 'node:assert/strict';
 import { loadTsModule } from '../tests/tsModule.mjs';
 const {getCourseItems}=await loadTsModule('lib/learning/content.ts');
 const {lessons}=await loadTsModule('lib/lesson.ts');
+export async function startLesson(page) {
+ const ready=page.getByRole('button',{name:'I’m ready',exact:true});
+ await ready.waitFor();
+ assert.equal(await page.getByRole('button',{name:'Check',exact:true}).count(),0,'Guide has its own screen');
+ const footer=await ready.boundingBox();
+ assert.ok(footer.y+footer.height<=await page.evaluate(()=>innerHeight),'Ready button remains visible');
+ await ready.click();
+}
 export async function finishTransfer(page,set,{newLesson=false}={}){
  const items=getCourseItems(set);
  if(!newLesson)await page.getByRole('heading',{name:'Put it together',exact:true}).waitFor();
@@ -29,6 +37,7 @@ export async function checkLearning(browser,base){
   const unit=lessons.find(l=>l.unitNumber===2&&l.sectionId==='section-1');
   const step=unit.progressionGroups[0].lessons.find(s=>s.exerciseSet==='bohairic-noun-phrases');
   await page.goto(`${base}/learn/${unit.id}/play/${step.id}/`);
+  await startLesson(page);
   await page.getByRole('heading',{name:'Articles and nouns',exact:true}).waitFor();
   await page.getByRole('button',{name:'ⲡⲓⲣⲱⲙⲓ',exact:true}).click();
   await page.getByText(/ⲡⲓ- is the masculine singular definite article/).waitFor();
@@ -45,6 +54,7 @@ export async function checkLearning(browser,base){
   await page.evaluate(()=>{const data=JSON.parse(localStorage.getItem('coptic-learning:v1'));const first=Object.values(data.skills)[0];first.dueAt=0;localStorage.setItem('coptic-learning:v1',JSON.stringify(data));});
   const next=unit.progressionGroups[0].lessons.find(s=>s.exerciseSet==='bohairic-names-and-phrases');
   await page.goto(`${base}/learn/${unit.id}/play/${next.id}/`);
+  await startLesson(page);
   await page.getByRole('heading',{name:'A quick recall',exact:true}).waitFor();
   await page.getByLabel('Your answer',{exact:true}).fill('wrong');await page.getByRole('button',{name:'Check',exact:true}).click();
   await page.getByRole('status').filter({hasText:'Not quite.'}).waitFor();
@@ -62,6 +72,7 @@ export async function checkLearning(browser,base){
   await page.waitForLoadState('networkidle');
   const checkpoint=unit.progressionGroups[0].lessons.find(s=>s.exerciseSet==='bohairic-first-reading-checkpoint');
   await page.goto(`${base}/learn/${unit.id}/play/${checkpoint.id}/`);
+  await startLesson(page);
   await page.getByRole('heading',{name:'First reading checkpoint',exact:true}).waitFor();
   await finishTransfer(page,checkpoint.exerciseSet,{newLesson:true});
   await page.waitForLoadState('networkidle');
@@ -69,8 +80,10 @@ export async function checkLearning(browser,base){
   // Replay slowly uses the same audio file at the requested speed.
   await page.addInitScript(()=>{window.__rates=[];const start=AudioBufferSourceNode.prototype.start;AudioBufferSourceNode.prototype.start=function(...args){window.__rates.push(this.playbackRate.value);return start.apply(this,args);};});
   await page.goto(base+'/learn/section-1-unit-01-pair-letters-and-sounds/play/lesson-1-a-o-d/');
-  await page.getByRole('button',{name:'Play recording slowly',exact:true}).click();
+  await page.getByRole('button',{name:'Play recording slowly',exact:true}).first().click();
   await page.waitForFunction(()=>window.__rates.includes(.75));
+  await startLesson(page);
+  assert.equal(await page.getByText('Lesson guide',{exact:true}).count(),0);
   await page.getByRole('button',{name:'ⲁ',exact:true}).click();
   await page.getByRole('button',{name:'Check',exact:true}).click();
   await page.getByRole('button',{name:'Continue',exact:true}).click();

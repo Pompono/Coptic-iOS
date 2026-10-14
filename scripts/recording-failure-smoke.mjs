@@ -1,3 +1,4 @@
+import { startLesson } from './learning-smoke.mjs';
 import assert from 'node:assert/strict';
 export async function checkRecordingFailure(browser, base) {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
@@ -11,6 +12,7 @@ export async function checkRecordingFailure(browser, base) {
     await page.route(pattern, route => route.abort());
     await page.goto(base + '/learn/section-1-unit-01-pair-letters-and-sounds/play/lesson-1-a-o-d/');
     await page.waitForLoadState('networkidle');
+    await startLesson(page);
     await page.locator('.lesson-audio-card').first().click();
     await page.getByRole('alert').filter({ hasText: 'The recording could not play.' }).waitFor();
     assert.equal(await page.evaluate(() => window.__syntheticSpeechCount), 0, 'Recording failure never silently reads the letters using a synthetic voice');

@@ -1,3 +1,4 @@
+import { startLesson } from './learning-smoke.mjs';
 import assert from 'node:assert/strict';
 import { finishTransfer } from './learning-smoke.mjs';
 import { readFile } from 'node:fs/promises';
@@ -37,6 +38,7 @@ export async function checkDarkTheme(page, base) {
     const lesson = lessons.find(lesson => lesson.progressionGroups?.some(group => group.lessons.some(step => step.exerciseSet === set)));
     const step = lesson.progressionGroups.flatMap(group => group.lessons).find(step => step.exerciseSet === set);
     await page.goto(`${base}/learn/${lesson.id}/play/${step.id}/`); await page.waitForLoadState('networkidle');
+    await startLesson(page);
     await page.getByRole('button', { name: 'Check', exact: true }).waitFor();
     const main = await colors(page.locator('main'));
     assert.ok(main.gradient.includes('rgb(0, 0, 0)'), `${set}: lesson background is dark`);

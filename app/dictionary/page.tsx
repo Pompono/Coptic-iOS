@@ -2,6 +2,7 @@
 
 import AppIcon from "../AppIcon";
 import Link from "@/lib/AppLink";
+import { readDictionaryOptions } from "@/lib/dictionary/preferences";
 import { COPTIC_ALPHABET, indexSearchEntry, searchDictionary, suggestDictionary } from "@/lib/dictionary/search.mjs";
 
 import { type PointerEvent as ReactPointerEvent, type TouchEvent as ReactTouchEvent, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
@@ -286,10 +287,10 @@ export default function DictionaryPage() {
   useEffect(() => {
     if (!searchRestored) return;
     try {
-      sessionStorage.setItem("coptic-dictionary-search", JSON.stringify({ query, scope, pos: posFilter, initial, examplesOnly }));
+      sessionStorage.setItem("coptic-dictionary-search", JSON.stringify({ query, scope, pos: posFilter, initial, examplesOnly, bohairicOnly }));
       localStorage.setItem("coptic-dictionary-preferences", JSON.stringify({ ignoreMarks, suggestions: spellingSuggestions }));
     } catch { /* Search remains usable when storage is unavailable. */ }
-  }, [searchRestored, query, scope, posFilter, initial, examplesOnly, ignoreMarks, spellingSuggestions]);
+  }, [searchRestored, query, scope, posFilter, initial, examplesOnly, ignoreMarks, spellingSuggestions, bohairicOnly]);
   const rememberSearch = () => {
     const value = query.trim();
     if (!value) return;
@@ -398,7 +399,7 @@ export default function DictionaryPage() {
     setShowKeyboard(keyboardIsEnabled && !mobileViewport ? readCopticKeyboardSessionVisibility(true) : false);
     const globalBohairicOnly = isBohairicOnlyEnabled();
     setGlobalBohairicOnlyEnabled(globalBohairicOnly);
-    setBohairicOnly(globalBohairicOnly);
+    setBohairicOnly(globalBohairicOnly || readDictionaryOptions().bohairicOnly);
   }, []);
 
   useEffect(() => {
@@ -470,18 +471,6 @@ export default function DictionaryPage() {
       p === "All" ? true : getPosLabel(p).toLowerCase().includes(q) || p.toLowerCase().includes(q)
     );
   }, [allPos, posCounts, posSearch]);
-
-  useEffect(() => {
-    if (posFilter === "All") {
-      return;
-    }
-
-    if ((posCounts.map.get(posFilter) ?? 0) > 0) {
-      return;
-    }
-
-    setPosFilter("All");
-  }, [posFilter, posCounts]);
 
   const visibleResults = useMemo(
     () => filtered.slice(0, resultsLimit),
@@ -708,7 +697,7 @@ export default function DictionaryPage() {
         <p className="mt-2 text-[var(--text-muted)]">Search Coptic words, English meanings, or transliteration.</p>
 
         <div className="mt-5 space-y-3">
-          <div className="flex items-center gap-3 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-1)] px-4 py-3">
+          <div className="dictionary-search-shell flex items-center gap-3 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-1)] px-4 py-3">
             <input
               ref={queryInputRef}
               value={query}
@@ -720,28 +709,14 @@ export default function DictionaryPage() {
               inputMode={keyboardEnabled && isMobileViewport && showKeyboard ? "none" : "text"}
               aria-label="Dictionary search"
               placeholder="Search Coptic, English, or transliteration..."
-              className="coptic-text w-full bg-transparent text-base outline-none placeholder:text-[var(--text-soft)]"
+              className="dictionary-search-input coptic-text w-full min-w-0 bg-transparent text-base outline-none placeholder:text-[var(--text-soft)]"
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 text-sm">
-            <label className="flex items-center gap-2">Search in
-              <select aria-label="Search in" value={scope} onChange={e => setScope(e.target.value)} className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-1)] p-2 text-[var(--text-color)]">
-                <option value="all">All fields</option><option value="coptic">Coptic words</option><option value="english">English meanings</option><option value="transliteration">Transliteration</option>
-              </select>
-            </label>
-            <label className="flex items-center gap-2">Initial letter
-              <select aria-label="Initial letter" value={initial} onChange={e => setInitial(e.target.value)} className="coptic-text rounded-xl border border-[var(--border-color)] bg-[var(--surface-1)] p-2 text-[var(--text-color)]">
-                <option value="">All letters</option>{Array.from(COPTIC_ALPHABET).map(letter => <option key={letter} value={letter}>{letter}</option>)}
-              </select>
-            </label>
-            <button type="button" onClick={() => { setQuery(""); setPosFilter("All"); setInitial(""); queryInputRef.current?.focus({ preventScroll: true }); }} className="rounded-xl border border-[var(--border-color)] px-3 py-2">Clear</button>
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <Link href="/dictionary/settings/" className="inline-flex min-h-11 items-center gap-2 text-[var(--text-muted)] underline underline-offset-4">Advanced dictionary settings</Link>
+            <button type="button" onClick={() => { setQuery(""); queryInputRef.current?.focus({ preventScroll: true }); }} className="min-h-11 px-3 text-[var(--text-muted)]">Clear</button>
           </div>
-          <div className="flex flex-wrap gap-4 text-sm text-[var(--text-muted)]">
-            <label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={ignoreMarks} onChange={e => setIgnoreMarks(e.target.checked)} />Search without combining marks</label>
-            <label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={spellingSuggestions} onChange={e => setSpellingSuggestions(e.target.checked)} />Spelling suggestions</label>
-          </div>
-          <p className="text-sm text-[var(--text-muted)]">English letters: agape / agapi / agapee → ⲁⲅⲁⲡⲏ. Transliteration is an approximate typing aid.</p>
           {suggestions.length > 0 && <div className="flex flex-wrap items-center gap-2 text-sm" aria-label="Spelling suggestions">Try:
             {suggestions.map(word => <button key={word} type="button" onClick={() => setQuery(word)} className="coptic-text rounded-xl border border-[var(--border-color)] px-3 py-2">{word}</button>)}
           </div>}
@@ -750,266 +725,6 @@ export default function DictionaryPage() {
             <div className="mt-2 flex flex-wrap gap-2">{recentSearches.map(word => <button key={word} type="button" onClick={() => setQuery(word)} className="coptic-text rounded-xl border border-[var(--border-color)] px-3 py-2">{word}</button>)}
               <button type="button" onClick={() => { setRecentSearches([]); try { localStorage.removeItem("coptic-dictionary-recent"); } catch {} }} className="px-3 py-2 underline">Clear recent searches</button>
             </div></details>}
-          {keyboardEnabled && !isMobileViewport ? (
-          <div className="rounded-2xl border border-[var(--kb-border)] p-3"
-            style={{ background: "var(--kb-shell)" }}>
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-sm text-[var(--text-muted)]">Coptic keyboard</span>
-              <button
-                type="button"
-                onClick={() => setKeyboardVisibility(!showKeyboard)}
-                className="rounded-full border border-[var(--border-color)] bg-[var(--surface-1)] px-3 py-1 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-2)]"
-              >
-                {showKeyboard ? "Hide" : "Show"}
-              </button>
-            </div>
-
-            {showKeyboard ? (
-              <div
-                style={{
-                  padding: 12,
-                  borderRadius: 16,
-                  background: "var(--kb-panel)",
-                  border: "1px solid var(--kb-border)",
-                }}
-              >
-                {page.map((row, rIdx) => (
-                  <div
-                    key={rIdx}
-                    style={{
-                      display: "flex",
-                      gap: 8,
-                      justifyContent: "center",
-                      marginBottom: rIdx === page.length - 1 ? 0 : 10,
-                    }}
-                  >
-                    {row.map((k, i) => {
-                      const obj = isKeyObj(k) ? k : null;
-
-                      const isSpace = obj?.key === "space";
-                      const isReturn = obj?.key === "return";
-                      const isBackspace = obj?.key === "backspace";
-                      const isShiftKey = obj?.key === "shift";
-
-                      const flex = isSpace
-                        ? 5
-                        : isReturn
-                        ? 2.2
-                        : isBackspace || isShiftKey
-                        ? 1.6
-                        : obj
-                        ? 1.4
-                        : 1;
-
-                      const shiftKeyBg = shiftActive ? "var(--accent-color)" : "var(--kb-key)";
-                      const shiftKeyFg = shiftActive ? "var(--accent-contrast-color)" : "var(--kb-text)";
-
-                      return (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => handleKey(k)}
-                          style={{
-                            flex,
-                            minWidth: 44,
-                            height: 56,
-                            borderRadius: 14,
-                            background: isShiftKey
-                              ? shiftKeyBg
-                              : obj?.key === "return"
-                              ? "var(--kb-key-return)"
-                              : obj?.key === "toNumbers" || obj?.key === "toSymbols" || obj?.key === "toABC"
-                              ? "var(--kb-key-alt)"
-                              : "var(--kb-key)",
-                            border: "1px solid var(--kb-border)",
-                            color: isShiftKey ? shiftKeyFg : "var(--kb-text)",
-                            fontSize: 20,
-                            fontWeight: 700,
-                            fontFamily: "var(--coptic-font-family)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            cursor: "pointer",
-                            userSelect: "none",
-                            padding: "0 10px",
-                            position: "relative",
-                          }}
-                        >
-                          {isBackspace ? (
-                            <IconBackspace />
-                          ) : isShiftKey ? (
-                            <>
-                              <IconShift />
-                              {capsLock ? (
-                                <span
-                                  style={{
-                                    position: "absolute",
-                                    bottom: 8,
-                                    width: 18,
-                                    height: 3,
-                                    borderRadius: 3,
-                                    background: "var(--accent-contrast-color)",
-                                    opacity: 0.9,
-                                  }}
-                                />
-                              ) : null}
-                            </>
-                          ) : isReturn ? (
-                            <AppIcon name="return" />
-                          ) : isSpace ? (
-                            ""
-                          ) : (
-                            <span className="coptic-text">{displayKey(k)}</span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </div>
-          ) : null}
-
-          <div className="flex flex-wrap items-center gap-3">
-            <div ref={posDropdownRef} className="relative min-w-[340px] flex-1">
-              <button
-                type="button"
-                onClick={() => setPosOpen((v) => !v)}
-                className="flex w-full items-center rounded-xl border border-[var(--border-color)] bg-[var(--surface-2)] px-4 py-2"
-                aria-expanded={posOpen}
-                aria-haspopup="listbox"
-              >
-                <span className="text-sm text-[var(--text-muted)]">POS</span>
-                <span className="ml-4 w-full text-left text-sm text-[var(--text-color)]">
-                  {posFilter === "All" ? "All parts of speech" : getPosLabel(posFilter)}
-                </span>
-                <span className="ml-3 text-xs text-[var(--text-soft)]">▾</span>
-              </button>
-
-              {posOpen ? (
-                <div className="absolute left-0 top-full z-20 mt-2 w-full rounded-2xl border border-[var(--border-color)] bg-[var(--panel-bg)] p-3 shadow-[0_12px_28px_rgba(0,0,0,0.7)] backdrop-blur">
-                  <input
-                    value={posSearch}
-                    onChange={(e) => setPosSearch(e.target.value)}
-                    placeholder="Filter parts of speech..."
-                    className="mb-3 w-full rounded-xl border border-[var(--border-color)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-color)] outline-none placeholder:text-[var(--text-soft)]"
-                  />
-
-                  <div className="pos-scrollbar max-h-80 space-y-2 overflow-auto pr-1">
-                    {displayedPosOptions.map((p) => {
-                      const isSelected = posFilter === p;
-                      const count = p === "All" ? totalAll : posCounts.map.get(p) ?? 0;
-
-                      return (
-                        <button
-                          key={p}
-                          type="button"
-                          onClick={() => {
-                            setPosFilter(p);
-                            setPosOpen(false);
-                          }}
-                          className={[
-                            "group flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left transition",
-                            isSelected
-                              ? "border-[var(--text-soft)] bg-[var(--surface-2)]"
-                              : "border-transparent bg-[var(--surface-1)] hover:border-[var(--border-color)] hover:bg-[var(--surface-2)]",
-                          ].join(" ")}
-                          role="option"
-                          aria-selected={isSelected}
-                        >
-                          <span className="text-sm text-[var(--text-color)]">
-                            {p === "All" ? "All parts of speech" : getPosLabel(p)}
-                          </span>
-                          <span
-                            className={[
-                              "ml-3 inline-flex min-w-8 items-center justify-center rounded-full border px-2 py-0.5 text-xs",
-                              isSelected
-                                ? "border-[var(--text-soft)] bg-[var(--surface-2)] text-[var(--text-color)]"
-                                : "border-[var(--border-color)] bg-[var(--surface-1)] text-[var(--text-soft)] group-hover:text-[var(--text-color)]",
-                            ].join(" ")}
-                          >
-                            {isSelected ? "Selected" : count}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setExamplesOnly((v) => !v)}
-                className="inline-flex items-center gap-3 rounded-xl border border-[var(--border-color)] bg-transparent px-4 py-2 text-sm text-[var(--text-color)]"
-                aria-pressed={examplesOnly}
-              >
-                <span
-                  className={[
-                    "relative inline-flex h-7 w-12 rounded-full transition-colors",
-                    examplesOnly ? "bg-[var(--text-muted)]" : "bg-white/25",
-                  ].join(" ")}
-                >
-                  <span
-                    className={[
-                      "absolute top-1 h-5 w-5 rounded-full bg-white transition-transform",
-                      examplesOnly ? "translate-x-6" : "translate-x-1",
-                    ].join(" ")}
-                  />
-                </span>
-                Has examples
-              </button>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (globalBohairicOnlyEnabled) {
-                      setBohairicOnly(true);
-                      return;
-                    }
-
-                    setBohairicOnly((current) => !current);
-                  }}
-                  className={[
-                    "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition",
-                    bohairicOnly
-                      ? ""
-                      : "border-[var(--border-color)] bg-[var(--surface-1)] text-[var(--text-muted)] hover:bg-[var(--surface-2)]",
-                    globalBohairicOnlyEnabled ? "cursor-not-allowed opacity-80" : "",
-                  ].join(" ")}
-                  style={
-                    bohairicOnly
-                      ? {
-                          borderColor: "var(--bohairic-badge-border)",
-                          background: "var(--bohairic-badge-bg)",
-                          color: "var(--bohairic-badge-text)",
-                        }
-                      : undefined
-                  }
-                  aria-pressed={bohairicOnly}
-                  aria-disabled={globalBohairicOnlyEnabled}
-                  disabled={globalBohairicOnlyEnabled}
-                  title={
-                    globalBohairicOnlyEnabled
-                      ? "Disabled while global Bohairic-only mode is enabled"
-                      : "Toggle Bohairic-only dictionary results"
-                  }
-                  >
-                    <span
-                      className={[
-                        "h-2.5 w-2.5 rounded-full",
-                        bohairicOnly ? "" : "bg-[var(--text-soft)]",
-                    ].join(" ")}
-                    style={bohairicOnly ? { background: "var(--bohairic-badge-dot)" } : undefined}
-                    />
-                  Bohairic-only
-                </button>
-              </div>
-            </div>
-
             <div className="text-sm text-[var(--text-muted)]">
               {loadState === "loading" ? (
                 <span>Loading…</span>
@@ -1024,7 +739,6 @@ export default function DictionaryPage() {
                 </span>
               )}
             </div>
-          </div>
         </div>
 
         <div className="mt-6 space-y-4">

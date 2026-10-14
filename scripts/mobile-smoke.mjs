@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import path from 'node:path';
 import { readFile, access, stat } from 'node:fs/promises';
-import { checkLearning, finishTransfer } from './learning-smoke.mjs';
+import { startLesson, checkLearning, finishTransfer } from './learning-smoke.mjs';
 import { checkDictionary } from './dictionary-smoke.mjs';
 import { checkScanner } from './scanner/smoke.mjs';
 import { checkReading } from './reading-smoke.mjs';
@@ -64,6 +64,7 @@ try {
     assert.equal(response.status(), 200, route);
     await page.waitForLoadState('networkidle');
     if (route.includes('/play/')) {
+      await startLesson(page);
       await page.getByRole('button', { name: 'Check', exact: true }).waitFor();
       assert.equal(await page.getByRole('navigation', { name: 'Mobile navigation' }).count(), 0);
       assert.ok(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 2), 'Full-screen exercises do not reserve extra dock space');
