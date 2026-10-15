@@ -53,7 +53,7 @@ export async function checkDictionary(browser, base) {
     assert.equal(await page.getByRole('button', { name: 'Bohairic-only', exact: true }).getAttribute('aria-disabled'),'true');
     await page.getByRole('button', { name: 'Bohairic-only', exact: true }).click({force:true});
     await page.getByRole('status').filter({hasText:'This is locked by Settings.'}).waitFor();
-    await page.getByRole('link', { name: 'Dictionary', exact: true }).click();
+    await page.getByRole('main').getByRole('link', { name: 'Dictionary', exact: true }).click();
     await query.waitFor();
     await page.waitForFunction(() => document.querySelector('[aria-label="Dictionary search"]').value === 'ⲁ');
     await settings(async () => {
