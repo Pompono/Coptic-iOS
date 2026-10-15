@@ -1,6 +1,6 @@
 "use client";
 import AudioReplay from "@/app/AudioReplay";
-import {keepInputFocusOnPress} from '@/lib/inputFocus';
+import {lessonActionPressHandlers} from '@/lib/inputFocus';
 import AppIcon from "@/app/AppIcon";
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from '@/lib/AppLink';
@@ -179,5 +179,5 @@ function LearningPractice({ items, lesson, title, description, onDone, review = 
       {result!=='idle' && <div role="status" className={styles.panel}><p>{result==='correct'?'Correct.':`Not quite. ${expected}`}</p><p>{item.explanation}</p></div>}
       {session.error && <p role="alert">{session.error}</p>}
     </>}
-  </div><footer className={styles.practiceFooter}><button type="button" className={styles.primary} disabled={!reading&&result==='idle'&&!(kind==='build'?bank.length:answer.trim())} onPointerDown={keepInputFocusOnPress} onClick={reading?()=>{setReading(false);setSelected(null);}:result==='idle'?check:next}>{reading?'Continue':result==='idle'?'Check':result==='wrong'?'Try again':'Continue'}</button></footer></div></main>;
+  </div><footer className={styles.practiceFooter}><button type="button" className={styles.primary} disabled={!reading&&result==='idle'&&!(kind==='build'?bank.length:answer.trim())} {...lessonActionPressHandlers} onClick={reading?()=>{setReading(false);setSelected(null);}:result==='idle'?check:next}>{reading?'Continue':result==='idle'?'Check':result==='wrong'?'Try again':'Continue'}</button></footer></div></main>;
 }

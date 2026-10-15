@@ -1,6 +1,6 @@
 "use client";
 import {RecordingCard} from "@/app/AudioReplay";
-import {keepInputFocusOnPress} from '@/lib/inputFocus';
+import {lessonActionPressHandlers} from '@/lib/inputFocus';
 
 import { COPTIC, QUESTIONS, type LessonQuestion } from "@/lib/learning/wordLesson2";
 import { LearningSession, LessonExplanation, useLearningSession } from "../learning/LearningSession";
@@ -1576,7 +1576,7 @@ export default function Section1Unit2Lesson2Client({
             <button
               type="button"
               className="lesson-tap-target lesson-action-button"
-              onPointerDown={keepInputFocusOnPress}
+              {...lessonActionPressHandlers}
               onClick={onPrimaryAction}
               disabled={!canSubmit}
               style={{
