@@ -697,7 +697,7 @@ export default function DictionaryPage() {
         <PageHeader title="Dictionary" description="Search words, meanings, or transliteration." icon="book"/>
 
         <div className="mt-5 space-y-3">
-          <div className="dictionary-search-shell flex items-center gap-3 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-1)] px-4 py-3">
+          <label className="dictionary-search-shell flex items-center gap-3 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-1)] px-4 py-3">
             <AppIcon name="search" size={20}/>
             <input
               ref={queryInputRef}
@@ -712,7 +712,7 @@ export default function DictionaryPage() {
               placeholder="Search Coptic, English, or transliteration..."
               className={`dictionary-search-input ${/\p{Script=Coptic}/u.test(query) ? "coptic-text" : ""} w-full min-w-0 bg-transparent text-base outline-none placeholder:text-[var(--text-soft)]`}
             />
-          </div>
+          </label>
 
           <div className="flex items-center justify-between gap-3 text-sm">
             <Link href="/dictionary/settings/" className="ui-text-action"><AppIcon name="settings" size={18}/>Advanced dictionary settings</Link>
@@ -851,12 +851,12 @@ export default function DictionaryPage() {
           ))}
           {loadState === "ready" && filtered.length === 0 && <p role="status" className="rounded-2xl border border-[var(--border-color)] p-5 text-[var(--text-muted)]">No matching entries. Try a suggested spelling, change the search scope, or clear the filters.</p>}
           {hiddenResultsCount > 0 ? (
-            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-1)] p-4 text-center text-sm text-[var(--text-muted)]">
-              Showing {visibleResults.length} of {filtered.length} matches.
+            <div className="dictionary-pagination">
+              <span>Showing {visibleResults.length} of {filtered.length} matches.</span>
               <button
                 type="button"
                 onClick={() => setResultsLimit((current) => current + 80)}
-                className="ml-2 rounded-full border border-[var(--border-color)] bg-[var(--surface-2)] px-3 py-1 text-[var(--text-color)] hover:bg-[var(--surface-1)]"
+                className="ui-secondary"
               >
                 Show 80 more
               </button>

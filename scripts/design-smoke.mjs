@@ -36,14 +36,26 @@ export async function checkDesign(browser,base){
    assert.equal(await header.count(),1,route+' has one shared page header');
    const layout=await header.evaluate(el=>{
     const title=el.querySelector('h1'),subtitle=el.querySelector(':scope > p'),style=getComputedStyle(title);
-    return {font:style.fontSize,weight:style.fontWeight,line:style.lineHeight,subtitleBelow:subtitle.getBoundingClientRect().top>=title.getBoundingClientRect().bottom};
+    return {subtitleFont:getComputedStyle(subtitle).fontSize,subtitleLine:getComputedStyle(subtitle).lineHeight,subtitleMargin:getComputedStyle(subtitle).marginBottom,font:style.fontSize,weight:style.fontWeight,line:style.lineHeight,subtitleBelow:subtitle.getBoundingClientRect().top>=title.getBoundingClientRect().bottom};
    });
    assert.ok(layout.subtitleBelow,route+' puts supporting text after the title');
-   headings.push({font:layout.font,weight:layout.weight,line:layout.line});
+   headings.push({font:layout.font,weight:layout.weight,line:layout.line,subtitleFont:layout.subtitleFont,subtitleLine:layout.subtitleLine,subtitleMargin:layout.subtitleMargin});
    const art=page.locator('.mobile-chin-dock__item[aria-label="Translator"] .heritage-icon__art');
    assert.match(await art.evaluate(el=>getComputedStyle(el).maskImage),/translate-tab-icon.svg/,'Coptic-letter translator artwork remains in the tab bar');
   }
   assert.ok(headings.every(style=>JSON.stringify(style)===JSON.stringify(headings[0])),'All main pages share title typography');
+  for(const [route,selector,min] of [
+   ['/translator/','button[type=submit]',50],['/translator/','select[aria-label="Translation method"]',44],
+   ['/settings/','select',44],['/dictionary/','.dictionary-pagination button',44],
+   ['/read/','[role=group][aria-label="Reading passage"] button',44],['/translator/scanner/','button',44]
+  ]){
+   await page.goto(base+route);await page.waitForLoadState('networkidle');
+   const heights=await page.locator(selector).evaluateAll(els=>els.filter(el=>el.getBoundingClientRect().height>0).map(el=>el.getBoundingClientRect().height));
+   assert.ok(heights.length>0&&heights.every(height=>height>=min),route+' controls have consistent touch targets');
+  }
+  await page.goto(base+'/dictionary/');await page.waitForLoadState('networkidle');
+  await page.locator('.dictionary-search-shell').click({position:{x:8,y:8}});
+  assert.equal(await page.getByRole('textbox',{name:'Dictionary search'}).evaluate(el=>document.activeElement===el),true,'The whole search field focuses its input');
   await page.goto(base+'/read/');await page.waitForLoadState('networkidle');
   assert.ok(await page.getByRole('button',{name:/Look up/}).first().evaluate(el=>parseFloat(getComputedStyle(el).fontSize))>=30,'Passage buttons retain their Coptic type size');
   for(const theme of ['light','dark']){

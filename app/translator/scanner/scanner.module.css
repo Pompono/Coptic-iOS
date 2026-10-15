@@ -49,7 +49,7 @@
 
 /* Match the reader and translation utility rather than styling a separate app. */
 .shell { max-width:760px; padding:24px 20px 32px; }
-.shell button:not(.region) { min-height:44px; border:0; font-size:.9375rem; font-weight:500; border-radius:14px; box-shadow:var(--surface-shadow); }
+.shell button:not(.region) { min-height:44px; border:0; font-size:.875rem; font-weight:600; border-radius:14px; box-shadow:var(--surface-shadow); }
 .note,.muted { line-height:1.5; }
 .editor { border:0; padding:20px; border-radius:20px; box-shadow:var(--surface-shadow); }
 .editor h2 { font-size:1.25rem; letter-spacing:-.025em; margin-bottom:12px; }
@@ -72,3 +72,6 @@
 .tips { margin:8px 0 24px; color:var(--text-muted); font-size:.875rem; }
 .tips summary { min-height:44px; display:flex; align-items:center; color:var(--tint-color); cursor:pointer; }
 .tips p { margin:8px 0; line-height:1.5; }
+
+.shell button.primary { min-height:50px; font-size:1rem; font-weight:600; }
+.importPanel .actions>button { flex:1; min-height:50px; font-size:1rem; font-weight:600; }

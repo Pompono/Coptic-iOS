@@ -36,7 +36,17 @@ jobs:
       - run: npm run ios:sync
       - run: xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/coptic-derived CODE_SIGNING_ALLOWED=NO build
       - run: bash scripts/native-startup-smoke.sh
+        id: native_startup
         timeout-minutes: 18
+      - uses: actions/upload-artifact@v4
+        if: failure() && steps.native_startup.outcome == 'failure'
+        with:
+          name: native-startup-diagnostics
+          path: |
+            /tmp/coptic-native-stdout.log
+            /tmp/coptic-native-stderr.log
+            /tmp/coptic-native-boot.log
+          if-no-files-found: warn
   backend:
     runs-on: ubuntu-latest
     defaults:

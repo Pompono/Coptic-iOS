@@ -5,12 +5,12 @@
 .shell p { line-height:1.6; margin:8px 0; }
 .muted { color:var(--text-muted); font-size:.875rem; }
 .actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:16px 0; }
-.shell button,.link { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:10px 14px; border:0; border-radius:14px; background:var(--surface-1); color:var(--tint-color); font-size:.9375rem; font-weight:500; box-shadow:var(--surface-shadow); }
+.shell button,.link { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:10px 14px; border:0; border-radius:14px; background:var(--surface-1); color:var(--tint-color); font-size:.875rem; font-weight:600; box-shadow:var(--surface-shadow); }
 .shell button:disabled { opacity:.5; }
 .shell button[aria-pressed=true],.shell .primary { background:var(--accent-color); color:var(--accent-contrast-color); }
 .shell button:focus-visible,.shell textarea:focus-visible { outline:2px solid var(--teal); outline-offset:3px; }
 .segmented { display:flex; align-items:stretch; padding:3px; background:var(--surface-2); border-radius:12px; gap:2px; margin:16px 0; overflow-x:auto; }
-.segmented button { flex:1; white-space:nowrap; min-height:38px; padding:8px 12px; border-radius:9px; box-shadow:none; background:transparent; color:var(--text-muted); font-size:.875rem; }
+.segmented button { flex:1; white-space:nowrap; min-height:44px; padding:8px 12px; border-radius:9px; box-shadow:none; background:transparent; color:var(--text-muted); font-size:.875rem; }
 .segmented button[aria-pressed=true] { background:var(--surface-1); color:var(--text-color); box-shadow:0 1px 4px #0002; }
 .panel { padding:20px; margin:16px 0; border:0; border-radius:20px; background:var(--surface-1); box-shadow:var(--surface-shadow); }
 .shell textarea { width:100%; min-height:125px; border:1px solid var(--border-color); border-radius:14px; padding:12px; background:var(--surface-1); color:var(--text-color); font-size:1.375rem; line-height:1.65; }
@@ -28,3 +28,5 @@
 .shell h2:global(.coptic-text) { font-size:1.875rem; line-height:1.7; }
 :global(:root[data-large-text=true]) .segmented { flex-wrap:wrap; overflow-x:visible; }
 :global(:root[data-large-text=true]) .segmented button { white-space:normal; }
+
+.shell button.primary { min-height:50px; font-size:1rem; font-weight:600; }

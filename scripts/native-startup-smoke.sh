@@ -13,7 +13,7 @@ cleanup() { if [ -n "$launch_pid" ]; then kill "$launch_pid" 2>/dev/null || true
 trap cleanup EXIT
 bounded 30 xcrun simctl boot "$device"
 bounded 15 open -a Simulator --args -CurrentDeviceUDID "$device" || true
-bounded 600 xcrun simctl bootstatus "$device" -b
+bounded 600 xcrun simctl bootstatus "$device" -b 2>&1 | tee /tmp/coptic-native-boot.log
 bounded 180 xcrun simctl install "$device" /tmp/coptic-derived/Build/Products/Debug-iphonesimulator/App.app
 SIMCTL_CHILD_COPTIC_NATIVE_AUDIO_SMOKE=1 bounded 120 xcrun simctl launch --terminate-running-process --console "$device" com.pompono.coptic > /tmp/coptic-native-stdout.log 2> /tmp/coptic-native-stderr.log &
 launch_pid=$!
