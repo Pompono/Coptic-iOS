@@ -43,7 +43,11 @@ export async function finishTransfer(page,set,{newLesson=false,verifyKeyboardLay
   await page.getByRole('button',{name:'Check',exact:true}).click();
   await page.getByRole('status').filter({hasText:'Correct.'}).waitFor();
   await page.waitForFunction(()=>window.__transferSound);
-  await page.getByRole('button',{name:'Continue',exact:true}).click();
+  if(index===count-1){
+   await page.evaluate(()=>{window.__completionSound=false;window.addEventListener('coptic-audio-played',()=>window.__completionSound=true,{once:true});});
+   await page.getByRole('button',{name:'Continue',exact:true}).click();
+   await page.waitForFunction(()=>window.__completionSound);
+  }else await page.getByRole('button',{name:'Continue',exact:true}).click();
  }
  await page.getByRole('heading',{name:'Lesson complete',exact:true}).waitFor();
 }

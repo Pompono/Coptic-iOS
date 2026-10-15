@@ -72,7 +72,13 @@ export function LearningSession({ lesson, step, children, newLesson = false }: {
   };
   const finish = () => { setPhase('transfer'); };
   const complete = () => {
-    try { clearStepFailed(lesson.id,step.id); markStepCompleted(lesson.id,step.id); setPhase('complete'); }
+    try {
+      clearStepFailed(lesson.id,step.id);
+      markStepCompleted(lesson.id,step.id);
+      setPhase('complete');
+      const celebration = resolveLessonAudio('', 'lesson-complete');
+      if (celebration?.src) void audioService.play(celebration.src,celebration.src).catch(reportAudioFailure);
+    }
     catch { setError('Could not save lesson completion. Please try again.'); }
   };
   const summary = items.map(item => ({...item,state:masteryState(data.skills[learningId(item)])}));
