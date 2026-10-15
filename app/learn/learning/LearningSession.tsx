@@ -1,7 +1,7 @@
 "use client";
 import AudioReplay from "@/app/AudioReplay";
 import AppIcon from "@/app/AppIcon";
-import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from '@/lib/AppLink';
 import { useRouter } from 'next/navigation';
 import { resultFeedback } from "@/lib/nativeExperience";
@@ -37,6 +37,8 @@ export function LearningSession({ lesson, step, children, newLesson = false }: {
   const [reviews, setReviews] = useState<LearningItem[]>([]);
   const [error, setError] = useState('');
   const [celebrationPlaying, setCelebrationPlaying] = useState(false);
+  const [celebrationDuration, setCelebrationDuration] = useState(2200);
+  const returnToUnit = useCallback(()=>router.replace(`/learn/${lesson.id}/`),[router,lesson.id]);
   const attempts = useRef(new Set<string>());
   const guideContent = useRef<HTMLDivElement>(null);
   useLayoutEffect(()=>{window.scrollTo({top:0,left:0,behavior:'instant'});guideContent.current?.scrollTo({top:0,left:0,behavior:'instant'});},[phase,step.id]);
@@ -82,7 +84,11 @@ export function LearningSession({ lesson, step, children, newLesson = false }: {
       setPhase('complete');
       const celebration = resolveLessonAudio('', 'lesson-complete');
       if (celebration?.src) void audioService.play(celebration.src,celebration.src)
-        .then(()=>setCelebrationPlaying(true))
+        .then(playback=>{
+          const duration = playback.buffer?.duration;
+          if(typeof duration==='number'&&Number.isFinite(duration))setCelebrationDuration(Math.max(2200,duration*1000));
+          setCelebrationPlaying(true);
+        })
         .catch(failure=>{reportAudioFailure(failure);setCelebrationPlaying(true);});
       else setCelebrationPlaying(true);
     }
@@ -106,7 +112,7 @@ export function LearningSession({ lesson, step, children, newLesson = false }: {
       : phase === 'lesson' ? children
       : phase === 'review' ? <LearningPractice key="review" items={reviews} lesson={lesson} title="A quick recall" description="A few things from earlier lessons are ready for another try. Then you’ll continue into this lesson." onDone={() => setPhase(newLesson ? 'transfer' : 'lesson')} review />
       : phase === 'transfer' ? <LearningPractice key="transfer" progressOffset={lessonCount} items={items} lesson={lesson} title={newLesson ? step.title : 'Put it together'} description={newLesson ? step.summary : 'Read what you have learned, then try it in a different way.'} onDone={complete} teaching={newLesson && !/checkpoint/.test(step.exerciseSet ?? '')} checkpoint={/checkpoint/.test(step.exerciseSet ?? '')} />
-      : <LessonCelebration playing={celebrationPlaying} error={error} onContinue={()=>router.replace(`/learn/${lesson.id}/`)}/>}
+      : <LessonCelebration playing={celebrationPlaying} duration={celebrationDuration} error={error} onComplete={returnToUnit}/>}
   </SessionContext.Provider>;
 }
 

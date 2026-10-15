@@ -48,7 +48,7 @@ export async function finishTransfer(page,set,{newLesson=false,verifyKeyboardLay
   await page.getByRole('status').filter({hasText:'Correct.'}).waitFor();
   await page.waitForFunction(()=>window.__transferSound);
   if(index===count-1){
-   await page.evaluate(()=>{window.__completionSound=false;window.addEventListener('coptic-audio-played',()=>window.__completionSound=true,{once:true});});
+   await page.evaluate(()=>{window.__completionSound=false;window.addEventListener('coptic-audio-played',()=>{window.__completionSound=true;window.__completionStarted=performance.now();},{once:true});});
    await page.getByRole('button',{name:'Continue',exact:true}).click();
    await page.waitForFunction(()=>window.__completionSound);
   }else await page.getByRole('button',{name:'Continue',exact:true}).click();
@@ -57,6 +57,7 @@ export async function finishTransfer(page,set,{newLesson=false,verifyKeyboardLay
  await page.locator('.lesson-outcome-screen[data-celebrating=true]').waitFor();
  assert.equal(await page.getByLabel('Lesson summary',{exact:true}).count(),0,'The old lesson summary is removed');
  assert.doesNotMatch(await page.locator('.lesson-outcome-screen').innerText(),/You practised|Building|Needs practice/);
+ assert.equal(await page.locator('.lesson-outcome-screen button').count(),0,'Celebration dismisses automatically without a Continue button');
 }
 export async function checkLearning(browser,base){
  const context=await browser.newContext({viewport:{width:360,height:640}});
@@ -71,12 +72,11 @@ export async function checkLearning(browser,base){
   await page.getByRole('button',{name:'ⲡⲓⲣⲱⲙⲓ',exact:true}).click();
   await page.getByText(/ⲡⲓ- is the masculine singular definite article/).waitFor();
   await finishTransfer(page,step.exerciseSet,{newLesson:true});
-  assert.match(await page.locator('main').innerText(),/Well done/i);
+  assert.match(await page.locator('main').innerText(),/Lesson complete/);
   assert.doesNotMatch(await page.locator('main').innerText(),/3 Secure/);
   const progress=await page.evaluate(()=>JSON.parse(localStorage.getItem('coptic-learning:v1')));
   assert.equal(Object.keys(progress.skills).length,3);
   assert.equal(await page.getByRole('navigation',{name:'Mobile navigation'}).count(),0);
-  await page.getByRole('button',{name:'Continue',exact:true}).click();
   await page.waitForURL(`${base}/learn/${unit.id}/`);
   await page.waitForLoadState('networkidle');
   // Put a learned item due; the next lesson brings it into the flow directly.
@@ -116,7 +116,6 @@ export async function checkLearning(browser,base){
   const deck=await page.evaluate(()=>JSON.parse(localStorage.getItem('coptic-vocabulary:v1')));
   assert.ok(deck.cards.some(card=>card.word==='ⲡⲓⲣⲱⲙⲓ'&&card.lapses===1));
   await finishTransfer(page,next.exerciseSet,{newLesson:true});
-  await page.getByRole('button',{name:'Continue',exact:true}).click();
   await page.waitForURL(`${base}/learn/${unit.id}/`);
   await page.getByLabel('Skill mastery').first().waitFor();
   await page.waitForLoadState('networkidle');
