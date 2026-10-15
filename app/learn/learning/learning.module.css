@@ -22,7 +22,6 @@
 .bank button:disabled { opacity:.5; }
 .listen { display:flex; flex-wrap:wrap; gap:8px; }
 .listen button,.slow { display:inline-flex; align-items:center; gap:6px; min-height:44px; padding:10px 14px; font-size:.875rem; background:var(--surface-1); color:var(--tint-color); border:0; border-radius:14px; text-decoration:none; box-shadow:var(--surface-shadow); }
-.hint { align-self:center; background:transparent; color:var(--tint-color); border:0; font-size:.875rem; min-height:44px; padding:8px 12px; }
 .skills { display:grid; gap:0; background:var(--surface-1); padding:4px 18px; border-radius:20px; box-shadow:var(--surface-shadow); }
 .skills>div { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 0; }
 .skills>div+div { border-top:1px solid var(--separator-color); }
@@ -62,14 +61,30 @@
 .instruction :global(.audio-replay) { width:96px; min-height:44px; }
 .instruction :global(.audio-replay)>button { width:48px; height:44px; min-height:44px; }
 
-.practiceTools { display:flex; align-items:center; gap:12px; }
-.keyboardDone { display:none; background:transparent; color:var(--tint-color); border:0; min-height:44px; padding:8px; font-size:.9375rem; }
-:global([data-keyboard=true]) .keyboardDone { display:inline-flex; align-items:center; }
-
-.completionBody { width:100%; max-width:680px; margin:0 auto; flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:16px; overscroll-behavior:contain; }
-.completionBody>* { flex-shrink:0; }
-.completionBody h1 { font-size:1.75rem; font-weight:700; line-height:1.2; letter-spacing:-.035em; margin:8px 0 0; }
-.completionBody p { margin:0; line-height:1.5; }
+.celebrationScreen { height:var(--page-content-height); display:flex; flex-direction:column; padding:24px 24px 20px; box-sizing:border-box; background:var(--bg-color); color:var(--text-color); }
+.celebrationBody { flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; align-items:center; justify-content:safe center; gap:24px; text-align:center; padding:16px 0; }
+.celebrationArt { position:relative; width:264px; height:264px; flex-shrink:0; color:var(--gold); }
+.celebrationHalo { position:absolute; inset:10%; border-radius:50%; background:radial-gradient(circle,var(--teal-surface) 0%,transparent 72%); }
+.celebrationSeal { position:absolute; inset:12px; width:240px; height:240px; overflow:visible; }
+.sealTrack { stroke:currentColor; stroke-width:.6; opacity:.2; }
+.sealRing { stroke:currentColor; stroke-width:1.6; stroke-dasharray:1; transform:rotate(-90deg); transform-origin:center; }
+.sealInner { stroke:currentColor; stroke-width:.7; stroke-dasharray:1 7; opacity:.6; }
+.celebrationCross { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+.celebrationSpark { position:absolute; inset:0; transform:rotate(var(--angle)); pointer-events:none; }
+.celebrationSpark i { position:absolute; left:calc(50% - 3px); top:50%; width:6px; height:9px; border-radius:1px; background:currentColor; opacity:0; }
+.celebrationSpark:nth-child(even) { color:var(--teal); }
+.celebrationMessage p { margin:0 0 10px; color:var(--gold); font-size:.8125rem; font-weight:600; letter-spacing:.16em; text-transform:uppercase; }
+.celebrationMessage h1 { margin:0; font-size:clamp(1.75rem,7vw,2.25rem); line-height:1.2; font-weight:700; letter-spacing:-.035em; }
+[data-celebrating=true] .sealRing { animation:sealDraw 1000ms cubic-bezier(.22,.68,.25,1) both; }
+[data-celebrating=true] .celebrationCross { animation:sealArrive 1100ms cubic-bezier(.16,1,.3,1) both; }
+[data-celebrating=true] .celebrationHalo { animation:sealGlow 2400ms ease-out both; }
+[data-celebrating=true] .celebrationSpark i { animation:sealSpark 1600ms calc(300ms + var(--delay)) cubic-bezier(.16,.6,.3,1) both; }
+@keyframes sealDraw { from { stroke-dashoffset:1; opacity:0; } 15% { opacity:1; } to { stroke-dashoffset:0; opacity:1; } }
+@keyframes sealArrive { from { transform:translateY(12px) scale(.72); opacity:0; } 60% { transform:translateY(0) scale(1.06); opacity:1; } to { transform:translateY(0) scale(1); opacity:1; } }
+@keyframes sealGlow { from { transform:scale(.7); opacity:0; } 35% { transform:scale(1.1); opacity:1; } to { transform:scale(1); opacity:.65; } }
+@keyframes sealSpark { from { transform:translateY(-85px) rotate(45deg) scale(.4); opacity:0; } 20% { opacity:.85; } to { transform:translateY(-134px) rotate(115deg) scale(.15); opacity:0; } }
+@media (max-height:600px) { .celebrationBody { gap:12px; } .celebrationArt { width:204px; height:204px; } .celebrationSeal { inset:12px; width:180px; height:180px; } }
+@media (prefers-reduced-motion:reduce) { [data-celebrating] .celebrationArt * { animation:none!important; } .celebrationSpark { display:none; } }
 /* Continue the authored lesson shell through the final practice questions. */
 .practiceScreen { padding:16px 20px; background:linear-gradient(180deg,var(--lesson-bg-top),var(--lesson-bg-bottom)); color:var(--lesson-text-primary); }
 .practiceLayout { max-width:760px; gap:12px; }

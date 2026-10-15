@@ -10,13 +10,14 @@ import { resolveLessonAudio } from '@/lib/lessonAudio';
 import { clearStepFailed, markStepCompleted } from '../progress';
 import { createCard, gradeCard, cardId } from '@/lib/vocabulary/schedule.mjs';
 import { readVocabulary, writeVocabulary } from '@/lib/vocabulary/store';
-import { LEARNING_KEY, parseLearning, recordAttempt, learningId, dueLearningItems, masteryState } from '@/lib/learning/progress.mjs';
+import { LEARNING_KEY, parseLearning, recordAttempt, learningId, dueLearningItems } from '@/lib/learning/progress.mjs';
 import { getCourseItems, itemsForQuestion, lessonNote, type LearningItem } from '@/lib/learning/content';
 import { loadReadingDictionary } from '@/lib/reading/dictionary';
 import { makeWordIndex, lookupWord } from '@/lib/reading/text.mjs';
 import type { DictionaryEntry } from '@/lib/dictionary';
 import type { Lesson, UnitLessonStep } from '@/lib/lesson';
 import styles from './learning.module.css';
+import LessonCelebration from './LessonCelebration';
 
 type Session = { record: (id: string, items: LearningItem[], correct: boolean, assisted?: boolean) => void; finish: (total: number) => void; progress: (completed: number, total: number) => number; error: string; };
 const SessionContext = createContext<Session>({ record: () => {}, finish: () => {}, progress: (completed, total) => total ? completed / total : 0, error: '' });
@@ -35,16 +36,16 @@ export function LearningSession({ lesson, step, children, newLesson = false }: {
   const [phase, setPhase] = useState<'loading'|'guide'|'review'|'lesson'|'transfer'|'complete'>('loading');
   const [reviews, setReviews] = useState<LearningItem[]>([]);
   const [error, setError] = useState('');
-  const [data, setData] = useState<any>({version:1,skills:{}});
+  const [celebrationPlaying, setCelebrationPlaying] = useState(false);
   const attempts = useRef(new Set<string>());
   const guideContent = useRef<HTMLDivElement>(null);
   useLayoutEffect(()=>{window.scrollTo({top:0,left:0,behavior:'instant'});guideContent.current?.scrollTo({top:0,left:0,behavior:'instant'});},[phase,step.id]);
   const items = useMemo(() => getCourseItems(step.exerciseSet ?? ''), [step.exerciseSet]);
   useEffect(() => {
     try {
-      const progress = parseLearning(localStorage.getItem(LEARNING_KEY)); setData(progress);
+      const progress = parseLearning(localStorage.getItem(LEARNING_KEY));
       const due = dueLearningItems(progress, Object.keys(progress.skills)).map(skill => ({...skill, explanation:skill.explanation ?? 'Read the complete expression and compare it with the meaning you learned.'}));
-      setReviews(due); setPhase('guide');
+      setReviews(due); setCelebrationPlaying(false); setPhase('guide');
     } catch (failure) { setError(failure instanceof Error ? failure.message : 'Learning progress could not be loaded.'); setPhase('guide'); }
   }, [step.id, newLesson]);
   const record = (id: string, concepts: LearningItem[], correct: boolean, assisted = false) => {
@@ -54,7 +55,7 @@ export function LearningSession({ lesson, step, children, newLesson = false }: {
     try {
       let latest = parseLearning(localStorage.getItem(LEARNING_KEY));
       for (const item of concepts) latest = recordAttempt(latest, {...item, unitId:item.unitId ?? lesson.id}, correct, firstTry);
-      localStorage.setItem(LEARNING_KEY,JSON.stringify(latest)); setData(latest);
+      localStorage.setItem(LEARNING_KEY,JSON.stringify(latest));
       window.dispatchEvent(new Event('coptic-learning-change'));
       const cards = readVocabulary(); let changed = false;
       for (const item of concepts) {
@@ -80,11 +81,13 @@ export function LearningSession({ lesson, step, children, newLesson = false }: {
       markStepCompleted(lesson.id,step.id);
       setPhase('complete');
       const celebration = resolveLessonAudio('', 'lesson-complete');
-      if (celebration?.src) void audioService.play(celebration.src,celebration.src).catch(reportAudioFailure);
+      if (celebration?.src) void audioService.play(celebration.src,celebration.src)
+        .then(()=>setCelebrationPlaying(true))
+        .catch(failure=>{reportAudioFailure(failure);setCelebrationPlaying(true);});
+      else setCelebrationPlaying(true);
     }
     catch { setError('Could not save lesson completion. Please try again.'); }
   };
-  const summary = items.map(item => ({...item,state:masteryState(data.skills[learningId(item)])}));
   return <SessionContext.Provider value={{record,finish,progress,error}}>
     {phase === 'loading' ? <main className={styles.screen}><p>Preparing your lesson…</p></main>
       : phase === 'guide' ? <main className={styles.introScreen}>
@@ -103,9 +106,7 @@ export function LearningSession({ lesson, step, children, newLesson = false }: {
       : phase === 'lesson' ? children
       : phase === 'review' ? <LearningPractice key="review" items={reviews} lesson={lesson} title="A quick recall" description="A few things from earlier lessons are ready for another try. Then you’ll continue into this lesson." onDone={() => setPhase(newLesson ? 'transfer' : 'lesson')} review />
       : phase === 'transfer' ? <LearningPractice key="transfer" progressOffset={lessonCount} items={items} lesson={lesson} title={newLesson ? step.title : 'Put it together'} description={newLesson ? step.summary : 'Read what you have learned, then try it in a different way.'} onDone={complete} teaching={newLesson && !/checkpoint/.test(step.exerciseSet ?? '')} checkpoint={/checkpoint/.test(step.exerciseSet ?? '')} />
-      : <main className={`lesson-outcome-screen ${styles.introScreen}`}><div className={styles.completionBody} data-lesson-scroll aria-label="Lesson summary" tabIndex={0}><h1>Lesson complete</h1><p>You practised {items.length} {items.some(i => i.pos !== 'Letter / syllable') ? 'words and phrases' : 'sound patterns'}.</p>
-        <div className={styles.skills}>{summary.map(item => <div key={learningId(item)}><span className="coptic-text">{item.word}</span><span>{item.state}</span></div>)}</div>
-        {error && <p role="alert">{error}</p>}</div><footer className={styles.introFooter}><button className={styles.primary} onClick={() => router.replace(`/learn/${lesson.id}/`)}>Continue</button></footer></main>}
+      : <LessonCelebration playing={celebrationPlaying} error={error} onContinue={()=>router.replace(`/learn/${lesson.id}/`)}/>}
   </SessionContext.Provider>;
 }
 
@@ -116,7 +117,7 @@ function LearningPractice({ items, lesson, title, description, onDone, review = 
   const wordIndex = useMemo(()=>makeWordIndex(dictionary),[dictionary]);
   const [index,setIndex] = useState(0), [reading,setReading] = useState(teaching || checkpoint), [selected,setSelected] = useState<number|null>(null);
   const [answer,setAnswer] = useState(''), [result,setResult] = useState<'idle'|'correct'|'wrong'>('idle');
-  const [bank,setBank] = useState<number[]>([]), [hint,setHint] = useState(false);
+  const [bank,setBank] = useState<number[]>([]);
   const practiceContent = useRef<HTMLDivElement>(null);
   useLayoutEffect(()=>{window.scrollTo({top:0,left:0,behavior:'instant'});practiceContent.current?.scrollTo({top:0,left:0,behavior:'instant'});},[index,reading]);
   const selectedEntries = selected === null ? [] : [...new Map(items[selected].word.split(' ').flatMap(word=>{const found=lookupWord(wordIndex,word);return [...found.matches,...found.analyses.flatMap(analysis=>analysis.entries)];}).map(entry=>[entry.id,entry])).values()] as DictionaryEntry[];
@@ -132,10 +133,11 @@ function LearningPractice({ items, lesson, title, description, onDone, review = 
   const gapIndex = Math.max(0, gapParts.length-2);
   const expected = kind === 'build' ? item?.word ?? '' : kind === 'gap' ? gapParts[gapIndex] : plainMeaning(item);
   const check = () => {
+    if(document.activeElement instanceof HTMLInputElement)document.activeElement.blur();
     const actual = kind === 'build' ? bank.map(i=>bankWords[i]).join(joined ? '' : ' ') : answer;
     const accepted = kind === 'recall' ? [plainMeaning(item),...(item.accepted ?? [])] : [expected];
     const correct = accepted.some(value => normalizeAnswer(actual) === normalizeAnswer(value));
-    session.record(`${review?'review':'transfer'}:${index}:${learningId(item)}`, [item], correct, hint);
+    session.record(`${review?'review':'transfer'}:${index}:${learningId(item)}`, [item], correct);
     const feedback = resolveLessonAudio('',correct ? 'correct-answer' : 'incorrect-answer');
     if(feedback?.src)void audioService.play(feedback.src,feedback.src).catch(reportAudioFailure);
     setResult(correct ? 'correct' : 'wrong');
@@ -143,7 +145,7 @@ function LearningPractice({ items, lesson, title, description, onDone, review = 
   const next = () => {
     if (result === 'wrong') { setResult('idle'); setAnswer(''); setBank([]); return; }
     if (index + 1 >= count) { onDone(); return; }
-    setIndex(i=>i+1); setResult('idle'); setAnswer(''); setBank([]); setHint(false);
+    setIndex(i=>i+1); setResult('idle'); setAnswer(''); setBank([]);
   };
   if (!items.length) return <main className={styles.screen}><div className={styles.inner}><p>This lesson’s practice is ready.</p><button className={styles.primary} onClick={onDone}>Continue</button></div></main>;
   return <main className={`${styles.screen} ${styles.practiceScreen}`}><div className={styles.practiceLayout}><header className={styles.practiceHeader}>
@@ -151,7 +153,6 @@ function LearningPractice({ items, lesson, title, description, onDone, review = 
     <div className={`lesson-progress-track ${styles.progress}`} role="progressbar" aria-label="Lesson progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}>
       <div style={{width:`${progress * 100}%`}} />
     </div>
-    <button className={styles.keyboardDone} onClick={()=>{if(document.activeElement instanceof HTMLElement)document.activeElement.blur();}}>Done</button>
     </header><div ref={practiceContent} className={styles.practiceContent} data-lesson-scroll>
     {reading && <><h1>{title}</h1><p className={styles.muted}>{description}</p></>}
     {reading ? <>
@@ -168,8 +169,6 @@ function LearningPractice({ items, lesson, title, description, onDone, review = 
           <label className={styles.label}>{kind === 'gap' ? 'Missing letter' : 'Your answer'}<input aria-label={kind==='gap'?'Missing letter':'Your answer'} value={answer} disabled={result!=='idle'} onChange={e=>setAnswer(e.target.value)} onKeyDown={e=>{if(e.key==='Enter' && answer.trim() && result==='idle'){e.currentTarget.blur();check();}}} enterKeyHint="done" autoCapitalize="none" autoCorrect="off" spellCheck={false} /></label>
           {kind==='gap' && <div className={styles.bank}>{[...new Set([...gapParts,'ⲉ','ⲟ'])].filter(ch=>ch!==' ').map(ch=><button key={ch} className="coptic-text" disabled={result!=='idle'} onClick={()=>setAnswer(ch)}>{ch}</button>)}</div>}
         </>}
-      {(review||(teaching&&kind!=='recall')) && result==='idle' && <button className={styles.hint} onClick={()=>setHint(true)}>Show a hint</button>}
-      {hint && result==='idle' && <p>{item.explanation}</p>}
       {result!=='idle' && <div role="status" className={styles.panel}><p>{result==='correct'?'Correct.':`Not quite. ${expected}`}</p><p>{item.explanation}</p></div>}
       {session.error && <p role="alert">{session.error}</p>}
     </>}

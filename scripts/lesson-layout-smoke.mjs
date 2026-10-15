@@ -42,10 +42,12 @@ export async function checkLessonLayouts(browser,base){
   }
   await finishTransfer(page,step.exerciseSet,{verifyKeyboardLayout:true});
   await page.setViewportSize({width:393,height:500});
-  const summary=page.getByLabel('Lesson summary',{exact:true});
-  await summary.hover();await page.mouse.wheel(0,1000);
-  await page.waitForFunction(()=>document.querySelector('[aria-label="Lesson summary"]').scrollTop>0);
-  assert.ok(await summary.evaluate(el=>el.scrollTop>0),'The lesson summary scrolls when its content exceeds the screen');
+  const celebration=page.locator('.lesson-outcome-screen');
+  assert.equal(await celebration.locator('.heritage-icon__art').count(),1,'The celebration preserves original Coptic artwork');
+  assert.ok(await celebration.evaluate(el=>el.getAnimations({subtree:true}).length>0),'The celebration animates alongside the completion sound');
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.waitForFunction(()=>document.querySelector('.lesson-outcome-screen').getAnimations({subtree:true}).length===0);
+  await page.emulateMedia({reducedMotion:'no-preference'});
   const continueButton=await page.getByRole('button',{name:'Continue',exact:true}).boundingBox();
   assert.ok(continueButton.y+continueButton.height<=466,'Completion Continue stays above the iPhone home indicator');
   await page.getByRole('button',{name:'Continue',exact:true}).click();

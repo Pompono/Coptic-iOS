@@ -18,7 +18,9 @@ export async function finishTransfer(page,set,{newLesson=false,verifyKeyboardLay
  const count=checkpoint?items.length:newLesson?items.length*3:Math.min(3,items.length);
  for(let index=0;index<count;index++){
   const item=items[index%items.length],kind=checkpoint?index%3:newLesson?Math.floor(index/items.length)%3:2;
-  if(kind===2){await page.getByLabel('Your answer',{exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'Show a hint',exact:true}).count(),0,'Final typed recall has no hint');}
+  assert.equal(await page.getByRole('button',{name:/hint/i}).count(),0,'Teaching, recall, and checkpoint questions never offer hints');
+  assert.equal(await page.getByRole('button',{name:'Done',exact:true}).count(),0,'No top-right Done button');
+  if(kind===2)await page.getByLabel('Your answer',{exact:true}).waitFor();
   if(verifyKeyboardLayout&&index===0&&kind===2){
    const title=page.getByRole('heading',{level:1}),field=page.getByLabel('Your answer',{exact:true}),prompt=page.locator('p.coptic-text');
    const before=await Promise.all([title.boundingBox(),field.boundingBox(),prompt.boundingBox()]);
@@ -31,8 +33,7 @@ export async function finishTransfer(page,set,{newLesson=false,verifyKeyboardLay
    if(before.some((b,n)=>Math.abs(b.y-after[n].y)>=1))console.log("Keyboard geometry",{before,after},await field.evaluate(el=>({pane:el.closest("[data-lesson-scroll]").getBoundingClientRect().toJSON(),scroll:el.closest("[data-lesson-scroll]").scrollTop})));
    for(let n=0;n<before.length;n++){assert.ok(Math.abs(before[n].height-after[n].height)<1,'Keyboard keeps normal element heights');assert.ok(Math.abs(before[n].y-after[n].y)<1,'Opening a typical iPhone keyboard does not jump the exercise content');}
    const action=await page.getByRole('button',{name:'Check',exact:true}).boundingBox();assert.ok(action.y+action.height<=560,'Only the action moves above the keyboard');
-   await page.getByRole('button',{name:'Done',exact:true}).click();
-   assert.equal(await field.evaluate(el=>document.activeElement===el),false,'Done dismisses the typing field');
+   assert.equal(await page.getByRole('button',{name:'Done',exact:true}).count(),0,'Opening the keyboard does not add a Done button');
    await page.screenshot({path:'/tmp/coptic-stable-typing-keyboard.png'});
    await page.evaluate(()=>{delete visualViewport.height;const s=document.querySelector('.mobile-chin-page-shell');s.style.paddingBottom='34px';s.style.setProperty('--page-content-height','calc(var(--interactive-viewport-height,100svh) - 93px)');document.activeElement.blur();visualViewport.dispatchEvent(new Event('resize'));});
   }
@@ -43,6 +44,7 @@ export async function finishTransfer(page,set,{newLesson=false,verifyKeyboardLay
   else await page.getByLabel('Your answer',{exact:true}).fill(item.meaning.replace(/^Sound: /,''));
   await page.evaluate(()=>{window.__transferSound=false;window.addEventListener('coptic-audio-played',()=>window.__transferSound=true,{once:true});});
   await page.getByRole('button',{name:'Check',exact:true}).click();
+  assert.equal(await page.evaluate(()=>document.activeElement instanceof HTMLInputElement),false,'Check dismisses the typing field');
   await page.getByRole('status').filter({hasText:'Correct.'}).waitFor();
   await page.waitForFunction(()=>window.__transferSound);
   if(index===count-1){
@@ -52,6 +54,9 @@ export async function finishTransfer(page,set,{newLesson=false,verifyKeyboardLay
   }else await page.getByRole('button',{name:'Continue',exact:true}).click();
  }
  await page.getByRole('heading',{name:'Lesson complete',exact:true}).waitFor();
+ await page.locator('.lesson-outcome-screen[data-celebrating=true]').waitFor();
+ assert.equal(await page.getByLabel('Lesson summary',{exact:true}).count(),0,'The old lesson summary is removed');
+ assert.doesNotMatch(await page.locator('.lesson-outcome-screen').innerText(),/You practised|Building|Needs practice/);
 }
 export async function checkLearning(browser,base){
  const context=await browser.newContext({viewport:{width:360,height:640}});
@@ -66,7 +71,7 @@ export async function checkLearning(browser,base){
   await page.getByRole('button',{name:'ⲡⲓⲣⲱⲙⲓ',exact:true}).click();
   await page.getByText(/ⲡⲓ- is the masculine singular definite article/).waitFor();
   await finishTransfer(page,step.exerciseSet,{newLesson:true});
-  assert.match(await page.locator('main').innerText(),/Building/);
+  assert.match(await page.locator('main').innerText(),/Well done/i);
   assert.doesNotMatch(await page.locator('main').innerText(),/3 Secure/);
   const progress=await page.evaluate(()=>JSON.parse(localStorage.getItem('coptic-learning:v1')));
   assert.equal(Object.keys(progress.skills).length,3);
@@ -80,6 +85,7 @@ export async function checkLearning(browser,base){
   await page.goto(`${base}/learn/${unit.id}/play/${next.id}/`);
   await startLesson(page);
   await page.getByLabel('Your answer',{exact:true}).waitFor();
+  assert.equal(await page.getByRole('button',{name:/hint/i}).count(),0,'Spaced review never offers hints');
   await page.evaluate(()=>{const shell=document.querySelector('.mobile-chin-page-shell');shell.style.paddingTop='59px';shell.style.setProperty('--page-content-height','calc(var(--interactive-viewport-height, 100svh) - 59px)');});
   const normalSizes=await page.evaluate(()=>{const field=document.querySelector('input[aria-label="Your answer"]');const prompt=document.querySelector('p.coptic-text');const title=document.querySelector('h1');return {field:field.getBoundingClientRect().height,prompt:prompt.getBoundingClientRect().height,promptFont:getComputedStyle(prompt).fontSize,titleFont:getComputedStyle(title).fontSize};});
   await page.getByLabel('Your answer',{exact:true}).fill('wrong');
