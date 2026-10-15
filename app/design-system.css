@@ -221,3 +221,5 @@ h1,h2,h3,strong,label,button { overflow-wrap:anywhere; }
 
 .dictionary-pagination { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:16px 0; border-top:1px solid var(--separator-color); font-size:.875rem; color:var(--text-muted); }
 .dictionary-pagination .ui-secondary { background:var(--surface-2); box-shadow:none; }
+
+.dictionary-entry-toolbar button[aria-pressed=true] { background:var(--teal-surface); color:var(--teal); }

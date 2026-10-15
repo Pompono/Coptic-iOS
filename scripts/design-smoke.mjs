@@ -4,6 +4,8 @@ const {lessons}=await loadTsModule('lib/lesson.ts');
 export async function checkDesign(browser,base){
  const context=await browser.newContext({viewport:{width:390,height:844}}),page=await context.newPage(),errors=[];
  page.on('pageerror',error=>errors.push(error.message));
+ // Exercise the optional model-method control even in web-only CI builds.
+ await context.route('**/models/coptic-english/manifest.json',route=>route.fulfill({json:{model:'megalaa/coptic-english-translator'}}));
  try{
   await page.goto(base+'/');await page.waitForLoadState('networkidle');
   const first=lessons[0],group=first.progressionGroups[0];
@@ -46,12 +48,12 @@ export async function checkDesign(browser,base){
   assert.ok(headings.every(style=>JSON.stringify(style)===JSON.stringify(headings[0])),'All main pages share title typography');
   for(const [route,selector,min] of [
    ['/translator/','button[type=submit]',50],['/translator/','select[aria-label="Translation method"]',44],
-   ['/settings/','select',44],['/dictionary/','.dictionary-pagination button',44],
+   ['/settings/','select',44],['/dictionary/entry/?lemma=ⲁ','.dictionary-entry-toolbar button,.dictionary-entry-toolbar a',44],['/dictionary/','.dictionary-pagination button',44],
    ['/read/','[role=group][aria-label="Reading passage"] button',44],['/translator/scanner/','button',44]
   ]){
    await page.goto(base+route);await page.waitForLoadState('networkidle');
    const heights=await page.locator(selector).evaluateAll(els=>els.filter(el=>el.getBoundingClientRect().height>0).map(el=>el.getBoundingClientRect().height));
-   assert.ok(heights.length>0&&heights.every(height=>height>=min),route+' controls have consistent touch targets');
+   assert.ok(heights.length>0&&heights.every(height=>height>=min),route+' '+selector+' controls have consistent touch targets: '+JSON.stringify(heights));
   }
   await page.goto(base+'/dictionary/');await page.waitForLoadState('networkidle');
   await page.locator('.dictionary-search-shell').click({position:{x:8,y:8}});
@@ -75,7 +77,11 @@ export async function checkDesign(browser,base){
    const insetReady=await page.getByRole('button',{name:'I’m ready',exact:true}).boundingBox();
    assert.ok(insetReady.y+insetReady.height<=606&&insetReady.y+insetReady.height>=582,'The bottom safe area is reserved once, not twice');
   }
+  await context.unroute('**/models/coptic-english/manifest.json');
+  await context.route('**/models/coptic-english/manifest.json',route=>route.fulfill({status:404,body:'Not installed'}));
   await page.goto(base+'/translator/');await page.waitForLoadState('networkidle');
+  assert.equal(await page.getByRole('combobox',{name:'Translation method',exact:true}).count(),0,'An unavailable optional model does not expose its method picker');
+  assert.ok((await page.getByRole('button',{name:'Translate',exact:true}).boundingBox()).height>=50,'Translation retains its action size without model controls');
   await page.getByRole('textbox',{name:'Coptic text',exact:true}).focus();
   await page.evaluate(()=>{Object.defineProperty(window.visualViewport,'height',{configurable:true,get:()=>400});window.visualViewport.dispatchEvent(new Event('resize'));});
   await page.waitForFunction(()=>document.querySelector('.mobile-chin-page-shell').dataset.keyboard==='true');

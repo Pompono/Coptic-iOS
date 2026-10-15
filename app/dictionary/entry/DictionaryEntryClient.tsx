@@ -2,6 +2,7 @@
 import useSettingsLockNotice from "../../SettingsLockNotice";
 
 import Link from "@/lib/AppLink";
+import {PageBackLink} from "@/app/PageHeader";
 import { useEffect, useMemo, useState } from "react";
 import { isBohairicOnlyEnabled } from "@/app/BohairicPreference";
 import { crossReferences, indexSearchEntry, normalizeSearch } from "@/lib/dictionary/search.mjs";
@@ -142,13 +143,8 @@ export default function DictionaryEntryClient({ lemma }: { lemma: string }) {
     <main className="dictionary-detail min-h-screen bg-[var(--bg-color)] text-[var(--text-color)]">
       {notice}
       <div className="mx-auto max-w-3xl px-5 py-8">
-        <div className="flex items-center justify-between gap-4">
-          <Link
-            href="/dictionary"
-            className="inline-flex items-center gap-2 rounded-full border border-[var(--border-color)] bg-[var(--surface-1)] px-4 py-2 text-sm text-[var(--text-color)] hover:bg-[var(--surface-2)]"
-          >
-            ← Back
-          </Link>
+        <div className="page-toolbar dictionary-entry-toolbar">
+          <PageBackLink href="/dictionary/">Dictionary</PageBackLink>
 
           <button
             type="button"
@@ -156,7 +152,7 @@ export default function DictionaryEntryClient({ lemma }: { lemma: string }) {
             aria-disabled={globalBohairicOnly}
             title={globalBohairicOnly ? "Locked by global Bohairic-only mode in Settings" : "Toggle Bohairic-only entries"}
             className={[
-              "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition",
+              "ui-secondary",
               bohairicOnly
                 ? "border-[var(--bohairic-badge-border)] bg-[var(--bohairic-badge-bg)] text-[var(--bohairic-badge-text)]"
                 : "border-[var(--border-color)] bg-[var(--surface-1)] text-[var(--text-muted)] hover:bg-[var(--surface-2)]",
