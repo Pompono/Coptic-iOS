@@ -10,9 +10,24 @@ export async function checkDictionary(browser, base) {
   await context.route('**/*', route => route.request().url().startsWith(base + '/') ? route.continue() : route.abort());
   try {
     await page.goto(base + '/dictionary/');
-    await page.getByText(/of [\d,]+ entries/).waitFor();
+    await page.locator('.dictionary-results[data-state="ready"]').waitFor();
     const query = page.getByRole('textbox', { name: 'Dictionary search' });
     const cards = page.locator('a[href^="/dictionary/entry/"]');
+    const initialWords=await cards.allTextContents();
+    assert.equal(initialWords.length,24,'The first render is a small batch');
+    assert.equal(await page.getByText('Dialect labels',{exact:true}).count(),0);
+    assert.equal(await page.getByText(/of [\d,]+ entries/).count(),0);
+    assert.equal(await page.getByRole('button',{name:'Show 80 more',exact:true}).count(),0);
+    assert.equal(await page.workers().length,1,'Dictionary preparation and search run in a background worker');
+    const dictionaryWorker=page.workers()[0];
+    await page.locator('.dictionary-scroll-sentinel').scrollIntoViewIfNeeded();
+    await page.waitForFunction(()=>document.querySelectorAll('.dictionary-entry-card').length>=48);
+    assert.deepEqual((await cards.allTextContents()).slice(0,24),initialWords,'Appending entries preserves the existing order');
+    await page.locator('.dictionary-scroll-sentinel').scrollIntoViewIfNeeded();
+    await page.waitForFunction(()=>document.querySelectorAll('.dictionary-entry-card').length>=72);
+    await page.emulateMedia({reducedMotion:'reduce'});
+    assert.equal(await page.locator('.dictionary-entry-card').first().evaluate(el=>getComputedStyle(el).animationName),'none');
+    await page.emulateMedia({reducedMotion:'no-preference'});
     assert.equal(await page.locator('select, input[type=checkbox]').count(), 0);
     await query.focus();
     assert.equal(await query.evaluate(el => getComputedStyle(el).outlineStyle), 'none');
@@ -20,11 +35,13 @@ export async function checkDictionary(browser, base) {
       await page.getByRole('link', { name: 'Advanced dictionary settings', exact: true }).click();
       await page.getByRole('heading', { name: 'Dictionary settings', exact: true }).waitFor();
       await page.waitForLoadState('networkidle');
+      await page.waitForFunction(()=>document.querySelector('[aria-label="Part of speech"]')?.querySelectorAll('option').length>1);
       assert.ok(await page.getByLabel('Part of speech', {exact:true}).locator('option').count() > 1, 'Parts of speech populate from the dictionary');
       assert.equal(await page.getByRole('alert').filter({hasText:'Parts of speech could not be loaded'}).count(), 0);
       await update();
       await page.getByRole('link', { name: 'Done', exact: true }).click();
-      await page.getByText(/of [\d,]+ entries/).waitFor();
+      await page.locator('.dictionary-results[data-state="ready"]').waitFor();
+      assert.ok(page.workers().includes(dictionaryWorker),'Returning from settings reuses the prepared dictionary');
       await page.waitForLoadState('networkidle');
     };
     await settings(() => page.getByLabel('Search in', { exact: true }).selectOption('transliteration'));
@@ -74,15 +91,15 @@ export async function checkDictionary(browser, base) {
     await page.getByRole('heading', { name: target, exact: true }).waitFor();
     // Missing dictionary resources surface a themed error and can be retried.
     const fail = route => route.fulfill({ status: 404, body: 'Missing' });
-    await page.route('**/bohairic_dictionary.json', fail);
+    await context.route('**/bohairic_dictionary.json', fail);
     await page.goto(base + '/dictionary/');
     await page.getByRole('alert').filter({ hasText: 'Failed to load dictionary files' }).waitFor();
-    await page.unroute('**/bohairic_dictionary.json', fail);
+    await context.unroute('**/bohairic_dictionary.json', fail);
     await page.getByRole('button', { name: 'Retry', exact: true }).click();
-    await page.getByText(/of [\d,]+ entries/).waitFor();
+    await page.locator('.dictionary-results[data-state="ready"]').waitFor();
     await page.getByRole('alert').filter({ hasText: 'Failed to load dictionary files' }).waitFor({ state: 'hidden' });
     await page.waitForLoadState('networkidle');
     assert.deepEqual(errors, []);
-    console.log('PASS: dictionary transliteration, ranked multiword meanings, manual suggestions, strict marks, entry links, preferences and empty results work offline.');
+    console.log('PASS: background dictionary search, small batches, infinite scrolling, reduced motion, transliteration, ranked meanings, suggestions, strict marks, entry links, preferences and offline retry.');
   } catch (error) { console.error("Dictionary failure:", (await page.locator("body").innerText()).slice(0, 2400)); throw error; } finally { await context.close(); }
 }

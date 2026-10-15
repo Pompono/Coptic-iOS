@@ -48,7 +48,7 @@ export async function checkDesign(browser,base){
   assert.ok(headings.every(style=>JSON.stringify(style)===JSON.stringify(headings[0])),'All main pages share title typography');
   for(const [route,selector,min] of [
    ['/translator/','button[type=submit]',50],['/translator/','select[aria-label="Translation method"]',44],
-   ['/settings/','select',44],['/dictionary/entry/?lemma=ⲁ','.dictionary-entry-toolbar button,.dictionary-entry-toolbar a',44],['/dictionary/','.dictionary-pagination button',44],
+   ['/settings/','select',44],['/dictionary/entry/?lemma=ⲁ','.dictionary-entry-toolbar button,.dictionary-entry-toolbar a',44],['/dictionary/','.dictionary-search-input',44],
    ['/read/','[role=group][aria-label="Reading passage"] button',44],['/translator/scanner/','button',44]
   ]){
    await page.goto(base+route);await page.waitForLoadState('networkidle');

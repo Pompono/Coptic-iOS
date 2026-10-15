@@ -1,12 +1,13 @@
 "use client";
+import {searchBrowseDictionary, peekBrowseDictionary, type BrowseEntry} from "@/lib/dictionary/browseClient";
 import PageHeader from "../PageHeader";
 
 import AppIcon from "../AppIcon";
 import Link from "@/lib/AppLink";
 import { readDictionaryOptions } from "@/lib/dictionary/preferences";
-import { COPTIC_ALPHABET, indexSearchEntry, searchDictionary, suggestDictionary } from "@/lib/dictionary/search.mjs";
+import { COPTIC_ALPHABET } from "@/lib/dictionary/search.mjs";
 
-import { type PointerEvent as ReactPointerEvent, type TouchEvent as ReactTouchEvent, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { type PointerEvent as ReactPointerEvent, type TouchEvent as ReactTouchEvent, type CSSProperties, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   isCopticKeyboardEnabled,
   readCopticKeyboardSessionVisibility,
@@ -14,48 +15,6 @@ import {
 } from "../CopticKeyboardPreference";
 import { isBohairicOnlyEnabled } from "../BohairicPreference";
 import { subscribeToMediaQueryChange } from "@/lib/mediaQuery";
-
-type BohExample = { sentence: string; translation: string; source?: string };
-type BohairicEntryRaw = {
-  word: string;
-  tla_id?: string;
-  entry_url?: string;
-  bohairic_variants?: string[];
-  pos?: string;
-  scriptorium_tag?: string;
-  greek_origin?: string;
-  crum_ref?: string;
-  etymology?: string;
-  senses?: string[];
-  bohairic_examples?: BohExample[];
-};
-
-type CombinedEntryRaw = {
-  lemma: string;
-  forms?: string[];
-  pos?: string;
-  gloss?: string[];
-  hasGloss?: boolean;
-  source?: string;
-  license?: string;
-};
-
-type Entry = {
-  lemma: string;
-  forms: string[];
-  pos: string;
-  gloss: string[];
-  dialect: "boh" | "unknown";
-  entryUrl?: string;
-  tag?: string;
-  greek?: string;
-  crum?: string;
-  etymology?: string;
-  examples?: BohExample[];
-  searchBlob: string;
-  normalizedPos: string;
-  hasExamples: boolean;
-};
 
 type SpecialKey =
   | "backspace"
@@ -78,24 +37,6 @@ type PageMode = "ABC" | "NUMBERS" | "SYMBOLS";
 const POS_LABELS: Record<string, string> = {
   q: "Qualitative",
 };
-
-function norm(s: string) {
-  return (s || "").toLowerCase().normalize("NFKC").trim();
-}
-
-function uniqueStrings(arr: string[]) {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const x of arr) {
-    const t = (x ?? "").toString().trim();
-    if (!t) continue;
-    const k = t.normalize("NFKC");
-    if (seen.has(k)) continue;
-    seen.add(k);
-    out.push(t);
-  }
-  return out;
-}
 
 function removeLastChar(s: string) {
   const chars = Array.from(s);
@@ -258,9 +199,15 @@ export default function DictionaryPage() {
   const [mobileKeyboardIsClosing, setMobileKeyboardIsClosing] = useState(false);
   const queryInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [entries, setEntries] = useState<Entry[]>([]);
+  const [visibleResults, setVisibleResults] = useState<BrowseEntry[]>([]);
+  const [resultKey,setResultKey] = useState('');
+  const [suggestions,setSuggestions] = useState<string[]>([]);
+  const [hasMore,setHasMore] = useState(false);
+  const [loadingMore,setLoadingMore] = useState(false);
+  const [moreError,setMoreError] = useState(false);
+  const generation = useRef(0), morePending = useRef(false);
+  const sentinel = useRef<HTMLDivElement>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
-  const [resultsLimit, setResultsLimit] = useState(80);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">(
     "loading"
   );
@@ -309,82 +256,6 @@ export default function DictionaryPage() {
     return () => window.removeEventListener("keydown", focusSearch);
   }, []);
 
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      try {
-        setLoadState("loading");
-
-        const bohRes = await fetch("/bohairic_dictionary.json", {
-          cache: "no-store",
-        });
-        if (!bohRes.ok) throw new Error("Bohairic dictionary unavailable");
-        const bohRaw = (await bohRes.json()) as BohairicEntryRaw[];
-
-        const comboRes = await fetch("/coptic_dictionary_combined.json", {
-          cache: "no-store",
-        });
-        if (!comboRes.ok) throw new Error("Combined dictionary unavailable");
-        const comboRaw = (await comboRes.json()) as CombinedEntryRaw[];
-
-        const bohEntries: Entry[] = bohRaw.map((r) => {
-          const gloss = uniqueStrings(r.senses ?? []);
-          const forms = uniqueStrings([r.word, ...(r.bohairic_variants ?? [])]);
-
-          return {
-            lemma: r.word,
-            forms,
-            pos: r.pos ?? "",
-            gloss,
-            dialect: "boh",
-            entryUrl: r.entry_url,
-            tag: r.scriptorium_tag,
-            greek: r.greek_origin,
-            crum: r.crum_ref,
-            etymology: r.etymology,
-            examples: r.bohairic_examples ?? [],
-            searchBlob: norm([r.word, ...forms, ...gloss].join(" ")),
-            normalizedPos: (r.pos ?? "").trim(),
-            hasExamples: !!(r.bohairic_examples && r.bohairic_examples.length > 0),
-          };
-        });
-
-        const comboEntries: Entry[] = comboRaw.map((r) => {
-          const gloss = uniqueStrings(r.gloss ?? []);
-          const forms = uniqueStrings([r.lemma, ...(r.forms ?? [])]);
-
-          return {
-            lemma: r.lemma,
-            forms,
-            pos: r.pos ?? "",
-            gloss,
-            dialect: "unknown",
-            searchBlob: norm([r.lemma, ...forms, ...gloss].join(" ")),
-            normalizedPos: (r.pos ?? "").trim(),
-            hasExamples: false,
-          };
-        });
-
-        if (!cancelled) {
-          setEntries([...bohEntries, ...comboEntries]);
-          setLoadState("ready");
-        }
-      } catch {
-        if (!cancelled) setLoadState("error");
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [loadAttempt]);
-
-  useEffect(() => {
-    setResultsLimit(80);
-  }, [deferredQuery, bohairicOnly, posFilter, examplesOnly, scope, ignoreMarks, initial]);
 
   useEffect(() => {
     const mql = window.matchMedia("(max-width: 768px)");
@@ -438,50 +309,38 @@ export default function DictionaryPage() {
     };
   }, [posOpen]);
 
-  const allPos = useMemo(() => {
-    const set = new Set<string>();
-    for (const e of entries) {
-      const p = (e.pos || "").trim();
-      if (p) set.add(p);
-    }
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [entries]);
-
-  const searchIndex = useMemo(() => entries.map(indexSearchEntry), [entries]);
-  const searchOptions = useMemo(() => ({ query: deferredQuery, scope, ignoreMarks, initial, bohairicOnly, examplesOnly }),
-    [deferredQuery, scope, ignoreMarks, initial, bohairicOnly, examplesOnly]);
-  const textMatches = useMemo(() => searchDictionary(searchIndex, searchOptions), [searchIndex, searchOptions]);
-  const filtered = useMemo(() => posFilter === "All" ? textMatches : textMatches.filter(e => e.normalizedPos === posFilter), [textMatches, posFilter]);
-  const suggestions = useMemo(() => spellingSuggestions ? suggestDictionary(searchIndex, { ...searchOptions, pos: posFilter === "All" ? "" : posFilter }) : [],
-    [searchIndex, searchOptions, posFilter, spellingSuggestions]);
-  const posCounts = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const e of textMatches) {
-      const p = e.normalizedPos || "(unspecified)";
-      map.set(p, (map.get(p) ?? 0) + 1);
-    }
-    return { map, total: textMatches.length };
-  }, [textMatches]);
-
-  const displayedPosOptions = useMemo(() => {
-    const q = posSearch.trim().toLowerCase();
-    const populatedPos = allPos.filter((p) => (posCounts.map.get(p) ?? 0) > 0);
-    const base = ["All", ...populatedPos];
-    if (!q) return base;
-    return base.filter((p) =>
-      p === "All" ? true : getPosLabel(p).toLowerCase().includes(q) || p.toLowerCase().includes(q)
-    );
-  }, [allPos, posCounts, posSearch]);
-
-  const visibleResults = useMemo(
-    () => filtered.slice(0, resultsLimit),
-    [filtered, resultsLimit]
-  );
-
-  const hiddenResultsCount = filtered.length - visibleResults.length;
-
-  const totalShown = visibleResults.length;
-  const totalAll = posCounts.total;
+  const searchOptions = useMemo(()=>({query:deferredQuery,scope,ignoreMarks,initial,bohairicOnly,examplesOnly,pos:posFilter==='All'?'':posFilter,suggestions:spellingSuggestions}),
+    [deferredQuery,scope,ignoreMarks,initial,bohairicOnly,examplesOnly,posFilter,spellingSuggestions]);
+  useEffect(()=>{
+    if(!searchRestored)return;
+    const current=++generation.current;
+    morePending.current=false;setLoadingMore(false);setMoreError(false);
+    const cached=peekBrowseDictionary(searchOptions);
+    setLoadState(cached?'ready':'loading');
+    if(cached){setResultKey(JSON.stringify(searchOptions));setVisibleResults(cached.entries);setSuggestions(cached.suggestions);setHasMore(cached.entries.length<cached.total);}
+    const fontReady=cached?Promise.resolve():document.fonts?.load('30px "FreeSerifAvvaShenouda"','ⲁⲃⲅ').catch(()=>undefined);
+    Promise.all([searchBrowseDictionary(searchOptions,0),fontReady]).then(([result])=>{
+      if(current!==generation.current)return;
+      setResultKey(JSON.stringify(searchOptions));setVisibleResults(result.entries);setSuggestions(result.suggestions);setHasMore(result.entries.length<result.total);setLoadState('ready');
+    }).catch(()=>{if(current===generation.current){setVisibleResults([]);setHasMore(false);setLoadState('error');}});
+    return()=>{generation.current++;};
+  },[searchOptions,searchRestored,loadAttempt]);
+  const loadMore=useCallback(()=>{
+    if(morePending.current||!hasMore||loadState!=='ready')return;
+    morePending.current=true;setLoadingMore(true);setMoreError(false);
+    const current=generation.current;
+    searchBrowseDictionary(searchOptions,visibleResults.length).then(result=>{
+      if(current!==generation.current)return;
+      setVisibleResults(previous=>[...previous,...result.entries]);setHasMore(visibleResults.length+result.entries.length<result.total);
+    }).catch(()=>{if(current===generation.current)setMoreError(true);})
+      .finally(()=>{if(current===generation.current){morePending.current=false;setLoadingMore(false);}});
+  },[hasMore,loadState,searchOptions,visibleResults.length]);
+  useEffect(()=>{
+    if(!sentinel.current||!hasMore||moreError||loadState!=='ready'||typeof IntersectionObserver==='undefined')return;
+    const observer=new IntersectionObserver(records=>{if(records.some(record=>record.isIntersecting))loadMore();},{rootMargin:'0px 0px 600px 0px'});
+    observer.observe(sentinel.current);
+    return()=>observer.disconnect();
+  },[hasMore,loadMore,moreError,loadState]);
 
   const page: KeyDef[][] =
     mode === "ABC" ? KB_ABC : mode === "NUMBERS" ? KB_NUMBERS : KB_SYMBOLS;
@@ -726,22 +585,16 @@ export default function DictionaryPage() {
             <div className="mt-2 flex flex-wrap gap-2">{recentSearches.map(word => <button key={word} type="button" onClick={() => setQuery(word)} className="coptic-text rounded-xl border border-[var(--border-color)] px-3 py-2">{word}</button>)}
               <button type="button" onClick={() => { setRecentSearches([]); try { localStorage.removeItem("coptic-dictionary-recent"); } catch {} }} className="px-3 py-2 underline">Clear recent searches</button>
             </div></details>}
-            <div className="text-sm text-[var(--text-muted)]">
-              {loadState === "loading" ? (
-                <span>Loading…</span>
-              ) : loadState === "error" ? (
-                <span role="alert" className="text-[var(--lesson-choice-wrong-text)]">Failed to load dictionary files. <button type="button" onClick={() => setLoadAttempt(n => n + 1)} className="ml-2 min-h-11 underline">Retry</button></span>
-              ) : (
-                <div className="dictionary-result-summary"><span>{totalShown.toLocaleString()} of {totalAll.toLocaleString()} entries</span><details><summary>Dialect labels</summary><p><b>Bohairic</b> entries are verified Bohairic. <b>Unknown</b> means the dialect is not guaranteed.</p></details></div>
-              )}
-            </div>
+          {loadState==='error'&&<p role="alert" className="text-sm text-[var(--lesson-choice-wrong-text)]">Failed to load dictionary files. <button type="button" onClick={()=>setLoadAttempt(n=>n+1)} className="ml-2 min-h-11 underline">Retry</button></p>}
         </div>
 
-        <div className="dictionary-results">
+        <div className="dictionary-results" role="region" aria-label="Dictionary entries" aria-busy={loadState==='loading'} data-state={loadState}>
+          {loadState==='loading'&&visibleResults.length===0&&<div className="dictionary-loading" role="status" aria-label="Loading dictionary"><span className="sr-only">Loading dictionary…</span>{[0,1,2].map(n=><div key={n} className="dictionary-placeholder" aria-hidden="true"><i/><i/><i/></div>)}</div>}
           {visibleResults.map((e, idx) => (
             <div
-              key={`${e.dialect}-${e.lemma}-${e.pos}-${idx}`}
-              className="dictionary-entry-card"
+              key={resultKey+`-${e.dialect}-${e.lemma}-${e.pos}-${idx}`}
+              className="dictionary-entry-card dictionary-entry-arrival"
+              style={{'--entry-delay':`${Math.min(idx%24,5)*30}ms`} as CSSProperties}
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -849,19 +702,11 @@ export default function DictionaryPage() {
               ) : null}
             </div>
           ))}
-          {loadState === "ready" && filtered.length === 0 && <p role="status" className="rounded-2xl border border-[var(--border-color)] p-5 text-[var(--text-muted)]">No matching entries. Try a suggested spelling, change the search scope, or clear the filters.</p>}
-          {hiddenResultsCount > 0 ? (
-            <div className="dictionary-pagination">
-              <span>Showing {visibleResults.length} of {filtered.length} matches.</span>
-              <button
-                type="button"
-                onClick={() => setResultsLimit((current) => current + 80)}
-                className="ui-secondary"
-              >
-                Show 80 more
-              </button>
-            </div>
-          ) : null}
+          {loadState === "ready" && visibleResults.length === 0 && <p role="status" className="rounded-2xl border border-[var(--border-color)] p-5 text-[var(--text-muted)]">No matching entries. Try a suggested spelling, change the search scope, or clear the filters.</p>}
+          {hasMore&&<div ref={sentinel} className="dictionary-scroll-sentinel">
+            {loadingMore&&<span role="status">Loading more words…</span>}
+            {moreError?<button type="button" className="ui-secondary" onClick={loadMore}>Retry loading more words</button>:<button type="button" className="dictionary-load-more" onClick={loadMore} disabled={loadingMore}>Load more dictionary entries</button>}
+          </div>}
         </div>
       </div>
 
