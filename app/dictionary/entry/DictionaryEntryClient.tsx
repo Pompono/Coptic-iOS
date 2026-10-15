@@ -214,21 +214,7 @@ export default function DictionaryEntryClient({ lemma }: { lemma: string }) {
                       ) : null}
                     </div>
 
-                    <div className="mt-2 text-sm text-[var(--text-muted)]">
-                      {e.tag ? <span className="mr-3">Tag: {e.tag}</span> : null}
-                      {e.greek ? <span>Greek: {e.greek}</span> : null}
-                      {e.crum || e.entryUrl?.startsWith('crum:') ? <span>Crum {e.crum || e.entryUrl?.slice(5)}</span> : /^https?:\/\//.test(e.entryUrl ?? '') ? (
-                        <a
-                          href={e.entryUrl}
-                          className="ml-3 text-[var(--text-muted)] underline decoration-[var(--text-muted)] underline-offset-4 hover:text-[var(--text-color)]"
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          View entry
-                        </a>
-                      ) : null}
-                      {e.etymology && <p className="mt-2">Etymology: {e.etymology}</p>}
-                    </div>
+
                   </div>
                 </div>
 

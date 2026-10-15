@@ -638,22 +638,7 @@ export default function DictionaryPage() {
                     ) : null}
                   </div>
 
-                  <div className="mt-2 text-sm text-[var(--text-muted)]">
-                    {e.tag ? <span className="mr-3">Tag: {e.tag}</span> : null}
-                    {e.greek ? <span>Greek: {e.greek}</span> : null}
-                    {e.crum || e.entryUrl?.startsWith("crum:") ? <span className="ml-3">Crum {e.crum || e.entryUrl?.slice(5)}</span> : null}
-                    {e.etymology ? <span className="ml-3">Etymology: {e.etymology}</span> : null}
-                    {/^https?:\/\//.test(e.entryUrl ?? "") ? (
-                      <a
-                        href={e.entryUrl}
-                        className="ml-3 text-[var(--text-muted)] underline decoration-[var(--text-soft)] underline-offset-4 hover:text-[var(--text-color)]"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        View entry
-                      </a>
-                    ) : null}
-                  </div>
+
                 </div>
               </div>
 

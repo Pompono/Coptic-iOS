@@ -1,5 +1,6 @@
 "use client";
 import {RecordingCard} from "@/app/AudioReplay";
+import {keepInputFocusOnPress} from '@/lib/inputFocus';
 
 import { LESSON_EXERCISE_SETS, PAIR_LETTERS_EXERCISES, type PairLettersExercise } from "@/lib/learning/letterExercises";
 import { LearningSession, LessonExplanation, useLearningSession } from "../learning/LearningSession";
@@ -1864,6 +1865,7 @@ function PairLettersLesson({ lesson, step }: { lesson: Lesson; step: UnitLessonS
               <button
                 type="button"
                 className="lesson-tap-target lesson-action-button"
+                onPointerDown={keepInputFocusOnPress}
                 onClick={onContinue}
                 disabled={isSliding}
                 style={{
@@ -1882,6 +1884,7 @@ function PairLettersLesson({ lesson, step }: { lesson: Lesson; step: UnitLessonS
               <button
                 type="button"
                 className="lesson-tap-target lesson-action-button"
+                onPointerDown={keepInputFocusOnPress}
                 onClick={() => selectedChoice && onCheck()}
                 disabled={!selectedChoice || isSliding}
                 style={{

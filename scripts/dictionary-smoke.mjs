@@ -14,6 +14,9 @@ export async function checkDictionary(browser, base) {
     const query = page.getByRole('textbox', { name: 'Dictionary search' });
     const cards = page.locator('a[href^="/dictionary/entry/"]');
     const initialWords=await cards.allTextContents();
+    assert.doesNotMatch(await page.locator('.dictionary-results').innerText(),/Tag:|Greek:|Etymology:|Crum 1a/);
+    assert.ok(await page.getByText('Bohairic',{exact:true}).count()>0,'Dialect badges remain');
+    assert.ok(await page.getByText('Imperative',{exact:true}).count()>0,'Parts of speech remain');
     assert.equal(initialWords.length,24,'The first render is a small batch');
     assert.equal(await page.getByText('Dialect labels',{exact:true}).count(),0);
     assert.equal(await page.getByText(/of [\d,]+ entries/).count(),0);
@@ -57,6 +60,7 @@ export async function checkDictionary(browser, base) {
     assert.equal(await query.inputValue(), 'lvoe', 'Suggestions do not silently rewrite input');
     await page.getByRole('button', { name: 'love', exact: true }).click();
     await page.getByText('English meaning · exact', { exact: true }).first().waitFor();
+    assert.equal(await page.getByLabel('Spelling suggestions',{exact:true}).count(),0,'Good matches do not invite unnecessary spelling corrections');
     await settings(() => page.getByLabel('Search in', { exact: true }).selectOption('coptic'));
     await query.fill('ⲁ');
     await settings(() => page.getByLabel('Search without combining marks').uncheck());
@@ -66,7 +70,7 @@ export async function checkDictionary(browser, base) {
     await page.getByRole('link', { name: 'ⲁ', exact: true }).first().click();
     await page.getByRole('heading', { name: 'ⲁ', exact: true }).waitFor();
     await page.getByText('First letter of the alphabet', { exact: true }).waitFor();
-    await page.getByText('Crum 1a', { exact: true }).first().waitFor();
+    assert.doesNotMatch(await page.locator('main').innerText(),/Tag:|Greek:|Etymology:|Crum 1a/);
     assert.equal(await page.getByRole('button', { name: 'Bohairic-only', exact: true }).getAttribute('aria-disabled'),'true');
     await page.getByRole('button', { name: 'Bohairic-only', exact: true }).click({force:true});
     await page.getByRole('status').filter({hasText:'This is locked by Settings.'}).waitFor();

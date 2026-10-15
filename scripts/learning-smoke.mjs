@@ -35,7 +35,6 @@ export async function finishTransfer(page,set,{newLesson=false,verifyKeyboardLay
    const action=await page.getByRole('button',{name:'Check',exact:true}).boundingBox();assert.ok(action.y+action.height<=560,'Only the action moves above the keyboard');
    assert.equal(await page.getByRole('button',{name:'Done',exact:true}).count(),0,'Opening the keyboard does not add a Done button');
    await page.screenshot({path:'/tmp/coptic-stable-typing-keyboard.png'});
-   await page.evaluate(()=>{delete visualViewport.height;const s=document.querySelector('.mobile-chin-page-shell');s.style.paddingBottom='34px';s.style.setProperty('--page-content-height','calc(var(--interactive-viewport-height,100svh) - 93px)');document.activeElement.blur();visualViewport.dispatchEvent(new Event('resize'));});
   }
   if(kind===0){
    const joined=!item.word.includes(' '),words=joined?item.word.startsWith('ⲡⲓ')?['ⲡⲓ',item.word.slice(2)]:Array.from(item.word):item.word.split(' ');
@@ -43,7 +42,18 @@ export async function finishTransfer(page,set,{newLesson=false,verifyKeyboardLay
   }else if(kind===1){const chars=Array.from(item.word);await page.getByLabel('Missing letter',{exact:true}).fill(chars[Math.max(0,chars.length-2)]);}
   else await page.getByLabel('Your answer',{exact:true}).fill(item.meaning.replace(/^Sound: /,''));
   await page.evaluate(()=>{window.__transferSound=false;window.addEventListener('coptic-audio-played',()=>window.__transferSound=true,{once:true});});
-  await page.getByRole('button',{name:'Check',exact:true}).click();
+  if(verifyKeyboardLayout&&index===0&&kind===2){
+   // Reproduce the footer relocating as soon as focus leaves the answer field.
+   await page.evaluate(()=>document.addEventListener('focusout',()=>{delete visualViewport.height;const s=document.querySelector('.mobile-chin-page-shell');s.style.paddingBottom='34px';s.style.setProperty('--page-content-height','calc(var(--interactive-viewport-height,100svh) - 93px)');visualViewport.dispatchEvent(new Event('resize'));},{once:true}));
+   const button=await page.getByRole('button',{name:'Check',exact:true}).boundingBox();
+   const x=button.x+button.width/2,y=button.y+button.height/2;
+   await page.mouse.move(x,y);await page.mouse.down();
+   await page.mouse.move(x,y-90);await page.mouse.up();
+   assert.equal(await page.getByRole('status').filter({hasText:'Correct.'}).count(),0,'Dragging away does not submit an answer');
+   await page.mouse.move(x,y);await page.mouse.down();
+   assert.equal(await page.getByLabel('Your answer',{exact:true}).evaluate(el=>document.activeElement===el),true,'Pressing the action preserves focus until click so the footer cannot move');
+   await page.mouse.up();
+  }else await page.getByRole('button',{name:'Check',exact:true}).click();
   assert.equal(await page.evaluate(()=>document.activeElement instanceof HTMLInputElement),false,'Check dismisses the typing field');
   await page.getByRole('status').filter({hasText:'Correct.'}).waitFor();
   await page.waitForFunction(()=>window.__transferSound);
@@ -60,7 +70,7 @@ export async function finishTransfer(page,set,{newLesson=false,verifyKeyboardLay
  assert.equal(await page.locator('.lesson-outcome-screen button').count(),0,'Celebration dismisses automatically without a Continue button');
 }
 export async function checkLearning(browser,base){
- const context=await browser.newContext({viewport:{width:360,height:640}});
+ const context=await browser.newContext({viewport:{width:360,height:640},hasTouch:true});
  const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
  await context.route('**/*',route=>route.request().url().startsWith(base+'/')?route.continue():route.abort());
  try{
@@ -102,9 +112,9 @@ export async function checkLearning(browser,base){
   await page.evaluate(()=>window.scrollTo(0,100000));
   assert.equal(await page.evaluate(()=>scrollY),0,'An exercise cannot scroll its action into the status bar');
 
-  await page.evaluate(()=>{delete window.visualViewport.height;const shell=document.querySelector('.mobile-chin-page-shell');shell.style.paddingTop='';shell.style.removeProperty('--page-content-height');window.visualViewport.dispatchEvent(new Event('resize'));});
+  await page.evaluate(()=>document.addEventListener('focusout',()=>{delete window.visualViewport.height;const shell=document.querySelector('.mobile-chin-page-shell');shell.style.paddingTop='';shell.style.removeProperty('--page-content-height');window.visualViewport.dispatchEvent(new Event('resize'));},{once:true}));
   await page.evaluate(()=>{window.__feedbackPlayed=0;window.addEventListener('coptic-audio-played',()=>window.__feedbackPlayed++);});
-  await page.getByRole('button',{name:'Check',exact:true}).click();
+  await page.getByRole('button',{name:'Check',exact:true}).tap();
   await page.getByRole('status').filter({hasText:'Not quite.'}).waitFor();
   await page.waitForFunction(()=>window.__feedbackPlayed===1);
   await page.getByRole('button',{name:'Try again',exact:true}).click();

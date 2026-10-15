@@ -18,7 +18,8 @@ self.onmessage=async(event:MessageEvent<{id:number;options:BrowseOptions;offset:
     if(key!==lastKey||!lastResult){
       const allMatches=searchDictionary(index,{...options,pos:''});
       const matches=options.pos?allMatches.filter(entry=>entry.normalizedPos===options.pos):allMatches;
-      lastResult={entries:matches,total:matches.length,suggestions:options.suggestions?suggestDictionary(index,options):[]};
+      const hasGoodMatch=matches.some(entry=>entry.matchRank<=12);
+      lastResult={entries:matches,total:matches.length,suggestions:options.suggestions&&!hasGoodMatch?suggestDictionary(index,options):[]};
       lastKey=key;
     }
     self.postMessage({id,result:{entries:lastResult.entries.slice(offset,offset+limit),total:lastResult.total,suggestions:lastResult.suggestions}});
