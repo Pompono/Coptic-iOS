@@ -77,10 +77,10 @@
 .close { width:44px; height:44px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; color:var(--lesson-text-secondary); text-decoration:none; }
 .progress { flex:1; width:auto; height:5px; border-radius:999px; }
 .progress>div { height:100%; border-radius:inherit; background:linear-gradient(90deg,var(--lesson-progress-start),var(--lesson-progress-end)); transition:width 220ms ease; }
-.practiceContent { gap:16px; padding-top:12px; }
-.instruction { flex-direction:column; align-items:stretch; gap:18px; }
-.instruction h1 { font-size:1.5rem; line-height:1.2; letter-spacing:-.025em; }
-.instruction :global(.audio-replay) { align-self:center; width:112px; min-height:48px; }
+.practiceContent { gap:12px; padding-top:12px; }
+.instruction { flex-direction:row; align-items:center; gap:12px; }
+.instruction h1 { flex:1; min-width:0; font-size:1.5rem; line-height:1.2; letter-spacing:-.025em; }
+.instruction :global(.audio-replay) { flex-shrink:0; width:112px; min-height:48px; }
 .instruction :global(.audio-replay)>button { width:56px; height:48px; }
 .practiceContent .prompt { background:linear-gradient(180deg,var(--lesson-card-top),var(--lesson-card-bottom)); color:var(--lesson-card-text); border-radius:24px; min-height:152px; display:flex; align-items:center; justify-content:center; padding:24px 12px; box-shadow:none; }
 .label input { border-color:var(--lesson-input-border); background:var(--lesson-input-bg); font-size:1.125rem; min-height:56px; }

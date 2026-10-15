@@ -151,6 +151,7 @@ function LearningPractice({ items, lesson, title, description, onDone, review = 
     <div className={`lesson-progress-track ${styles.progress}`} role="progressbar" aria-label="Lesson progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}>
       <div style={{width:`${progress * 100}%`}} />
     </div>
+    <button className={styles.keyboardDone} onClick={()=>{if(document.activeElement instanceof HTMLElement)document.activeElement.blur();}}>Done</button>
     </header><div ref={practiceContent} className={styles.practiceContent} data-lesson-scroll>
     {reading && <><h1>{title}</h1><p className={styles.muted}>{description}</p></>}
     {reading ? <>

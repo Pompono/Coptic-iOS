@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import {tmpdir} from 'node:os';
+import path from 'node:path';
 import {loadTsModule} from '../tests/tsModule.mjs';
 import {startLesson,finishTransfer} from './learning-smoke.mjs';
 const {lessons}=await loadTsModule('lib/lesson.ts');
@@ -25,7 +27,7 @@ export async function checkLessonLayouts(browser,base){
     assert.ok(boxes.every(b=>Math.abs(b.x-boxes[0].x)<1&&Math.abs(b.width-boxes[0].width)<1),'Three choices form one equal-width stack');
     assert.ok(boxes.every(b=>b.y>=59&&b.y+b.height<=852-34),'Every choice fits above the home indicator');
     const shown=await choicesVisible(page);
-    if(!shown){console.log('Question',q.id,q.kind,q.choices);console.log(await page.locator('.lesson-option-button').evaluateAll(els=>els.map(el=>{const a=el.getBoundingClientRect();return {text:el.textContent,top:a.top,bottom:a.bottom,parent:el.parentElement.getBoundingClientRect().toJSON()};})));await page.screenshot({path:'/tmp/coptic-stack-failure.png'});}
+    if(!shown){console.log('Question',q.id,q.kind,q.choices);console.log(await page.locator('.lesson-option-button').evaluateAll(els=>els.map(el=>{const a=el.getBoundingClientRect();return {text:el.textContent,top:a.top,bottom:a.bottom,parent:el.parentElement.getBoundingClientRect().toJSON()};})));await page.screenshot({path:path.join(tmpdir(),'coptic-stack-failure.png')});}
     assert.ok(shown,'Choice corners are not clipped by a scrolling ancestor');
    }
    if(i===questions.length){const badge=await page.locator('.lesson-retry-context').boundingBox();const card=await page.locator('.recording-card').boundingBox();assert.ok(badge.y<120&&card.y<260,'Retry status stays in the progress header');}
@@ -33,10 +35,10 @@ export async function checkLessonLayouts(browser,base){
    await page.getByRole('button',{name:answer,exact:true}).click();await page.getByRole('button',{name:'Check',exact:true}).click();
    await page.getByRole('button',{name:'Continue',exact:true}).waitFor();
    assert.ok(await choicesVisible(page),'All selected button borders stay inside their scroll container');
-   if(q.choices.length===3){await page.waitForTimeout(200);const fit=await choicesVisible(page);if(!fit){console.log('Feedback question',q.id);console.log(await page.locator('.lesson-option-button').evaluateAll(els=>els.map(el=>({text:el.textContent,box:el.getBoundingClientRect().toJSON(),parent:el.parentElement.getBoundingClientRect().toJSON()}))));await page.screenshot({path:'/tmp/coptic-feedback-failure.png'});}assert.ok(fit,'Three choices remain visible with correct/incorrect feedback');}
+   if(q.choices.length===3){await page.waitForTimeout(200);const fit=await choicesVisible(page);if(!fit){console.log('Feedback question',q.id);console.log(await page.locator('.lesson-option-button').evaluateAll(els=>els.map(el=>({text:el.textContent,box:el.getBoundingClientRect().toJSON(),parent:el.parentElement.getBoundingClientRect().toJSON()}))));await page.screenshot({path:path.join(tmpdir(),'coptic-feedback-failure.png')});}assert.ok(fit,'Three choices remain visible with correct/incorrect feedback');}
    const stopsBefore=await page.evaluate(()=>window.__audioStops);
    await page.getByRole('button',{name:'Continue',exact:true}).click();
-   if(i===queue.length-1){await page.getByRole('heading',{name:'Put it together',exact:true}).waitFor();assert.equal(await page.evaluate(()=>window.__audioStops),stopsBefore,'The final answer sound is not stopped by the transfer transition');}
+   if(i===queue.length-1){await page.getByLabel('Your answer',{exact:true}).waitFor();assert.equal(await page.evaluate(()=>window.__audioStops),stopsBefore,'The final answer sound is not stopped by the transfer transition');}
   }
   await finishTransfer(page,step.exerciseSet,{verifyKeyboardLayout:true});
   await page.setViewportSize({width:393,height:500});
@@ -59,7 +61,7 @@ export async function checkLessonLayouts(browser,base){
   assert.ok(await choicesVisible(page,'.lesson-matching-tile'),'Matching tile borders stay inside the scroll container');
   await page.locator('.lesson-matching-tile').first().click();await page.waitForTimeout(200);
   assert.ok(await choicesVisible(page,'.lesson-matching-tile'),'Selecting a matching tile does not clip its top edge');
-  await page.screenshot({path:'/tmp/coptic-unclipped-matching.png'});
+  await page.screenshot({path:path.join(tmpdir(),'coptic-unclipped-matching.png')});
   console.log('PASS: three-choice listening/sound stacks and real mistake-retry layouts with iPhone safe areas.');
  }finally{await context.close();}
 }

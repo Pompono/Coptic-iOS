@@ -31,6 +31,8 @@ export async function finishTransfer(page,set,{newLesson=false,verifyKeyboardLay
    if(before.some((b,n)=>Math.abs(b.y-after[n].y)>=1))console.log("Keyboard geometry",{before,after},await field.evaluate(el=>({pane:el.closest("[data-lesson-scroll]").getBoundingClientRect().toJSON(),scroll:el.closest("[data-lesson-scroll]").scrollTop})));
    for(let n=0;n<before.length;n++){assert.ok(Math.abs(before[n].height-after[n].height)<1,'Keyboard keeps normal element heights');assert.ok(Math.abs(before[n].y-after[n].y)<1,'Opening a typical iPhone keyboard does not jump the exercise content');}
    const action=await page.getByRole('button',{name:'Check',exact:true}).boundingBox();assert.ok(action.y+action.height<=560,'Only the action moves above the keyboard');
+   await page.getByRole('button',{name:'Done',exact:true}).click();
+   assert.equal(await field.evaluate(el=>document.activeElement===el),false,'Done dismisses the typing field');
    await page.screenshot({path:'/tmp/coptic-stable-typing-keyboard.png'});
    await page.evaluate(()=>{delete visualViewport.height;const s=document.querySelector('.mobile-chin-page-shell');s.style.paddingBottom='34px';s.style.setProperty('--page-content-height','calc(var(--interactive-viewport-height,100svh) - 93px)');document.activeElement.blur();visualViewport.dispatchEvent(new Event('resize'));});
   }
