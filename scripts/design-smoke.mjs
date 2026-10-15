@@ -9,6 +9,7 @@ export async function checkDesign(browser,base){
  try{
   await page.goto(base+'/');await page.waitForLoadState('networkidle');
   const first=lessons[0],group=first.progressionGroups[0];
+  await page.waitForFunction(()=>document.querySelector('.home-continue a')?.getAttribute('href')?.includes('lesson-1-a-o-d'));
   assert.match(await page.getByRole('link',{name:'Start learning',exact:true}).getAttribute('href'),/lesson-1-a-o-d/);
   const tabs=page.getByRole('navigation',{name:'Mobile navigation'});
   assert.equal(await tabs.getByRole('link',{name:'Home',exact:true}).getAttribute('aria-current'),'page');
@@ -24,6 +25,7 @@ export async function checkDesign(browser,base){
   await page.goto(base+'/dictionary/settings/');await page.waitForLoadState('networkidle');
   assert.equal(await page.getByText(/Transliteration accepts spellings/).count(),0);
   const lockedSwitch=page.getByRole('switch',{name:'Bohairic-only',exact:true});
+  await page.waitForFunction(()=>document.querySelector('[role="switch"]')?.checked===true);
   await lockedSwitch.click({force:true});assert.equal(await lockedSwitch.isChecked(),true,'A locked switch stays on');
   await page.getByRole('status').filter({hasText:'This is locked by Settings.'}).waitFor();
   await page.waitForFunction(()=>!document.querySelector('.settings-lock-notice').classList.contains('is-visible'));
@@ -48,7 +50,7 @@ export async function checkDesign(browser,base){
   assert.ok(headings.every(style=>JSON.stringify(style)===JSON.stringify(headings[0])),'All main pages share title typography');
   for(const [route,selector,min] of [
    ['/translator/','button[type=submit]',50],['/translator/','select[aria-label="Translation method"]',44],
-   ['/settings/','select',44],['/dictionary/entry/?lemma=ⲁ','.dictionary-entry-toolbar button,.dictionary-entry-toolbar a',44],['/dictionary/','.dictionary-search-input',44],
+   ['/settings/','select',44],['/dictionary/entry/?lemma=ⲁ','.dictionary-entry-toolbar button,.dictionary-entry-toolbar a',44],['/dictionary/','.dictionary-search-shell',44],
    ['/read/','[role=group][aria-label="Reading passage"] button',44],['/translator/scanner/','button',44]
   ]){
    await page.goto(base+route);await page.waitForLoadState('networkidle');
