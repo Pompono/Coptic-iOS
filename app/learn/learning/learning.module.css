@@ -70,3 +70,23 @@
 .completionBody>* { flex-shrink:0; }
 .completionBody h1 { font-size:1.75rem; font-weight:700; line-height:1.2; letter-spacing:-.035em; margin:8px 0 0; }
 .completionBody p { margin:0; line-height:1.5; }
+/* Continue the authored lesson shell through the final practice questions. */
+.practiceScreen { padding:16px 20px; background:linear-gradient(180deg,var(--lesson-bg-top),var(--lesson-bg-bottom)); color:var(--lesson-text-primary); }
+.practiceLayout { max-width:760px; gap:12px; }
+.practiceHeader { flex-direction:row; align-items:center; gap:10px; min-height:44px; }
+.close { width:44px; height:44px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; color:var(--lesson-text-secondary); text-decoration:none; }
+.progress { flex:1; width:auto; height:5px; border-radius:999px; }
+.progress>div { height:100%; border-radius:inherit; background:linear-gradient(90deg,var(--lesson-progress-start),var(--lesson-progress-end)); transition:width 220ms ease; }
+.practiceContent { gap:16px; padding-top:12px; }
+.instruction { flex-direction:column; align-items:stretch; gap:18px; }
+.instruction h1 { font-size:1.5rem; line-height:1.2; letter-spacing:-.025em; }
+.instruction :global(.audio-replay) { align-self:center; width:112px; min-height:48px; }
+.instruction :global(.audio-replay)>button { width:56px; height:48px; }
+.practiceContent .prompt { background:linear-gradient(180deg,var(--lesson-card-top),var(--lesson-card-bottom)); color:var(--lesson-card-text); border-radius:24px; min-height:152px; display:flex; align-items:center; justify-content:center; padding:24px 12px; box-shadow:none; }
+.label input { border-color:var(--lesson-input-border); background:var(--lesson-input-bg); font-size:1.125rem; min-height:56px; }
+.reading button,.bank button { background:var(--lesson-choice-bg); border:1.5px solid var(--lesson-choice-border); border-radius:16px; min-height:56px; }
+.reading button[aria-pressed=true] { background:var(--lesson-choice-selected-bg); border-color:var(--lesson-choice-selected-border); color:var(--lesson-choice-selected-text); }
+.practiceFooter { padding:8px 14px 0; }
+.practiceFooter .primary { height:52px; }
+@media (min-width:761px) { .practiceLayout { max-width:1120px; } }
+@media (prefers-reduced-motion:reduce) { .progress>div { transition:none; } }

@@ -471,7 +471,7 @@ export default function Section1Unit2Lesson1Client({
   const imageChoiceMinHeight = compactPhone ? (tinyPhone ? 126 : ultraCompactPhone ? 142 : 150) : 236;
   const imageArtSize = compactPhone ? (tinyPhone ? 44 : ultraCompactPhone ? 50 : 56) : 72;
   const imageLabelFontSize = compactPhone ? (tinyPhone ? 14 : 16) : 20;
-  const progress = Math.max(0.08, index / QUESTIONS.length);
+  const progress = learning.progress(Math.min(index + (resultState === "correct" ? 1 : 0), QUESTIONS.length), QUESTIONS.length);
   const stageUsesTwoColumn =
     desktopLayout &&
     (question.kind === "sound_mcq" ||
@@ -567,7 +567,7 @@ export default function Section1Unit2Lesson1Client({
 
   const nextQuestion = () => {
     if (index >= QUESTIONS.length - 1) {
-      learning.finish();
+      learning.finish(QUESTIONS.length);
       return;
     }
 

@@ -497,7 +497,7 @@ export default function Section1Unit2Lesson2Client({
   const promptRowBaseHeight = compactPhone ? (tinyPhone ? 56 : ultraCompactPhone ? 70 : 82) : 116;
   const slidePanelGap = compactPhone ? (tinyPhone ? 12 : ultraCompactPhone ? 14 : 16) : 20;
   const desktopSlideViewportHeight = 520;
-  const progress = Math.max(0.08, index / QUESTIONS.length);
+  const progress = learning.progress(Math.min(index + (resultState === "correct" ? 1 : 0), QUESTIONS.length), QUESTIONS.length);
   const isTranslateChoiceScreen =
     question.kind === "listening_mcq" && question.prompt === "Translate this phrase";
   const translateGlossary = getTranslateGlossary(question);
@@ -712,7 +712,7 @@ export default function Section1Unit2Lesson2Client({
 
   const nextQuestion = () => {
     if (index >= QUESTIONS.length - 1) {
-      learning.finish();
+      learning.finish(QUESTIONS.length);
       return;
     }
 

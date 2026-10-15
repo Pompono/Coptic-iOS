@@ -12,15 +12,15 @@ export async function startLesson(page) {
 }
 export async function finishTransfer(page,set,{newLesson=false,verifyKeyboardLayout=false}={}){
  const items=getCourseItems(set);
- if(!newLesson)await page.getByRole('heading',{name:'Put it together',exact:true}).waitFor();
- await page.getByRole('button',{name:'Continue',exact:true}).click();
+ if(newLesson)await page.getByRole('button',{name:'Continue',exact:true}).click();
+ else await page.getByLabel('Your answer',{exact:true}).waitFor();
  const checkpoint=set.includes('checkpoint');
  const count=checkpoint?items.length:newLesson?items.length*3:Math.min(3,items.length);
  for(let index=0;index<count;index++){
   const item=items[index%items.length],kind=checkpoint?index%3:newLesson?Math.floor(index/items.length)%3:2;
   if(kind===2){await page.getByLabel('Your answer',{exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'Show a hint',exact:true}).count(),0,'Final typed recall has no hint');}
   if(verifyKeyboardLayout&&index===0&&kind===2){
-   const title=page.getByRole('heading',{name:'Put it together',exact:true}),field=page.getByLabel('Your answer',{exact:true}),prompt=page.locator('p.coptic-text');
+   const title=page.getByRole('heading',{level:1}),field=page.getByLabel('Your answer',{exact:true}),prompt=page.locator('p.coptic-text');
    const before=await Promise.all([title.boundingBox(),field.boundingBox(),prompt.boundingBox()]);
    await field.focus();
    await page.evaluate(()=>{const s=document.querySelector('.mobile-chin-page-shell');s.style.paddingBottom='0';s.style.setProperty('--page-content-height','calc(var(--interactive-viewport-height,100svh) - 59px)');Object.defineProperty(visualViewport,'height',{configurable:true,get:()=>560});visualViewport.dispatchEvent(new Event('resize'));});
@@ -77,7 +77,7 @@ export async function checkLearning(browser,base){
   const next=unit.progressionGroups[0].lessons.find(s=>s.exerciseSet==='bohairic-names-and-phrases');
   await page.goto(`${base}/learn/${unit.id}/play/${next.id}/`);
   await startLesson(page);
-  await page.getByRole('heading',{name:'A quick recall',exact:true}).waitFor();
+  await page.getByLabel('Your answer',{exact:true}).waitFor();
   await page.evaluate(()=>{const shell=document.querySelector('.mobile-chin-page-shell');shell.style.paddingTop='59px';shell.style.setProperty('--page-content-height','calc(var(--interactive-viewport-height, 100svh) - 59px)');});
   const normalSizes=await page.evaluate(()=>{const field=document.querySelector('input[aria-label="Your answer"]');const prompt=document.querySelector('p.coptic-text');const title=document.querySelector('h1');return {field:field.getBoundingClientRect().height,prompt:prompt.getBoundingClientRect().height,promptFont:getComputedStyle(prompt).fontSize,titleFont:getComputedStyle(title).fontSize};});
   await page.getByLabel('Your answer',{exact:true}).fill('wrong');

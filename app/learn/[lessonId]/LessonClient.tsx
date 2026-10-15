@@ -785,10 +785,10 @@ function PairLettersLesson({ lesson, step }: { lesson: Lesson; step: UnitLessonS
       ? exerciseQueue[incomingExerciseIndex]
       : null;
   const baseProgress = exerciseQueue.length
-    ? Math.max(0.08, exerciseIndex / exerciseQueue.length)
+    ? learning.progress(exerciseIndex, exerciseQueue.length)
     : 0;
   const nextProgress = exerciseQueue.length
-    ? Math.max(0.08, Math.min(exerciseIndex + 1, exerciseQueue.length) / exerciseQueue.length)
+    ? learning.progress(Math.min(exerciseIndex + 1, exerciseQueue.length), exerciseQueue.length)
     : 0;
   const progress = resultState === "idle" ? baseProgress : nextProgress;
   const performanceMode = false;
@@ -1152,7 +1152,7 @@ function PairLettersLesson({ lesson, step }: { lesson: Lesson; step: UnitLessonS
     const nextExercise = exerciseQueue[nextIndex] ?? null;
 
     if (nextIndex >= exerciseQueue.length) {
-      learning.finish();
+      learning.finish(exerciseQueue.length);
       return;
     }
 
