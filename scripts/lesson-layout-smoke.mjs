@@ -42,6 +42,7 @@ export async function checkLessonLayouts(browser,base){
   }
   await finishTransfer(page,step.exerciseSet,{verifyKeyboardLayout:true});
   await page.setViewportSize({width:393,height:500});
+  await page.waitForFunction(()=>document.querySelector('.mobile-chin-page-shell').style.getPropertyValue('--interactive-viewport-height')==='500px');
   const celebration=page.locator('.lesson-outcome-screen');
   assert.equal(await celebration.locator('.heritage-icon__art').count(),1,'The celebration preserves original Coptic artwork');
   assert.ok(await celebration.evaluate(el=>el.getAnimations({subtree:true}).length>0),'The celebration animates alongside the completion sound');
