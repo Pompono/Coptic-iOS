@@ -22,7 +22,7 @@ export async function finishTransfer(page,set,{newLesson=false,verifyKeyboardLay
   assert.equal(await page.getByRole('button',{name:'Done',exact:true}).count(),0,'No top-right Done button');
   if(kind===2)await page.getByLabel('Your answer',{exact:true}).waitFor();
   if(verifyKeyboardLayout&&index===0&&kind===2){
-   const title=page.getByRole('heading',{level:1}),field=page.getByLabel('Your answer',{exact:true}),prompt=page.locator('p.coptic-text');
+   const title=page.getByRole('heading',{level:1}),field=page.getByLabel('Your answer',{exact:true}),prompt=page.locator('button[aria-label^="Play recording:"]');
    const before=await Promise.all([title.boundingBox(),field.boundingBox(),prompt.boundingBox()]);
    await field.focus();
    await page.evaluate(()=>{const s=document.querySelector('.mobile-chin-page-shell');s.style.paddingBottom='0';s.style.setProperty('--page-content-height','calc(var(--interactive-viewport-height,100svh) - 59px)');Object.defineProperty(visualViewport,'height',{configurable:true,get:()=>560});visualViewport.dispatchEvent(new Event('resize'));});
@@ -97,11 +97,14 @@ export async function checkLearning(browser,base){
   await page.getByLabel('Your answer',{exact:true}).waitFor();
   assert.equal(await page.getByRole('button',{name:/hint/i}).count(),0,'Spaced review never offers hints');
   await page.evaluate(()=>{const shell=document.querySelector('.mobile-chin-page-shell');shell.style.paddingTop='59px';shell.style.setProperty('--page-content-height','calc(var(--interactive-viewport-height, 100svh) - 59px)');});
-  const normalSizes=await page.evaluate(()=>{const field=document.querySelector('input[aria-label="Your answer"]');const prompt=document.querySelector('p.coptic-text');const title=document.querySelector('h1');return {field:field.getBoundingClientRect().height,prompt:prompt.getBoundingClientRect().height,promptFont:getComputedStyle(prompt).fontSize,titleFont:getComputedStyle(title).fontSize};});
+  const normalSizes=await page.evaluate(()=>{const field=document.querySelector('input[aria-label="Your answer"]');const prompt=document.querySelector('button[aria-label^="Play recording:"]');const title=document.querySelector('h1');return {field:field.getBoundingClientRect().height,prompt:prompt.getBoundingClientRect().height,promptFont:getComputedStyle(prompt).fontSize,titleFont:getComputedStyle(title).fontSize};});
+  await page.evaluate(()=>{window.__promptAudio=0;window.addEventListener('coptic-audio-played',()=>window.__promptAudio++);});
+  await page.getByRole('button',{name:/^Play recording:/}).click();
+  await page.waitForFunction(()=>window.__promptAudio===1);
   await page.getByLabel('Your answer',{exact:true}).fill('wrong');
   await page.evaluate(()=>{Object.defineProperty(window.visualViewport,'height',{configurable:true,get:()=>400});window.visualViewport.dispatchEvent(new Event('resize'));});
   await page.waitForFunction(()=>document.querySelector('.mobile-chin-page-shell').dataset.keyboard==='true');
-  const focusedSizes=await page.evaluate(()=>{const field=document.querySelector('input[aria-label="Your answer"]');const prompt=document.querySelector('p.coptic-text');const title=document.querySelector('h1');return {field:field.getBoundingClientRect().height,prompt:prompt.getBoundingClientRect().height,promptFont:getComputedStyle(prompt).fontSize,titleFont:getComputedStyle(title).fontSize};});
+  const focusedSizes=await page.evaluate(()=>{const field=document.querySelector('input[aria-label="Your answer"]');const prompt=document.querySelector('button[aria-label^="Play recording:"]');const title=document.querySelector('h1');return {field:field.getBoundingClientRect().height,prompt:prompt.getBoundingClientRect().height,promptFont:getComputedStyle(prompt).fontSize,titleFont:getComputedStyle(title).fontSize};});
   assert.deepEqual(focusedSizes,normalSizes,'Typing keeps the normal title, prompt card and input sizes');
   const close=await page.getByRole('link',{name:'Close lesson',exact:true}).boundingBox();
   assert.ok(close.y>=59,'The lesson navigation stays below the iPhone status bar');

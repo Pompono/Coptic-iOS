@@ -99,3 +99,7 @@
 .practiceFooter .primary { height:52px; }
 @media (min-width:761px) { .practiceLayout { max-width:1120px; } }
 @media (prefers-reduced-motion:reduce) { .progress>div { transition:none; } }
+
+button.prompt { width:100%; border:0; cursor:pointer; margin:1em 0; }
+button.prompt:disabled { opacity:1; cursor:default; }
+button.prompt:focus-visible { outline:3px solid var(--accent-color); outline-offset:3px; }

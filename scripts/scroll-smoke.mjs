@@ -12,12 +12,13 @@ export async function checkScrollBounds(page, base) {
     await page.mouse.wheel(0,1000);await page.waitForTimeout(150);
     assert.ok(await page.evaluate(() => scrollY <= Math.max(0,document.documentElement.scrollHeight-innerHeight)+2), `${route} stops at its real content bound`);
   }
-  await page.goto(base + '/learn/'); await page.waitForLoadState('networkidle');
-  await page.waitForTimeout(250);
-  assert.equal(await page.evaluate(() => scrollY), 0, 'General learning pathway opens at the top after progress loads');
   const first = lessons[0];
   const progressKey = 'coptic-unit-progress:' + first.id;
   const previousProgress = await page.evaluate(key => localStorage.getItem(key), progressKey);
+  await page.evaluate(key=>localStorage.setItem(key,'[]'),progressKey);
+  await page.goto(base + '/learn/'); await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(250);
+  assert.equal(await page.evaluate(() => scrollY), 0, 'General learning pathway opens at the top after progress loads');
   await page.evaluate(({ key, steps }) => localStorage.setItem(key, JSON.stringify(steps)), {
     key: progressKey, steps: first.progressionGroups.flatMap(group => group.lessons.map(step => step.id))
   });
@@ -28,14 +29,27 @@ export async function checkScrollBounds(page, base) {
     requestAnimationFrame(record);
   });
   await page.goto(base + '/learn/'); await page.waitForLoadState('networkidle');
-  await page.waitForTimeout(500);
+  await page.waitForFunction(()=>scrollY>100);
+  await page.waitForTimeout(450);
   const positions = await page.evaluate(() => window.__pathScrollFrames);
   const finalY = await page.evaluate(() => scrollY);
   assert.equal(positions[0], 0, 'The pathway paints from the top');
   assert.ok(finalY > 100, 'An off-screen in-progress unit is brought into view');
   assert.ok(positions.some(y => y > 0 && y < finalY - 10), 'The move is animated rather than a jump');
-  const banner = await page.locator('.course-unit-block.is-focused .unit-banner').boundingBox();
-  assert.ok(banner.y >= 20 && banner.y <= 100, 'The complete unit heading has breathing room above it: ' + JSON.stringify({ banner, finalY }));
+  const banner = await page.locator('.course-unit-block.is-focused .course-row.is-current').boundingBox();
+  assert.ok(banner.y >= 20 && banner.y <= 130, 'The active lesson group has breathing room above it: ' + JSON.stringify({ banner, finalY }));
+  await page.evaluate(()=>scrollTo(0,350));
+  await page.waitForTimeout(100);
+  await page.getByRole('navigation',{name:'Mobile navigation'}).getByRole('link',{name:'Settings',exact:true}).click();
+  await page.waitForURL(url=>url.pathname.replace(/\/$/,'')==='/settings');
+  await page.getByRole('navigation',{name:'Mobile navigation'}).getByRole('link',{name:'Learn',exact:true}).click();
+  await page.waitForURL(url=>url.pathname.replace(/\/$/,'')==='/learn');
+  await page.waitForTimeout(500);
+  assert.ok(Math.abs(await page.evaluate(()=>scrollY)-350)<3,'Returning to the path restores the last session position instead of following progress again');
+  await page.reload();
+  await page.waitForFunction(()=>scrollY>1000);
+  await page.waitForTimeout(450);
+  assert.ok(await page.evaluate(()=>scrollY)>1000,'A new WebView session follows progress again instead of persisting the previous 350px position');
   await page.evaluate(({ key, value }) => value === null ? localStorage.removeItem(key) : localStorage.setItem(key, value), { key: progressKey, value: previousProgress });
   await page.goto(base + '/settings/'); await page.waitForLoadState('networkidle');
   await page.evaluate(() => scrollTo(0, 100000));
