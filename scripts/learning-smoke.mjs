@@ -130,7 +130,8 @@ export async function checkLearning(browser,base){
   assert.ok(deck.cards.some(card=>card.word==='ⲡⲓⲣⲱⲙⲓ'&&card.lapses===1));
   await finishTransfer(page,next.exerciseSet,{newLesson:true});
   await page.waitForURL(`${base}/learn/${unit.id}/`);
-  await page.getByLabel('Skill mastery').first().waitFor();
+  await page.locator('.course-unit-block.is-focused .unit-banner').waitFor();
+  assert.equal(await page.getByLabel('Skill mastery').count(),0,'Learning progress is retained without displaying the removed Recall line');
   await page.waitForLoadState('networkidle');
   const checkpoint=unit.progressionGroups[0].lessons.find(s=>s.exerciseSet==='bohairic-first-reading-checkpoint');
   await page.goto(`${base}/learn/${unit.id}/play/${checkpoint.id}/`);
