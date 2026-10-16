@@ -42,6 +42,12 @@ export async function checkScrollBounds(page, base) {
   assert.ok(Math.abs(pinned.y-heading.y-heading.height)<2,'The current unit header sticks below the page title');
   assert.ok(banner.y>=pinned.y+pinned.height&&banner.y<pinned.y+pinned.height+30,'The active group opens below both pinned headings');
   assert.equal(await page.locator('.page-header>p').count(),0,'Page headings have no subtitle');
+  assert.equal(await page.locator('.learning-path-actions').count(),0,'The learning shortcuts are removed');
+  const cards=await page.locator('.course-unit-block.is-focused').evaluate(el=>{const banner=el.querySelector('.unit-banner'),card=el.querySelector('.unit-banner-card'),path=el.querySelector('.course-timeline');return {headerRadius:getComputedStyle(card).borderBottomLeftRadius,pathRadius:getComputedStyle(path).borderTopLeftRadius,backing:getComputedStyle(banner).backgroundColor,page:getComputedStyle(document.querySelector('main')).backgroundColor,gap:parseFloat(getComputedStyle(banner).paddingBottom)};});
+  assert.equal(cards.headerRadius,'20px','The unit header has rounded bottom corners');
+  assert.equal(cards.pathRadius,'20px','The lesson path has its own rounded top corners');
+  assert.equal(cards.backing,cards.page,'The opaque sticky backing hides content behind header corners');
+  assert.ok(cards.gap>=12,'The unit card is detached from the path');
   assert.equal(await page.getByLabel('Skill mastery').count(),0,'Unit headings omit recall text');
   assert.equal(await page.locator('.course-unit-block.is-focused').evaluate(el=>getComputedStyle(el).outlineStyle),'none','The unit outline is removed');
   await page.evaluate(()=>scrollTo(0,350));
