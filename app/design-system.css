@@ -238,10 +238,10 @@ h1,h2,h3,strong,label,button { overflow-wrap:anywhere; }
 .audio-replay svg { flex-shrink:0; }
 
 /* The page title stays above the unit header; each unit pushes the last one away. */
-.learning-path-heading { position:sticky; top:env(safe-area-inset-top,0px); z-index:30; background:var(--bg-color); padding:12px 0; margin-top:-12px; }
+.learning-path-heading { position:sticky; top:env(safe-area-inset-top,0px); z-index:30; background:var(--bg-color); padding:24px 0; margin-top:-24px; }
 .learning-path-heading:before { content:''; position:absolute; inset:auto 0 100%; height:env(safe-area-inset-top,0px); background:var(--bg-color); }
 .learning-path-heading .page-header { margin:0; }
-.unit-map-page .unit-banner { position:sticky; top:calc(env(safe-area-inset-top,0px) + var(--learning-header-height,68px)); z-index:20; background:var(--surface-1); border-radius:20px 20px 0 0; }
+.unit-map-page .unit-banner { position:sticky; top:calc(env(safe-area-inset-top,0px) + var(--learning-header-height,92px)); z-index:20; background:var(--surface-1); border-radius:20px 20px 0 0; }
 .unit-map-page .is-locked .unit-banner { background:var(--surface-2); }
 
 /* Repeating unit colors keep the pinned banner and current lesson together. */

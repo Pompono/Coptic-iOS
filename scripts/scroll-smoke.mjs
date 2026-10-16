@@ -42,6 +42,10 @@ export async function checkScrollBounds(page, base) {
   assert.ok(Math.abs(pinned.y-heading.y-heading.height)<2,'The current unit header sticks below the page title');
   assert.ok(banner.y>=pinned.y+pinned.height&&banner.y<pinned.y+pinned.height+30,'The active group opens below both pinned headings');
   assert.equal(await page.locator('.page-header>p').count(),0,'Page headings have no subtitle');
+  assert.equal(await page.locator('.course-unit-block.is-locked progress').count(),0,'Unreached units do not display progress bars');
+  assert.ok(await page.locator('.course-unit-block.is-focused progress').count()>0,'The active unit keeps its progress bar');
+  const titleOffset=await page.locator('.learning-path-heading .page-header__title').evaluate(el=>{const root=document.querySelector('.mobile-chin-page-shell');return el.getBoundingClientRect().top-(parseFloat(getComputedStyle(root).paddingTop)||0);});
+  assert.ok(Math.abs(titleOffset-24)<2,'The pinned Coptic title uses the same 24px top spacing as other pages');
   assert.equal(await page.locator('.learning-path-actions').count(),0,'The learning shortcuts are removed');
   const cards=await page.locator('.course-unit-block.is-focused').evaluate(el=>{const banner=el.querySelector('.unit-banner'),card=el.querySelector('.unit-banner-card'),path=el.querySelector('.course-timeline');return {headerRadius:getComputedStyle(card).borderBottomLeftRadius,pathRadius:getComputedStyle(path).borderTopLeftRadius,backing:getComputedStyle(banner).backgroundColor,page:getComputedStyle(document.querySelector('main')).backgroundColor,gap:parseFloat(getComputedStyle(banner).paddingBottom)};});
   assert.equal(cards.headerRadius,'20px','The unit header has rounded bottom corners');

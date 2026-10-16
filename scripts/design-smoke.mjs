@@ -38,6 +38,7 @@ export async function checkDesign(browser,base){
    await page.goto(base+route);await page.waitForLoadState('networkidle');
    const header=page.locator('.page-header');
    assert.equal(await header.count(),1,route+' has one shared page header');
+   if(route==='/translator/')assert.equal(await page.getByRole('link',{name:'Scan a photo',exact:true}).count(),0,'Photo scanning is not offered in the translator');
    assert.equal(await header.locator(':scope > p').count(),0,route+' omits page-header descriptions');
    const layout=await header.evaluate(el=>{const style=getComputedStyle(el.querySelector('h1'));return {font:style.fontSize,weight:style.fontWeight,line:style.lineHeight};});
    headings.push(layout);
