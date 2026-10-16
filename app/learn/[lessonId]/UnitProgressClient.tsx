@@ -1,7 +1,6 @@
 "use client";
 import PageHeader from "@/app/PageHeader";
 import AppIcon from "@/app/AppIcon";
-import UnitMastery from "../learning/UnitMastery";
 
 import Link from "@/lib/AppLink";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -108,9 +107,23 @@ export default function UnitProgressClient({ focusLessonId = null }: { focusLess
   const [failedStepIdsByLessonId, setFailedStepIdsByLessonId] = useState<Record<string, string[]>>({});
   const [hasLoadedProgress, setHasLoadedProgress] = useState(false);
   const unitSectionRefs = useRef<Record<string, HTMLElement | null>>({});
+  const pathRoot = useRef<HTMLElement>(null);
+  const pathHeading = useRef<HTMLDivElement>(null);
   const firstVisit = useRef(false);
   const visitKey = useRef<string | null>(null);
 
+
+  useLayoutEffect(() => {
+    const heading = pathHeading.current;
+    if (!heading) return;
+    const measure = () => pathRoot.current?.style.setProperty('--learning-header-height', `${heading.getBoundingClientRect().height}px`);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(heading);
+    return () => observer.disconnect();
+  }, []);
+
+  const pinnedHeight = (unit:HTMLElement) => (pathHeading.current?.getBoundingClientRect().height ?? 0) + (unit.querySelector('.unit-banner')?.getBoundingClientRect().height ?? 0);
 
   useLayoutEffect(() => {
     const nextCompletedStepIdsByLessonId = Object.fromEntries(
@@ -214,7 +227,7 @@ export default function UnitProgressClient({ focusLessonId = null }: { focusLess
     } else {
       const node = unit.querySelector<HTMLElement>(".course-row.is-current") ?? unit;
       const shell = document.querySelector(".mobile-chin-page-shell");
-      const inset = 24 + (shell ? parseFloat(getComputedStyle(shell).paddingTop) || 0 : 0);
+      const inset = pinnedHeight(unit) + 12 + (shell ? parseFloat(getComputedStyle(shell).paddingTop) || 0 : 0);
       window.scrollTo({top:Math.max(0,node.getBoundingClientRect().top + window.scrollY - inset),left:0,behavior:"instant"});
     }
   }, [hasLoadedProgress, targetLesson, focusLessonId]);
@@ -231,13 +244,13 @@ export default function UnitProgressClient({ focusLessonId = null }: { focusLess
       frame = requestAnimationFrame(() => {
         if (cancelled) return;
         const shell = document.querySelector(".mobile-chin-page-shell");
-        const visibleTop = shell ? parseFloat(getComputedStyle(shell).paddingTop) || 0 : 0;
+        const visibleTop = pinnedHeight(unit) + (shell ? parseFloat(getComputedStyle(shell).paddingTop) || 0 : 0);
         const dock = document.querySelector(".mobile-chin-dock");
         const bottomInset = dock ? dock.getBoundingClientRect().height : 0;
         const bounds = node.getBoundingClientRect();
         if (bounds.bottom > visibleTop && bounds.top < innerHeight-bottomInset) return;
         const start = window.scrollY;
-        const target = Math.max(0,bounds.top+start-visibleTop-24);
+        const target = Math.max(0,bounds.top+start-visibleTop-12);
         if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
           window.scrollTo({top:target,behavior:"instant"});return;
         }
@@ -257,8 +270,8 @@ export default function UnitProgressClient({ focusLessonId = null }: { focusLess
     return () => {cancel();window.removeEventListener("touchstart",cancel);window.removeEventListener("wheel",cancel);};
   }, [hasLoadedProgress, targetLesson, focusLessonId]);
 
-  return <main className="unit-map-page app-page">
-    <PageHeader title="Learn Coptic" description="From your first letters to reading." icon="learn"><Link className="ui-secondary" href="/read/"><AppIcon name="reader"/>Read Coptic</Link><Link className="ui-secondary" href="/vocabulary/"><AppIcon name="review"/>Vocabulary & review</Link></PageHeader>
+  return <main ref={pathRoot} className="unit-map-page app-page">
+    <div ref={pathHeading} className="learning-path-heading"><PageHeader title="Coptic" icon="cross"/></div><div className="learning-path-actions"><Link className="ui-secondary" href="/read/"><AppIcon name="reader"/>Read Coptic</Link><Link className="ui-secondary" href="/vocabulary/"><AppIcon name="review"/>Vocabulary & review</Link></div>
     <div className="course-map-shell">
       {visibleLessonStates.map(unitState => {
         const focused=unitState.lesson.id===targetLesson?.id;
@@ -269,7 +282,6 @@ export default function UnitProgressClient({ focusLessonId = null }: { focusLess
           <header className="unit-banner"><h2 className="unit-banner-title">{unitState.lesson.title.replace(/^Unit \d+: /,'')}</h2><div className="unit-banner-subtitle">{unitState.lesson.sectionTitle} · Unit {unitState.lesson.unitNumber}</div>
             <div className="unit-progress-caption"><span>{unitState.isUnitFullyCompleted?'Completed':unitState.unitUnlocked?total>0&&complete===total?'Available practice complete':'In progress':'Upcoming'}</span><span>{total?`${complete} / ${total} lessons`:'Content coming soon'}</span></div>
             {total>0&&<progress className="unit-progress" value={complete} max={total} aria-label={`Unit ${unitState.lesson.unitNumber} completion`}/>}
-            <UnitMastery unitId={unitState.lesson.id}/>
           </header>
           <ol className="course-timeline">
             {unitState.groups.map((group,index)=>{

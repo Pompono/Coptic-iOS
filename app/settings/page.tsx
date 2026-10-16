@@ -153,7 +153,7 @@ export default function SettingsPage() {
   } as const;
 
   return <main className="app-page settings-page" style={{display:'grid',alignContent:'start'}}>
-    <PageHeader title="Settings" description="Make Coptic feel right for you." icon="settings"/>
+    <PageHeader title="Settings" icon="settings"/>
     <section><h2 className="settings-section-title">Appearance</h2><div className="settings-group">
       <div className="settings-row" aria-label="Theme toggle"><label htmlFor="theme-choice">App theme</label><select id="theme-choice" aria-label="App theme" value={themeMode} onChange={e=>onToggleTheme(e.target.value as ThemeMode)}><option value="light">Light</option><option value="dark">Dark</option></select></div>
       <div className="settings-row"><label htmlFor="font-choice">Coptic font</label><select id="font-choice" value={fontMode} onChange={e=>onToggleFont(e.target.value as CopticFontMode)}><option value="unicode">Standard</option><option value="avva">Avva Shenouda</option></select></div>

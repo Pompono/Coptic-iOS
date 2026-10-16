@@ -37,7 +37,13 @@ export async function checkScrollBounds(page, base) {
   assert.ok(finalY > 100, 'An off-screen in-progress unit is brought into view');
   assert.ok(positions.some(y => y > 0 && y < finalY - 10), 'The move is animated rather than a jump');
   const banner = await page.locator('.course-unit-block.is-focused .course-row.is-current').boundingBox();
-  assert.ok(banner.y >= 20 && banner.y <= 130, 'The active lesson group has breathing room above it: ' + JSON.stringify({ banner, finalY }));
+  const pinned = await page.locator('.course-unit-block.is-focused .unit-banner').boundingBox();
+  const heading = await page.locator('.learning-path-heading').boundingBox();
+  assert.ok(Math.abs(pinned.y-heading.y-heading.height)<2,'The current unit header sticks below the page title');
+  assert.ok(banner.y>=pinned.y+pinned.height&&banner.y<pinned.y+pinned.height+30,'The active group opens below both pinned headings');
+  assert.equal(await page.locator('.page-header>p').count(),0,'Page headings have no subtitle');
+  assert.equal(await page.getByLabel('Skill mastery').count(),0,'Unit headings omit recall text');
+  assert.equal(await page.locator('.course-unit-block.is-focused').evaluate(el=>getComputedStyle(el).outlineStyle),'none','The unit outline is removed');
   await page.evaluate(()=>scrollTo(0,350));
   await page.waitForTimeout(100);
   await page.getByRole('navigation',{name:'Mobile navigation'}).getByRole('link',{name:'Settings',exact:true}).click();
@@ -49,7 +55,8 @@ export async function checkScrollBounds(page, base) {
   assert.ok(await page.evaluate(()=>scrollY)>1000,'Returning opens directly at the active group, ignoring the old manual position');
   assert.ok((await page.evaluate(()=>window.__returnFrames)).every(y=>y>1000),'Return visits never flash through the top of the path');
   const returned = await page.locator('.course-unit-block.is-focused .course-row.is-current').boundingBox();
-  assert.ok(returned.y>=20&&returned.y<=130,'The active group stays open after navigation settles');
+  const returnedBanner=await page.locator('.course-unit-block.is-focused .unit-banner').boundingBox();
+  assert.ok(returned.y>=returnedBanner.y+returnedBanner.height&&returned.y<returnedBanner.y+returnedBanner.height+30,'The active group stays below the pinned unit header after navigation settles');
   await page.reload();
   await page.waitForFunction(()=>scrollY>1000);
   await page.waitForTimeout(450);

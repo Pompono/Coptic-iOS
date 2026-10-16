@@ -15,7 +15,7 @@ export default function AdvancedDictionarySettings(){
  const selectClass='w-full rounded-xl border border-[var(--border-color)] bg-[var(--surface-1)] px-3 py-3 text-[var(--text-color)]';
  return <main className="app-page dictionary-settings" style={{maxWidth:680,margin:'0 auto',paddingBottom:32}}>
   <div className="page-toolbar"><PageBackLink href="/dictionary/">Back to dictionary</PageBackLink><Link href="/dictionary/" className="ui-text-action">Done</Link></div>
-  <PageHeader title="Dictionary settings" description="Fine-tune your search. Changes apply on return." icon="settings"/>
+  <PageHeader title="Dictionary settings" icon="settings"/>
   <section className="mt-5 grid gap-5 rounded-3xl border border-[var(--border-color)] bg-[var(--surface-1)] p-5">
    <label className="grid gap-2 text-sm font-semibold">Search in<select aria-label="Search in" value={options.scope} onChange={e=>update({scope:e.target.value})} className={selectClass}><option value="all">All fields</option><option value="coptic">Coptic words</option><option value="english">English meanings</option><option value="transliteration">Transliteration</option></select></label>
    <label className="grid gap-2 text-sm font-semibold">Initial letter<select aria-label="Initial letter" value={options.initial} onChange={e=>update({initial:e.target.value})} className={`coptic-text ${selectClass}`}><option value="">All letters</option>{Array.from(COPTIC_ALPHABET).map(letter=><option key={letter} value={letter}>{letter}</option>)}</select></label>

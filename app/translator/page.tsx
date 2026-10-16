@@ -527,7 +527,7 @@ export default function TranslatorPage() {
           paddingBottom: isMobileViewport && showKeyboard ? "calc(24px + env(safe-area-inset-bottom, 0px))" : undefined,
         }}
       >
-        <PageHeader title="Translator" description="Coptic and English, side by side." icon="translate"><Link className="ui-secondary" href="/translator/scanner/"><AppIcon name="scan"/>Scan a photo</Link></PageHeader>
+        <PageHeader title="Translator" icon="translate"><Link className="ui-secondary" href="/translator/scanner/"><AppIcon name="scan"/>Scan a photo</Link></PageHeader>
         {notice}
         <div className="translation-options">
           {isCopticToEnglish&&localTranslationEnabled?<label>Translation method<select aria-label="Translation method" value={translationMethod} disabled={currentState==='loading'} onChange={event=>{setTranslationMethod(event.target.value as typeof translationMethod);setTranslationOutput('');setTranslationError('');setCopyStatus('');}}><option value="published">Published text</option><option value="experimental">Experimental AI draft</option></select></label>:<span>Translation</span>}

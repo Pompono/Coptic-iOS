@@ -208,7 +208,7 @@ export default function ScannerPage() {
     <main className={styles.page}>
       <div className={styles.shell}>
         <PageBackLink href="/translator/">Translator</PageBackLink>
-        <PageHeader title="Scan Coptic" description="Capture, check, and translate printed Coptic." icon="scan"/>
+        <PageHeader title="Scan Coptic" icon="scan"/>
         <section className={styles.importPanel} aria-label="Import a photo">
         {!image&&<div className={styles.importEmpty}><AppIcon name="scan" size={42}/><h2>Start with a photo</h2><p>Choose a clear page of printed Coptic.</p></div>}
         <div className={styles.actions}>

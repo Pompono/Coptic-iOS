@@ -70,7 +70,7 @@ export default function ReaderPage() {
   }
   return <main className={styles.shell}>
     <PageBackLink href="/">Home</PageBackLink>
-    <PageHeader title="Read Coptic" description="Explore a passage, one word at a time." icon="reader"><Link className="ui-secondary" href="/vocabulary/">Vocabulary & review</Link></PageHeader>
+    <PageHeader title="Read Coptic" icon="reader"><Link className="ui-secondary" href="/vocabulary/">Vocabulary & review</Link></PageHeader>
     {error && <p role="alert" className={styles.error}>{error}</p>}
     <div className={styles.segmented} role="group" aria-label="Reading passage">{practicePassages.map(item => <button key={item.id} aria-pressed={passageId === item.id} onClick={() => {
       setPassageId(item.id); setText(item.text); setSelected(null); setShowMeaning(false); rememberPassage(item.id);

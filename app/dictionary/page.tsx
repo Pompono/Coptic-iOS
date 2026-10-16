@@ -553,7 +553,7 @@ export default function DictionaryPage() {
               : undefined,
         }}
       >
-        <PageHeader title="Dictionary" description="Search words, meanings, or transliteration." icon="book"/>
+        <PageHeader title="Dictionary" icon="book"/>
 
         <div className="mt-5 space-y-3">
           <label className="dictionary-search-shell flex items-center gap-3 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-1)] px-4 py-3">

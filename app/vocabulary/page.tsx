@@ -55,7 +55,7 @@ export default function VocabularyPage() {
   }
   return <main className={styles.shell}>
     <PageBackLink href="/read/">Read Coptic</PageBackLink>
-    <PageHeader title="Vocabulary & review" description="Keep the words you’re learning fresh." icon="review"/>
+    <PageHeader title="Vocabulary & review" icon="review"/>
     {error && <p className={styles.error} role="alert">{error}</p>}
     {!ready ? <p role="status">Loading saved words…</p> : <>
       <p className={styles.muted}>{cards.length} saved · {due.length} due · {reviewed} reviewed this session</p>

@@ -28,7 +28,7 @@ export default function HomePage(){
   try{const saved=JSON.parse(localStorage.getItem('coptic-reader:v1')??'null');const passage=practicePassages.find(p=>p.id===saved?.passageId);if(passage)setReading(`Resume ${passage.title.toLowerCase()}.`);else if(saved?.passageId==='custom'&&saved.draft?.trim())setReading('Return to your saved passage.');}catch{}
  },[]);
  return <main className="app-page home-page">
-  <PageHeader title="Coptic" description="Read, learn, and remember." icon="cross"/>
+  <PageHeader title="Coptic" icon="cross"/>
   <section className="home-continue" aria-label="Your learning">
    <div className="home-continue__top"><span>{current.available?'Your next lesson':'Your learning path'}</span><AppIcon name="learn" size={30}/></div><h2>{current.title}</h2><p>{current.step}</p>
    <Link href={current.href} className="ui-primary">{!current.available?'Explore the pathway':current.completed?'Continue learning':'Start learning'}<AppIcon name="arrow"/></Link>
