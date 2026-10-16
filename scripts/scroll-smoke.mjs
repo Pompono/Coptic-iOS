@@ -24,14 +24,14 @@ export async function checkScrollBounds(page, base) {
   });
   await page.addInitScript(() => {
     window.__pathScrollFrames = [];
-    let count = 0;
-    const record = () => { window.__pathScrollFrames.push(scrollY); if (++count < 90) requestAnimationFrame(record); };
+    window.__pathScrollRecording = true;
+    const record = () => { window.__pathScrollFrames.push(scrollY); if (window.__pathScrollRecording) requestAnimationFrame(record); };
     requestAnimationFrame(record);
   });
   await page.goto(base + '/learn/'); await page.waitForLoadState('networkidle');
   await page.waitForFunction(()=>scrollY>100);
   await page.waitForTimeout(450);
-  const positions = await page.evaluate(() => window.__pathScrollFrames);
+  const positions = await page.evaluate(() => {window.__pathScrollRecording=false;return window.__pathScrollFrames;});
   const finalY = await page.evaluate(() => scrollY);
   assert.equal(positions[0], 0, 'The pathway paints from the top');
   assert.ok(finalY > 100, 'An off-screen in-progress unit is brought into view');
