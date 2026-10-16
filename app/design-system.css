@@ -263,7 +263,7 @@ h1,h2,h3,strong,label,button { overflow-wrap:anywhere; }
 
 /* A square, opaque sticky backing masks the path behind the rounded unit card. */
 .unit-map-page .course-unit-block,.unit-map-page .course-unit-block.is-locked { background:transparent; box-shadow:none; }
-.unit-map-page .course-unit-block .unit-banner { background:var(--bg-color); border-radius:0; padding:0 0 12px; }
-.unit-banner-card { background:var(--unit-accent); border-radius:20px; padding:20px 20px 18px; }
+.unit-map-page .course-unit-block .unit-banner { background:var(--bg-color); background-clip:content-box; border-radius:0; padding:0 0 12px; pointer-events:none; }
+.unit-banner-card { pointer-events:auto; background:var(--unit-accent); border-radius:20px; padding:20px 20px 18px; }
 .unit-map-page .course-timeline { background:var(--surface-1); border-radius:20px; }
 .unit-map-page .is-locked .course-timeline { background:var(--surface-2); }

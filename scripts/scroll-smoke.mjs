@@ -47,11 +47,12 @@ export async function checkScrollBounds(page, base) {
   const titleOffset=await page.locator('.learning-path-heading .page-header__title').evaluate(el=>{const root=document.querySelector('.mobile-chin-page-shell');return el.getBoundingClientRect().top-(parseFloat(getComputedStyle(root).paddingTop)||0);});
   assert.ok(Math.abs(titleOffset-24)<2,'The pinned Coptic title uses the same 24px top spacing as other pages');
   assert.equal(await page.locator('.learning-path-actions').count(),0,'The learning shortcuts are removed');
-  const cards=await page.locator('.course-unit-block.is-focused').evaluate(el=>{const banner=el.querySelector('.unit-banner'),card=el.querySelector('.unit-banner-card'),path=el.querySelector('.course-timeline');return {headerRadius:getComputedStyle(card).borderBottomLeftRadius,pathRadius:getComputedStyle(path).borderTopLeftRadius,backing:getComputedStyle(banner).backgroundColor,page:getComputedStyle(document.querySelector('main')).backgroundColor,gap:parseFloat(getComputedStyle(banner).paddingBottom)};});
+  const cards=await page.locator('.course-unit-block.is-focused').evaluate(el=>{const banner=el.querySelector('.unit-banner'),card=el.querySelector('.unit-banner-card'),path=el.querySelector('.course-timeline');return {headerRadius:getComputedStyle(card).borderBottomLeftRadius,pathRadius:getComputedStyle(path).borderTopLeftRadius,backing:getComputedStyle(banner).backgroundColor,page:getComputedStyle(document.querySelector('main')).backgroundColor,gap:parseFloat(getComputedStyle(banner).paddingBottom),clip:getComputedStyle(banner).backgroundClip};});
   assert.equal(cards.headerRadius,'20px','The unit header has rounded bottom corners');
   assert.equal(cards.pathRadius,'20px','The lesson path has its own rounded top corners');
   assert.equal(cards.backing,cards.page,'The opaque sticky backing hides content behind header corners');
   assert.ok(cards.gap>=12,'The unit card is detached from the path');
+  assert.equal(cards.clip,'content-box','The gap below a pinned card stays transparent instead of painting a bar');
   assert.equal(await page.getByLabel('Skill mastery').count(),0,'Unit headings omit recall text');
   assert.equal(await page.locator('.course-unit-block.is-focused').evaluate(el=>getComputedStyle(el).outlineStyle),'none','The unit outline is removed');
   await page.evaluate(()=>scrollTo(0,350));
