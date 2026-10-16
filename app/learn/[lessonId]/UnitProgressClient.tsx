@@ -278,7 +278,7 @@ export default function UnitProgressClient({ focusLessonId = null }: { focusLess
         const availableSteps=unitState.groups.flatMap(g=>g.lessons).filter(step=>step.exerciseSet);
         const total=availableSteps.length;
         const complete=availableSteps.filter(step=>unitState.completedSet.has(step.id)).length;
-        return <section key={unitState.lesson.id} ref={node=>{unitSectionRefs.current[unitState.lesson.id]=node;}} className={`course-unit-block ${focused?'is-focused':''} ${unitState.unitUnlocked?'':'is-locked'}`}>
+        return <section data-unit-color={["pink","purple","blue","red","green","orange"][(unitState.lesson.unitNumber-1)%6]} key={unitState.lesson.id} ref={node=>{unitSectionRefs.current[unitState.lesson.id]=node;}} className={`course-unit-block ${focused?'is-focused':''} ${unitState.unitUnlocked?'':'is-locked'}`}>
           <header className="unit-banner"><h2 className="unit-banner-title">{unitState.lesson.title.replace(/^Unit \d+: /,'')}</h2><div className="unit-banner-subtitle">{unitState.lesson.sectionTitle} · Unit {unitState.lesson.unitNumber}</div>
             <div className="unit-progress-caption"><span>{unitState.isUnitFullyCompleted?'Completed':unitState.unitUnlocked?total>0&&complete===total?'Available practice complete':'In progress':'Upcoming'}</span><span>{total?`${complete} / ${total} lessons`:'Content coming soon'}</span></div>
             {total>0&&<progress className="unit-progress" value={complete} max={total} aria-label={`Unit ${unitState.lesson.unitNumber} completion`}/>}

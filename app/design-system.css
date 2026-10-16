@@ -244,3 +244,20 @@ h1,h2,h3,strong,label,button { overflow-wrap:anywhere; }
 .learning-path-actions { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 24px; }
 .unit-map-page .unit-banner { position:sticky; top:calc(env(safe-area-inset-top,0px) + var(--learning-header-height,68px)); z-index:20; background:var(--surface-1); border-radius:20px 20px 0 0; }
 .unit-map-page .is-locked .unit-banner { background:var(--surface-2); }
+
+/* Repeating unit colors keep the pinned banner and current lesson together. */
+.course-unit-block[data-unit-color=pink] { --unit-accent:#b83f7c; }
+.course-unit-block[data-unit-color=purple] { --unit-accent:#7952b3; }
+.course-unit-block[data-unit-color=blue] { --unit-accent:#2968af; }
+.course-unit-block[data-unit-color=red] { --unit-accent:#bb434b; }
+.course-unit-block[data-unit-color=green] { --unit-accent:#287b59; }
+.course-unit-block[data-unit-color=orange] { --unit-accent:#b35d22; }
+.unit-map-page .course-unit-block .unit-banner { background:var(--unit-accent); color:#fff; border-bottom:0; }
+.unit-map-page .unit-banner :is(.unit-banner-subtitle,.unit-progress-caption) { color:#fff; }
+.unit-map-page .unit-banner .unit-progress { background:#ffffff40; }
+.unit-map-page .unit-banner .unit-progress::-webkit-progress-bar { background:#ffffff40; }
+.unit-map-page .unit-banner .unit-progress::-webkit-progress-value { background:#fff; }
+.unit-map-page .unit-banner .unit-progress::-moz-progress-bar { background:#fff; }
+.course-unit-block[data-unit-color] .is-current .course-row-marker,.course-unit-block[data-unit-color] .is-current .ui-primary { background:var(--unit-accent); color:#fff; }
+
+.unit-map-page .unit-banner .unit-banner-title { color:#fff; }

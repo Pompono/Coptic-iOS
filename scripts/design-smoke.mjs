@@ -38,12 +38,9 @@ export async function checkDesign(browser,base){
    await page.goto(base+route);await page.waitForLoadState('networkidle');
    const header=page.locator('.page-header');
    assert.equal(await header.count(),1,route+' has one shared page header');
-   const layout=await header.evaluate(el=>{
-    const title=el.querySelector('h1'),subtitle=el.querySelector(':scope > p'),style=getComputedStyle(title);
-    return {subtitleFont:getComputedStyle(subtitle).fontSize,subtitleLine:getComputedStyle(subtitle).lineHeight,subtitleMargin:getComputedStyle(subtitle).marginBottom,font:style.fontSize,weight:style.fontWeight,line:style.lineHeight,subtitleBelow:subtitle.getBoundingClientRect().top>=title.getBoundingClientRect().bottom};
-   });
-   assert.ok(layout.subtitleBelow,route+' puts supporting text after the title');
-   headings.push({font:layout.font,weight:layout.weight,line:layout.line,subtitleFont:layout.subtitleFont,subtitleLine:layout.subtitleLine,subtitleMargin:layout.subtitleMargin});
+   assert.equal(await header.locator(':scope > p').count(),0,route+' omits page-header descriptions');
+   const layout=await header.evaluate(el=>{const style=getComputedStyle(el.querySelector('h1'));return {font:style.fontSize,weight:style.fontWeight,line:style.lineHeight};});
+   headings.push(layout);
    const art=page.locator('.mobile-chin-dock__item[aria-label="Translator"] .heritage-icon__art');
    assert.match(await art.evaluate(el=>getComputedStyle(el).maskImage),/translate-tab-icon.svg/,'Coptic-letter translator artwork remains in the tab bar');
   }
