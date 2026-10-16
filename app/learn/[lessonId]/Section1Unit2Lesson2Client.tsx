@@ -1614,7 +1614,7 @@ export default function Section1Unit2Lesson2Client({
         }
 
         .lesson-audio-card:not(:disabled):active {
-          transform: translateY(4px) !important;
+          transform: none !important;
           box-shadow: inset 0 -3px 0 ${LESSON_THEME.cardInset} !important;
         }
 

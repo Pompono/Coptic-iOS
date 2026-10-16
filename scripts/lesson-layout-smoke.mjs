@@ -31,6 +31,7 @@ export async function checkLessonLayouts(browser,base){
     assert.ok(shown,'Choice corners are not clipped by a scrolling ancestor');
    }
    if(i===questions.length){const badge=await page.locator('.lesson-retry-context').boundingBox();const card=await page.locator('.recording-card').boundingBox();assert.ok(badge.y<120&&card.y<260,'Retry status stays in the progress header');}
+   if(i===0){const audio=page.locator('.lesson-audio-card').first();const box=await audio.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.waitForTimeout(100);const pressed=await audio.boundingBox();assert.ok(Math.abs(pressed.y-box.y)<1&&Math.abs(pressed.height-box.height)<1,'Pressed audio cards remain inside their clipping frame');await page.mouse.up();}
    const answer=i<questions.length&&q.id===retry.id?q.choices.find(c=>c!==q.answer):q.answer;
    await page.getByRole('button',{name:answer,exact:true}).click();await page.getByRole('button',{name:'Check',exact:true}).click();
    await page.getByRole('button',{name:'Continue',exact:true}).waitFor();

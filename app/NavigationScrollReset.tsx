@@ -5,7 +5,7 @@ import { clearNavigationScroll, takeNavigationScroll } from '@/lib/navigationScr
 export default function NavigationScrollReset() {
   const path = usePathname();
   useLayoutEffect(() => {
-    if (takeNavigationScroll(path)) window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (takeNavigationScroll(path) && !/^\/learn(?:\/[^/]+)?\/?$/.test(path)) window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, [path]);
   useEffect(() => {
     window.addEventListener('popstate', clearNavigationScroll);

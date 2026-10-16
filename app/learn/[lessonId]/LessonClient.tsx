@@ -1911,7 +1911,7 @@ function PairLettersLesson({ lesson, step }: { lesson: Lesson; step: UnitLessonS
         }
 
         .lesson-audio-card:not(:disabled):active {
-          transform: translateY(4px) !important;
+          transform: none !important;
           box-shadow: inset 0 -3px 0 ${LESSON_THEME.cardInset} !important;
         }
 

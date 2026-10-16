@@ -42,10 +42,14 @@ export async function checkScrollBounds(page, base) {
   await page.waitForTimeout(100);
   await page.getByRole('navigation',{name:'Mobile navigation'}).getByRole('link',{name:'Settings',exact:true}).click();
   await page.waitForURL(url=>url.pathname.replace(/\/$/,'')==='/settings');
+  await page.evaluate(()=>{window.__returnFrames=[];let n=0;const sample=()=>{if(location.pathname.replace(/\/$/,'')==='/learn'&&document.querySelector('.course-row.is-current'))window.__returnFrames.push(scrollY);if(n++<90)requestAnimationFrame(sample);};requestAnimationFrame(sample);});
   await page.getByRole('navigation',{name:'Mobile navigation'}).getByRole('link',{name:'Learn',exact:true}).click();
   await page.waitForURL(url=>url.pathname.replace(/\/$/,'')==='/learn');
   await page.waitForTimeout(500);
-  assert.ok(Math.abs(await page.evaluate(()=>scrollY)-350)<3,'Returning to the path restores the last session position instead of following progress again');
+  assert.ok(await page.evaluate(()=>scrollY)>1000,'Returning opens directly at the active group, ignoring the old manual position');
+  assert.ok((await page.evaluate(()=>window.__returnFrames)).every(y=>y>1000),'Return visits never flash through the top of the path');
+  const returned = await page.locator('.course-unit-block.is-focused .course-row.is-current').boundingBox();
+  assert.ok(returned.y>=20&&returned.y<=130,'The active group stays open after navigation settles');
   await page.reload();
   await page.waitForFunction(()=>scrollY>1000);
   await page.waitForTimeout(450);

@@ -9,7 +9,7 @@ import { lessonSections, lessons, type Lesson, type UnitLessonStep, type UnitPro
 import { readCompletedSteps, readFailedSteps } from "../progress";
 
 // In-memory state lasts until this WebView closes, unlike persisted progress.
-const pathwayPositions = new Map<string, number>();
+const visitedPathways = new Set<string>();
 
 type GroupSelection = {
   group: UnitProgressGroup;
@@ -108,9 +108,11 @@ export default function UnitProgressClient({ focusLessonId = null }: { focusLess
   const [failedStepIdsByLessonId, setFailedStepIdsByLessonId] = useState<Record<string, string[]>>({});
   const [hasLoadedProgress, setHasLoadedProgress] = useState(false);
   const unitSectionRefs = useRef<Record<string, HTMLElement | null>>({});
+  const firstVisit = useRef(false);
+  const visitKey = useRef<string | null>(null);
 
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const nextCompletedStepIdsByLessonId = Object.fromEntries(
       lessons.map((entry) => [entry.id, readCompletedSteps(entry.id)])
     ) as Record<string, string[]>;
@@ -198,66 +200,61 @@ export default function UnitProgressClient({ focusLessonId = null }: { focusLess
   );
 
   useLayoutEffect(() => {
-    // Navigation starts at the top; restore after progress determines the section.
-    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
-  }, [focusLessonId]);
+    if (!hasLoadedProgress || !targetLesson) return;
+    const unit = unitSectionRefs.current[targetLesson.id];
+    if (!unit) return;
+    const key = `${targetLesson.sectionId}:${focusLessonId ?? "index"}`;
+    if (visitKey.current !== key) {
+      visitKey.current = key;
+      firstVisit.current = !visitedPathways.has(targetLesson.sectionId);
+      visitedPathways.add(targetLesson.sectionId);
+    }
+    if (firstVisit.current) {
+      window.scrollTo({top:0,left:0,behavior:"instant"});
+    } else {
+      const node = unit.querySelector<HTMLElement>(".course-row.is-current") ?? unit;
+      const shell = document.querySelector(".mobile-chin-page-shell");
+      const inset = 24 + (shell ? parseFloat(getComputedStyle(shell).paddingTop) || 0 : 0);
+      window.scrollTo({top:Math.max(0,node.getBoundingClientRect().top + window.scrollY - inset),left:0,behavior:"instant"});
+    }
+  }, [hasLoadedProgress, targetLesson, focusLessonId]);
 
   useEffect(() => {
-    if (!hasLoadedProgress || !targetLesson) return;
-    const unitNode = unitSectionRefs.current[targetLesson.id];
-    if (!unitNode) return;
-    const targetNode = unitNode.querySelector<HTMLElement>(".course-row.is-current") ?? unitNode;
-    const positionKey = targetLesson.sectionId;
-    const savedPosition = pathwayPositions.get(positionKey);
-
+    if (!hasLoadedProgress || !targetLesson || !firstVisit.current) return;
+    const unit = unitSectionRefs.current[targetLesson.id];
+    if (!unit) return;
+    const node = unit.querySelector<HTMLElement>(".course-row.is-current") ?? unit;
     let frame = 0;
     let cancelled = false;
-    let tracking = false;
-    const remember = () => { if (tracking) pathwayPositions.set(positionKey, window.scrollY); };
-    window.addEventListener("scroll", remember, { passive: true });
-    const cancel = () => { cancelled = true; window.cancelAnimationFrame(frame); };
-    // Two frames let the top of the page paint before moving to an off-screen unit.
-    frame = window.requestAnimationFrame(() => {
-      frame = window.requestAnimationFrame(() => {
-        tracking = true;
-        if (savedPosition !== undefined) {
-          window.scrollTo({ top: savedPosition, left: 0, behavior: "instant" });
-          return;
-        }
-        pathwayPositions.set(positionKey, window.scrollY);
+    const cancel = () => {cancelled=true;cancelAnimationFrame(frame);};
+    frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        if (cancelled) return;
         const shell = document.querySelector(".mobile-chin-page-shell");
         const visibleTop = shell ? parseFloat(getComputedStyle(shell).paddingTop) || 0 : 0;
-        const topInset = visibleTop + 24;
         const dock = document.querySelector(".mobile-chin-dock");
         const bottomInset = dock ? dock.getBoundingClientRect().height : 0;
-        const bounds = targetNode.getBoundingClientRect();
-        // Any visible part counts; do not recenter a partially visible active group.
-        if (bounds.bottom > visibleTop && bounds.top < window.innerHeight - bottomInset) return;
+        const bounds = node.getBoundingClientRect();
+        if (bounds.bottom > visibleTop && bounds.top < innerHeight-bottomInset) return;
         const start = window.scrollY;
-        // Bring the active lesson group into view, even within a long unit.
-        const target = Math.max(0, targetNode.getBoundingClientRect().top + start - topInset);
-        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-          window.scrollTo({ top: target, behavior: "instant" }); return;
+        const target = Math.max(0,bounds.top+start-visibleTop-24);
+        if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          window.scrollTo({top:target,behavior:"instant"});return;
         }
-        let began: number | null = null;
-        const step = (timestamp: number) => {
+        let began:number|null = null;
+        const step = (timestamp:number) => {
           if (cancelled) return;
           began ??= timestamp;
-          const progress = Math.min((timestamp - began) / 360, 1);
-          window.scrollTo({ top: start + (target - start) * (1 - Math.pow(1 - progress, 3)), behavior: "instant" });
-          if (progress < 1) frame = window.requestAnimationFrame(step);
+          const progress = Math.min((timestamp-began)/360,1);
+          window.scrollTo({top:start+(target-start)*(1-Math.pow(1-progress,3)),behavior:"instant"});
+          if (progress<1) frame=requestAnimationFrame(step);
         };
-        frame = window.requestAnimationFrame(step);
+        frame=requestAnimationFrame(step);
       });
     });
-    window.addEventListener("touchstart", cancel, { passive: true });
-    window.addEventListener("wheel", cancel, { passive: true });
-    return () => {
-      cancel();
-      window.removeEventListener("touchstart", cancel);
-      window.removeEventListener("wheel", cancel);
-      window.removeEventListener("scroll", remember);
-    };
+    window.addEventListener("touchstart",cancel,{passive:true});
+    window.addEventListener("wheel",cancel,{passive:true});
+    return () => {cancel();window.removeEventListener("touchstart",cancel);window.removeEventListener("wheel",cancel);};
   }, [hasLoadedProgress, targetLesson, focusLessonId]);
 
   return <main className="unit-map-page app-page">
