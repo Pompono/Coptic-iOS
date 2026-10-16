@@ -1,6 +1,7 @@
 "use client";
 import {searchBrowseDictionary, peekBrowseDictionary, type BrowseEntry} from "@/lib/dictionary/browseClient";
 import PageHeader from "../PageHeader";
+import { applyCopticCase, COPTIC_KEYBOARD_LAYOUTS, CopticKeyboardGrid, isCopticKey, isCopticSpecialKey, updateInputAtSelection, type CopticKey, type CopticKeyboardMode, type CopticShiftMode } from "../CopticKeyboard";
 
 import AppIcon from "../AppIcon";
 import Link from "@/lib/AppLink";
@@ -16,37 +17,9 @@ import {
 import { isBohairicOnlyEnabled } from "../BohairicPreference";
 import { subscribeToMediaQueryChange } from "@/lib/mediaQuery";
 
-type SpecialKey =
-  | "backspace"
-  | "shift"
-  | "space"
-  | "return"
-  | "toABC"
-  | "toNumbers"
-  | "toSymbols";
-
-type KeyDef =
-  | string
-  | {
-      key: SpecialKey;
-      label?: string;
-    };
-
-type PageMode = "ABC" | "NUMBERS" | "SYMBOLS";
-
 const POS_LABELS: Record<string, string> = {
   q: "Qualitative",
 };
-
-function removeLastChar(s: string) {
-  const chars = Array.from(s);
-  chars.pop();
-  return chars.join("");
-}
-
-function isKeyObj(k: KeyDef): k is { key: SpecialKey; label?: string } {
-  return typeof k !== "string";
-}
 
 function getPosLabel(pos: string) {
   const trimmed = (pos || "").trim();
@@ -56,119 +29,6 @@ function getPosLabel(pos: string) {
 
   return POS_LABELS[trimmed.toLowerCase()] ?? trimmed;
 }
-
-const COPTIC_CASE_MAP: Record<string, string> = {
-  "Ϧ": "ϧ",
-  "ϧ": "Ϧ",
-  "Ⲁ": "ⲁ",
-  "ⲁ": "Ⲁ",
-  "Ⲃ": "ⲃ",
-  "ⲃ": "Ⲃ",
-  "Ⲅ": "ⲅ",
-  "ⲅ": "Ⲅ",
-  "Ⲇ": "ⲇ",
-  "ⲇ": "Ⲇ",
-  "Ⲉ": "ⲉ",
-  "ⲉ": "Ⲉ",
-  "Ⲍ": "ⲍ",
-  "ⲍ": "Ⲍ",
-  "Ⲏ": "ⲏ",
-  "ⲏ": "Ⲏ",
-  "Ⲑ": "ⲑ",
-  "ⲑ": "Ⲑ",
-  "Ⲓ": "ⲓ",
-  "ⲓ": "Ⲓ",
-  "Ⲕ": "ⲕ",
-  "ⲕ": "Ⲕ",
-  "Ⲗ": "ⲗ",
-  "ⲗ": "Ⲗ",
-  "Ⲙ": "ⲙ",
-  "ⲙ": "Ⲙ",
-  "Ⲛ": "ⲛ",
-  "ⲛ": "Ⲛ",
-  "Ⲝ": "ⲝ",
-  "ⲝ": "Ⲝ",
-  "Ⲟ": "ⲟ",
-  "ⲟ": "Ⲟ",
-  "Ⲡ": "ⲡ",
-  "ⲡ": "Ⲡ",
-  "Ⲣ": "ⲣ",
-  "ⲣ": "Ⲣ",
-  "Ⲥ": "ⲥ",
-  "ⲥ": "Ⲥ",
-  "Ⲧ": "ⲧ",
-  "ⲧ": "Ⲧ",
-  "Ⲩ": "ⲩ",
-  "ⲩ": "Ⲩ",
-  "Ⲫ": "ⲫ",
-  "ⲫ": "Ⲫ",
-  "Ⲭ": "ⲭ",
-  "ⲭ": "Ⲭ",
-  "Ⲯ": "ⲯ",
-  "ⲯ": "Ⲯ",
-  "Ⲱ": "ⲱ",
-  "ⲱ": "Ⲱ",
-  "Ϣ": "ϣ",
-  "ϣ": "Ϣ",
-  "Ϥ": "ϥ",
-  "ϥ": "Ϥ",
-  "Ϩ": "ϩ",
-  "ϩ": "Ϩ",
-  "Ϫ": "ϫ",
-  "ϫ": "Ϫ",
-  "Ϭ": "ϭ",
-  "ϭ": "Ϭ",
-  "Ϯ": "ϯ",
-  "ϯ": "Ϯ",
-};
-
-const isCopticLetter = (ch: string) => !!COPTIC_CASE_MAP[ch];
-
-function IconBackspace({ size = 18 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M20 5H11c-.6 0-1.1.3-1.5.8L4 12l5.5 6.2c.4.5.9.8 1.5.8h9c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2Zm-2.6 10.2-1.2 1.2L14 14.2l-2.2 2.2-1.2-1.2L12.8 13l-2.2-2.2 1.2-1.2L14 11.8l2.2-2.2 1.2 1.2L15.2 13l2.2 2.2Z"
-      />
-    </svg>
-  );
-}
-
-function IconShift({ size = 18 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M12 3 4 11h5v6h6v-6h5L12 3Zm1 12H11v-6H9.5L12 6.5 14.5 9H13v6Z"
-      />
-    </svg>
-  );
-}
-
-const KB_ABC: KeyDef[][] = [
-  ["ϧ", "ⲱ", "ⲉ", "ⲣ", "ⲧ", "ⲏ", "ⲩ", "ⲓ", "ⲟ", "ⲡ"],
-  ["ⲁ", "ϣ", "ⲇ", "ⲫ", "ⲅ", "ϩ", "ϫ", "ⲕ", "ⲗ", "ⲑ"],
-  ["ⲍ", "ⲝ", "ⲥ", "ϥ", "ⲃ", "ⲛ", "ⲙ", "ⲭ"],
-  [{ key: "shift" }, "ⲯ", "ϭ", "ϯ", { key: "backspace" }],
-  [{ key: "toNumbers", label: "ⲁ̅ⲃ̅ⲅ̅" }, "̀", { key: "space" }, { key: "return" }],
-];
-
-const KB_NUMBERS: KeyDef[][] = [
-  ["ⲁ̅", "ⲃ̅", "ⲅ̅", "ⲇ̅", "ⲉ̅", "ⲋ̅", "ⲍ̅", "ⲏ̅", "ⲑ̅", "ⲓ̅"],
-  ["ⲕ̅", "ⲗ̅", "ⲙ̅", "ⲛ̅", "ⲝ̅", "ⲟ̅", "ⲡ̅", "ϥ̅", "ⲣ̅"],
-  ["ⲥ̅", "ⲧ̅", "ⲩ̅", "ⲫ̅", "ⲭ̅", "ⲯ̅", "ⲱ̅", "ϣ̅", { key: "backspace" }],
-  [".", "⳾", ":", "–", "⸗", { key: "backspace" }],
-  [{ key: "toSymbols", label: "#+=" }, { key: "toABC", label: "ⲁ̅ⲃ̅ⲅ̅" }, { key: "space" }, { key: "return" }],
-];
-
-const KB_SYMBOLS: KeyDef[][] = [
-  ["̈", "॓", "̂", "︤", "̄", "︥", "̅", "̿", "̇", "̣"],
-  ["́", "̑", "͡", "⳽", "𐋠", "⳰", "⳯", "⳱", "︦", "⸗"],
-  ["[", "]", "{", "}", "(", ")", "^", "*", "+", "=", { key: "backspace" }],
-  ["|", "~", "-", "_", "<", ">", "”", "’", "!", "?"],
-  [{ key: "toABC", label: "ⲁ̅ⲃ̅ⲅ̅" }, ";", ":", "@", "#", "&", ",", ".", "$", "\\", "/", "%", { key: "space" }, { key: "return" }],
-];
 
 export default function DictionaryPage() {
   const [query, setQuery] = useState("");
@@ -189,8 +49,8 @@ export default function DictionaryPage() {
   const [showKeyboard, setShowKeyboard] = useState(false);
   const [keyboardEnabled, setKeyboardEnabled] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
-  const [mode, setMode] = useState<PageMode>("ABC");
-  const [shiftMode, setShiftMode] = useState<"off" | "once" | "lock">("off");
+  const [mode, setMode] = useState<CopticKeyboardMode>("ABC");
+  const [shiftMode, setShiftMode] = useState<CopticShiftMode>("off");
   const lastShiftTapRef = useRef<number>(0);
   const mobileKeyboardTouchStartRef = useRef<{ x: number; y: number } | null>(null);
   const mobileKeyboardCloseTimerRef = useRef<number | null>(null);
@@ -342,26 +202,25 @@ export default function DictionaryPage() {
     return()=>observer.disconnect();
   },[hasMore,loadMore,moreError,loadState]);
 
-  const page: KeyDef[][] =
-    mode === "ABC" ? KB_ABC : mode === "NUMBERS" ? KB_NUMBERS : KB_SYMBOLS;
+  const page = COPTIC_KEYBOARD_LAYOUTS[mode];
 
   const isCopticMode = mode === "ABC";
 
   const applyShiftToChar = (ch: string) => {
     if (!isCopticMode) return ch;
-    if (!isCopticLetter(ch)) return ch;
+    if (!isCopticKey(ch)) return ch;
     if (shiftMode === "off") return ch;
-    const out = COPTIC_CASE_MAP[ch] ?? ch;
+    const out = applyCopticCase(ch);
     if (shiftMode === "once") setShiftMode("off");
     return out;
   };
 
-  const displayKey = (k: KeyDef) => {
-    if (isKeyObj(k)) return k.label ?? "";
+  const displayKey = (k: CopticKey) => {
+    if (isCopticSpecialKey(k)) return k.label ?? "";
     if (!isCopticMode) return k;
-    if (!isCopticLetter(k)) return k;
+    if (!isCopticKey(k)) return k;
     if (shiftMode === "off") return k;
-    return COPTIC_CASE_MAP[k] ?? k;
+    return applyCopticCase(k);
   };
 
   const shiftActive = shiftMode !== "off";
@@ -492,11 +351,11 @@ export default function DictionaryPage() {
     setMobileKeyboardDragY(0);
   };
 
-  const handleKey = (k: KeyDef) => {
-    if (isKeyObj(k)) {
+  const handleKey = (k: CopticKey) => {
+    if (isCopticSpecialKey(k)) {
       switch (k.key) {
         case "backspace":
-          setQuery((q) => removeLastChar(q));
+          updateInputAtSelection(queryInputRef.current, query, null, setQuery);
           return;
 
         case "shift":
@@ -504,7 +363,7 @@ export default function DictionaryPage() {
           return;
 
         case "space":
-          setQuery((q) => q + " ");
+          updateInputAtSelection(queryInputRef.current, query, " ", setQuery);
           return;
 
         case "return":
@@ -531,7 +390,7 @@ export default function DictionaryPage() {
     const ch = typeof k === "string" ? k : "";
     if (!ch) return;
     const out = applyShiftToChar(ch);
-    setQuery((q) => q + out);
+    updateInputAtSelection(queryInputRef.current, query, out, setQuery);
   };
 
   return (
@@ -725,100 +584,7 @@ export default function DictionaryPage() {
               Hide Coptic keyboard
             </button>
           </div>
-          <div
-            style={{
-              padding: 12,
-              borderRadius: 14,
-              background: "var(--kb-panel)",
-              border: "1px solid var(--kb-border)",
-            }}
-          >
-            {page.map((row, rIdx) => (
-              <div
-                key={rIdx}
-                style={{
-                  display: "flex",
-                  gap: 6,
-                  justifyContent: "center",
-                  marginBottom: rIdx === page.length - 1 ? 0 : 8,
-                }}
-              >
-                {row.map((k, i) => {
-                  const obj = isKeyObj(k) ? k : null;
-
-                  const isSpace = obj?.key === "space";
-                  const isReturn = obj?.key === "return";
-                  const isBackspace = obj?.key === "backspace";
-                  const isShiftKey = obj?.key === "shift";
-
-                  const flex = isSpace ? 5 : isReturn ? 2.2 : isBackspace || isShiftKey ? 1.6 : obj ? 1.4 : 1;
-
-                  const shiftKeyBg = shiftActive ? "var(--accent-color)" : "var(--kb-key)";
-                  const shiftKeyFg = shiftActive ? "var(--accent-contrast-color)" : "var(--kb-text)";
-
-                  return (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => handleKey(k)}
-                      style={{
-                        flex,
-                        minWidth: 0,
-                        height: 50,
-                        borderRadius: 12,
-                        background: isShiftKey
-                          ? shiftKeyBg
-                          : obj?.key === "return"
-                          ? "var(--kb-key-return)"
-                          : obj?.key === "toNumbers" || obj?.key === "toSymbols" || obj?.key === "toABC"
-                          ? "var(--kb-key-alt)"
-                          : "var(--kb-key)",
-                        border: "1px solid var(--kb-border)",
-                        color: isShiftKey ? shiftKeyFg : "var(--kb-text)",
-                        fontSize: 18,
-                        fontWeight: 700,
-                        fontFamily: "var(--coptic-font-family)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        cursor: "pointer",
-                        userSelect: "none",
-                        padding: "0 6px",
-                        position: "relative",
-                      }}
-                    >
-                      {isBackspace ? (
-                        <IconBackspace />
-                      ) : isShiftKey ? (
-                        <>
-                          <IconShift />
-                          {capsLock ? (
-                            <span
-                              style={{
-                                position: "absolute",
-                                bottom: 8,
-                                width: 18,
-                                height: 3,
-                                borderRadius: 3,
-                                background: "var(--accent-contrast-color)",
-                                opacity: 0.9,
-                              }}
-                            />
-                          ) : null}
-                        </>
-                      ) : isReturn ? (
-                        <AppIcon name="return" />
-                      ) : isSpace ? (
-                        ""
-                      ) : (
-                        <span className="coptic-text">{displayKey(k)}</span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
+          <CopticKeyboardGrid page={page} handleKey={handleKey} displayKey={displayKey} shiftMode={shiftMode} mobile />
         </div>
       ) : null}
 

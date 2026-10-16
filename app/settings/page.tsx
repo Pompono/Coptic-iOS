@@ -12,7 +12,7 @@ import {
   COPTIC_FONT_STORAGE_KEY,
   type CopticFontMode,
 } from "../CopticFontPreference";
-import { applyThemeMode, THEME_STORAGE_KEY, type ThemeMode } from "../ThemePreference";
+import { applyThemeMode, readThemePreference, THEME_STORAGE_KEY, type ThemeMode } from "../ThemePreference";
 import {
   BOHAIRIC_ONLY_STORAGE_KEY,
   isBohairicOnlyEnabled,
@@ -24,7 +24,7 @@ import { subscribeToMediaQueryChange } from "@/lib/mediaQuery";
 export default function SettingsPage() {
   const router = useRouter();
   const [fontMode, setFontMode] = useState<CopticFontMode>("avva");
-  const [themeMode, setThemeMode] = useState<ThemeMode>("light");
+  const [themeMode, setThemeMode] = useState<ThemeMode>("system");
   const [bohairicOnlyEnabled, setBohairicOnlyEnabled] = useState(true);
   const [devToolsEnabled, setDevToolsEnabled] = useState(false);
   const [devLessonId, setDevLessonId] = useState(lessons[0]?.id ?? "");
@@ -38,8 +38,7 @@ export default function SettingsPage() {
     setFontMode(font);
     applyCopticFontMode(font);
 
-    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
-    const theme: ThemeMode = savedTheme === "dark" || savedTheme === "light" ? savedTheme : "light";
+    const theme = readThemePreference();
 
     setThemeMode(theme);
     applyThemeMode(theme);
@@ -155,7 +154,7 @@ export default function SettingsPage() {
   return <main className="app-page settings-page" style={{display:'grid',alignContent:'start'}}>
     <PageHeader title="Settings" icon="settings"/>
     <section><h2 className="settings-section-title">Appearance</h2><div className="settings-group">
-      <div className="settings-row" aria-label="Theme toggle"><label htmlFor="theme-choice">App theme</label><select id="theme-choice" aria-label="App theme" value={themeMode} onChange={e=>onToggleTheme(e.target.value as ThemeMode)}><option value="light">Light</option><option value="dark">Dark</option></select></div>
+      <div className="settings-row"><label htmlFor="theme-choice">Appearance</label><select id="theme-choice" aria-label="App theme" value={themeMode} onChange={e=>onToggleTheme(e.target.value as ThemeMode)}><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></div>
       <div className="settings-row"><label htmlFor="font-choice">Coptic font</label><select id="font-choice" value={fontMode} onChange={e=>onToggleFont(e.target.value as CopticFontMode)}><option value="unicode">Standard</option><option value="avva">Avva Shenouda</option></select></div>
     </div></section>
     <section><h2 className="settings-section-title">Language</h2><div className="settings-group"><div className="settings-row"><label htmlFor="bohairic-switch">Bohairic-only mode</label><input id="bohairic-switch" type="checkbox" className="ui-switch" role="switch" checked={bohairicOnlyEnabled} onChange={e=>onToggleBohairicOnlyEnabled(e.target.checked)}/></div></div><p className="settings-note">Use verified Bohairic entries and keep the translator in Bohairic.</p></section>

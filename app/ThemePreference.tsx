@@ -1,54 +1,45 @@
 "use client";
 
 import { syncNativeAppIcon } from "@/lib/nativeAppIcon";
+import { createThemeInitScript, readThemeMode, resolveTheme as resolveThemePreference, THEME_STORAGE_KEY } from "@/lib/themePreference.mjs";
 import { useEffect } from "react";
 import { subscribeToMediaQueryChange } from "@/lib/mediaQuery";
 
-export const THEME_STORAGE_KEY = "theme-mode";
-export type ThemeMode = "dark" | "light";
+export { THEME_STORAGE_KEY };
+export type ThemeMode = "system" | "dark" | "light";
+type ResolvedTheme = Exclude<ThemeMode, "system">;
+
+function resolveTheme(mode: ThemeMode): ResolvedTheme {
+  return resolveThemePreference(mode, window.matchMedia("(prefers-color-scheme: dark)").matches) as ResolvedTheme;
+}
 
 export function applyThemeMode(mode: ThemeMode) {
-  document.documentElement.dataset.theme = mode;
-  void syncNativeAppIcon(mode).catch(error => console.warn("App icon could not follow theme:", error));
+  const resolved = resolveTheme(mode);
+  document.documentElement.dataset.theme = resolved;
+  void syncNativeAppIcon(resolved).catch(error => console.warn("App icon could not follow theme:", error));
 }
 
-function getPreferredTheme(): ThemeMode {
-  const saved = localStorage.getItem(THEME_STORAGE_KEY);
-  if (saved === "dark" || saved === "light") {
-    return saved;
-  }
-
-  return "light";
-}
-
-export const themeInitScript = `(() => {
+export function readThemePreference(): ThemeMode {
   try {
-    const key = "${THEME_STORAGE_KEY}";
-    const saved = localStorage.getItem(key);
-    const mode = saved === "dark" || saved === "light"
-      ? saved
-      : "light";
-    document.documentElement.dataset.theme = mode;
+    return readThemeMode(localStorage.getItem(THEME_STORAGE_KEY)) as ThemeMode;
   } catch {
-    document.documentElement.dataset.theme = "light";
+    return "system";
   }
-})();`;
+}
+
+export const themeInitScript = createThemeInitScript();
 
 export default function ThemePreference() {
   useEffect(() => {
-    const mode = getPreferredTheme();
-    applyThemeMode(mode);
-
     const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const onSystemThemeChange = () => {
-      if (!localStorage.getItem(THEME_STORAGE_KEY)) {
-        applyThemeMode("light");
-      }
-    };
+    const syncTheme = () => applyThemeMode(readThemePreference());
+    syncTheme();
 
-    const unsubscribe = subscribeToMediaQueryChange(media, onSystemThemeChange);
+    const unsubscribe = subscribeToMediaQueryChange(media, () => {
+      if (readThemePreference() === "system") syncTheme();
+    });
     const onResume = () => {
-      if (document.visibilityState === "visible") applyThemeMode(getPreferredTheme());
+      if (document.visibilityState === "visible") syncTheme();
     };
     document.addEventListener("visibilitychange", onResume);
     return () => {
