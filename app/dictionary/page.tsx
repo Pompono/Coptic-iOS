@@ -367,6 +367,7 @@ export default function DictionaryPage() {
           return;
 
         case "return":
+          rememberSearch();
           queryInputRef.current?.blur();
           return;
 
@@ -422,7 +423,14 @@ export default function DictionaryPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onBlur={rememberSearch}
-              onKeyDown={e => { if (e.key === "Enter") { rememberSearch(); e.currentTarget.blur(); } }}
+              onKeyDown={e => {
+                if (e.key === "Backspace" && !e.nativeEvent.isComposing && e.currentTarget.selectionStart === e.currentTarget.selectionEnd) {
+                  e.preventDefault();
+                  updateInputAtSelection(queryInputRef.current, query, null, setQuery);
+                  return;
+                }
+                if (e.key === "Enter") { rememberSearch(); e.currentTarget.blur(); }
+              }}
               onPointerDownCapture={hideKeyboardOnManualInputFocus}
               readOnly={keyboardEnabled && isMobileViewport && showKeyboard}
               inputMode={keyboardEnabled && isMobileViewport && showKeyboard ? "none" : "text"}
@@ -584,7 +592,7 @@ export default function DictionaryPage() {
               Hide Coptic keyboard
             </button>
           </div>
-          <CopticKeyboardGrid page={page} handleKey={handleKey} displayKey={displayKey} shiftMode={shiftMode} mobile />
+          <CopticKeyboardGrid page={page} handleKey={handleKey} displayKey={displayKey} shiftMode={shiftMode} returnLabel="Search" mobile />
         </div>
       ) : null}
 

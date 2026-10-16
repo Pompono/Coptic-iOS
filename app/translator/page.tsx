@@ -267,6 +267,11 @@ export default function TranslatorPage() {
   };
 
   const handleInputKeyDown = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Backspace" && !event.nativeEvent.isComposing && event.currentTarget.selectionStart === event.currentTarget.selectionEnd) {
+      event.preventDefault();
+      updateInputAtSelection(inputRef.current, translationInput, null, setTranslationInput);
+      return;
+    }
     if (event.key !== "Enter" || !(event.metaKey || event.ctrlKey) || currentState === "loading") {
       return;
     }
@@ -513,7 +518,7 @@ export default function TranslatorPage() {
               Hide Coptic keyboard
             </button>
           </div>
-          <CopticKeyboardGrid page={page} handleKey={handleKey} displayKey={displayKey} shiftMode={shiftMode} mobile />
+          <CopticKeyboardGrid page={page} handleKey={handleKey} displayKey={displayKey} shiftMode={shiftMode} returnLabel="Translate" mobile />
         </div>
       ) : null}
 

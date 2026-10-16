@@ -56,12 +56,14 @@ export function CopticKeyboardGrid({
   handleKey,
   displayKey,
   shiftMode,
+  returnLabel,
   mobile = false,
 }: {
   page: readonly (readonly CopticKey[])[];
   handleKey: (key: CopticKey) => void;
   displayKey: (key: CopticKey) => string;
   shiftMode: CopticShiftMode;
+  returnLabel: string;
   mobile?: boolean;
 }) {
   const shiftActive = shiftMode !== "off";
@@ -79,7 +81,7 @@ export function CopticKeyboardGrid({
         return <button
           key={keyIndex}
           type="button"
-          aria-label={isBackspace ? "Delete previous character" : isShift ? "Change letter case" : isSpace ? "Space" : isReturn ? "Translate" : undefined}
+          aria-label={isBackspace ? "Delete previous character" : isShift ? "Change letter case" : isSpace ? "Space" : isReturn ? returnLabel : undefined}
           onClick={() => handleKey(key)}
           style={{
             flex, minWidth: mobile ? 0 : 44, height: mobile ? 50 : 56,
