@@ -39,6 +39,19 @@ export async function checkDesign(browser,base){
    const header=page.locator('.page-header');
    assert.equal(await header.count(),1,route+' has one shared page header');
    if(route==='/translator/')assert.equal(await page.getByRole('link',{name:'Scan a photo',exact:true}).count(),1,'Photo scanning is available from the translator');
+   const disclosureTitles=route==='/translator/'?['About translation & offline use','Translation options']:route==='/read/'?['Read your own passage']:route==='/translator/scanner/'?['About photo recognition']:[];
+   for(const title of disclosureTitles){
+    const summary=page.locator('summary.disclosure-summary').filter({hasText:title});
+    assert.equal(await summary.count(),1,route+' exposes '+title+' as a disclosure control');
+    assert.equal(await summary.evaluate(el=>el.tabIndex),0,title+' remains keyboard-focusable');
+    const indicator=summary.locator('.disclosure-chevron');
+    const closedTransform=await indicator.evaluate(el=>getComputedStyle(el).transform);
+    await summary.focus();await page.keyboard.press('Enter');
+    assert.equal(await summary.evaluate(el=>el.parentElement.open),true,title+' opens from the keyboard');
+    assert.notEqual(await indicator.evaluate(el=>getComputedStyle(el).transform),closedTransform,title+' indicator reflects its open state');
+    await page.keyboard.press('Enter');
+    assert.equal(await summary.evaluate(el=>el.parentElement.open),false,title+' closes from the keyboard');
+   }
    assert.equal(await header.locator(':scope > p').count(),0,route+' omits page-header descriptions');
    const layout=await header.evaluate(el=>{const style=getComputedStyle(el.querySelector('h1'));return {font:style.fontSize,weight:style.fontWeight,line:style.lineHeight};});
    headings.push(layout);
@@ -53,9 +66,17 @@ export async function checkDesign(browser,base){
   ]){
    await page.goto(base+route);await page.waitForLoadState('networkidle');
    if(route==='/translator/'&&selector==='button[type=submit]'){
-    await page.getByText('Translation options',{exact:true}).click();
-    const methodHeight=await page.locator('select[aria-label="Translation method"]').evaluate(el=>el.getBoundingClientRect().height);
-    assert.ok(methodHeight>=44,'Advanced translation method keeps a 44px touch target');
+    const methods=page.getByRole('group',{name:'Translation method',exact:true});
+    const published=methods.getByRole('button',{name:'Published text match',exact:true});
+    const experimental=methods.getByRole('button',{name:'Experimental translation',exact:true});
+    assert.equal(await published.getAttribute('aria-pressed'),'true','Published matching remains the default method');
+    assert.match(await methods.innerText(),/Finds translations in supported published Coptic passages\. Not all text can be matched\./);
+    const methodHeight=await experimental.evaluate(el=>el.getBoundingClientRect().height);
+    assert.ok(methodHeight>=44,'Translation method choices keep a 44px touch target');
+    await experimental.click();
+    assert.equal(await experimental.getAttribute('aria-pressed'),'true','The active method is visible before translation');
+    assert.match(await methods.innerText(),/Generates a translation of other text\. Results may be inaccurate\./);
+    await published.click();
    }
    const heights=await page.locator(selector).evaluateAll(els=>els.filter(el=>el.getBoundingClientRect().height>0).map(el=>el.getBoundingClientRect().height));
    assert.ok(heights.length>0&&heights.every(height=>height>=min),route+' '+selector+' controls have consistent touch targets: '+JSON.stringify(heights));
@@ -85,8 +106,7 @@ export async function checkDesign(browser,base){
   await context.unroute('**/models/coptic-english/manifest.json');
   await context.route('**/models/coptic-english/manifest.json',route=>route.fulfill({status:404,body:'Not installed'}));
   await page.goto(base+'/translator/');await page.waitForLoadState('networkidle');
-  await page.getByText('Translation options',{exact:true}).click();
-  assert.equal(await page.getByRole('combobox',{name:'Translation method',exact:true}).count(),0,'An unavailable optional model does not expose its method picker');
+  assert.equal(await page.getByRole('group',{name:'Translation method',exact:true}).count(),0,'An unavailable optional model does not expose methods it cannot run');
   assert.ok((await page.getByRole('button',{name:'Translate',exact:true}).boundingBox()).height>=50,'Translation retains its action size without model controls');
   await page.getByRole('textbox',{name:'Coptic text',exact:true}).focus();
   await page.evaluate(()=>{Object.defineProperty(window.visualViewport,'height',{configurable:true,get:()=>400});window.visualViewport.dispatchEvent(new Event('resize'));});

@@ -220,7 +220,7 @@ export default function ScannerPage() {
 
         </section>
         <p className={styles.note}>Photos and recognised text stay on this device.</p>
-        <details className={styles.tips}><summary>About photo recognition</summary><p><span className="ui-status">Experimental recognition</span></p><p>Clear, upright text works best. Handwriting and old manuscripts may not read correctly.</p></details>
+        <details className={styles.tips}><summary className="disclosure-summary">About photo recognition<span className="disclosure-chevron"><AppIcon name="chevron" size={16}/></span></summary><p><span className="ui-status">Experimental recognition</span></p><p>Clear, upright text works best. Handwriting and old manuscripts may not read correctly.</p></details>
 
         {image && <>
           <div className={styles.toolbar}>

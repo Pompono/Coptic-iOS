@@ -34,7 +34,7 @@ const exerciseRoute = `/learn/${exerciseLesson.id}/play/${exercise.id}/`;
 const routes = [
   ["home", "/"], ["learning", "/learn/"], ["exercise", exerciseRoute],
   ["dictionary", "/dictionary/"], ["translator", "/translator/"], ["reading", "/read/"],
-  ["vocabulary", "/vocabulary/"], ["settings", "/settings/"],
+  ["scanner", "/translator/scanner/"], ["vocabulary", "/vocabulary/"], ["settings", "/settings/"],
 ];
 const exerciseExportDirectory = path.resolve(root, `.${exerciseRoute}`);
 const exerciseSegment = (await readdir(exerciseExportDirectory)).find(name => /^__next\..*__PAGE__\.txt$/.test(name));
@@ -145,6 +145,22 @@ try {
       const dimensions = await page.evaluate(() => ({ width: innerWidth, documentWidth: document.documentElement.scrollWidth }));
       assert.ok(dimensions.documentWidth <= dimensions.width + 1, `${name} has no horizontal overflow at mobile width: ${JSON.stringify(dimensions)}`);
       await page.screenshot({ path: path.join(screenshots, `${mode}-${name}-mobile.png`) });
+    }
+  }
+
+  // Check the three disclosure-heavy surfaces at the narrower requested phone width too.
+  await page.setViewportSize({ width: 375, height: 812 });
+  for (const [mode, colorScheme] of [["light", "light"], ["dark", "dark"]]) {
+    await page.goto(`${base}/settings/`);
+    await page.getByRole("combobox", { name: "App theme", exact: true }).selectOption(mode);
+    await page.emulateMedia({ colorScheme });
+    for (const [name, route] of [["translator", "/translator/"], ["reading", "/read/"], ["scanner", "/translator/scanner/"]]) {
+      await page.goto(`${base}${route}`);
+      await page.waitForLoadState("networkidle");
+      await page.waitForFunction(value => document.documentElement.dataset.theme === value, mode);
+      const dimensions = await page.evaluate(() => ({ width: innerWidth, documentWidth: document.documentElement.scrollWidth }));
+      assert.ok(dimensions.documentWidth <= dimensions.width + 1, `${name} has no horizontal overflow at 375px: ${JSON.stringify(dimensions)}`);
+      await page.screenshot({ path: path.join(screenshots, `${mode}-${name}-375-mobile.png`) });
     }
   }
 

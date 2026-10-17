@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { characterDiff } from '@/lib/scanner/sourceSuggestions.mjs';
+import AppIcon from '@/app/AppIcon';
 import { editImage, type ScanImage } from '@/lib/scanner/images';
 import type { ScanRegion } from '@/lib/scanner/recognize';
 import styles from './scanner.module.css';
@@ -40,7 +41,7 @@ export default function SourceReview({ image, region, disabled, onAccept }: {
   const candidate = searchedText === region.text ? suggestions[selected] : undefined;
   const diff = useMemo(() => candidate ? characterDiff(region.text, candidate.text) : [], [region.text, candidate]);
   return <details className={styles.markReview} onToggle={event => setOpen(event.currentTarget.open)}>
-    <summary>Find a published passage to check these letters</summary>
+    <summary className="disclosure-summary">Find a published passage to check these letters<span className="disclosure-chevron"><AppIcon name="chevron" size={16}/></span></summary>
     {open && <>
       <p className={styles.note}>Suggestions compare text shapes and spelling; they do not prove that the passage is correct. Nothing changes until you check the photo and accept it.</p>
       {loading && <p role="status">Searching published passages…</p>}
