@@ -2,6 +2,7 @@
 import {useEffect,useState} from 'react';
 import Link from '@/lib/AppLink';
 import {lessons} from '@/lib/lesson';
+import { readRecord } from '@/lib/progressStorage';
 import {readCompletedSteps} from './learn/progress';
 import {readVocabulary} from '@/lib/vocabulary/store';
 import {dueCards} from '@/lib/vocabulary/schedule.mjs';
@@ -14,7 +15,7 @@ export default function HomePage(){
  useEffect(()=>{
   let completed=0,found=false;
   for(const unit of lessons){
-   const ids=new Set(readCompletedSteps(unit.id));
+   const ids=new Set((readCompletedSteps(unit.id) ?? []));
    completed+=(unit.progressionGroups??[]).flatMap(g=>g.lessons).filter(s=>s.exerciseSet&&ids.has(s.id)).length;
    if(!found){
     const groups=unit.progressionGroups??[];
@@ -25,7 +26,7 @@ export default function HomePage(){
    }
   }
   try{const cards=readVocabulary();setReview({saved:cards.length,due:dueCards(cards,Date.now()).length});}catch{}
-  try{const saved=JSON.parse(localStorage.getItem('coptic-reader:v1')??'null');const passage=practicePassages.find(p=>p.id===saved?.passageId);if(passage)setReading(`Resume ${passage.title.toLowerCase()}.`);else if(saved?.passageId==='custom'&&saved.draft?.trim())setReading('Return to your saved passage.');}catch{}
+  try{const saved=readRecord('coptic-reader:v1');const passage=practicePassages.find(p=>p.id===saved?.passageId);if(passage)setReading(`Resume ${passage.title.toLowerCase()}.`);else if(saved?.passageId==='custom'&&saved.draft?.trim())setReading('Return to your saved passage.');}catch{}
  },[]);
  return <main className="app-page home-page">
   <PageHeader title="Coptic" icon="cross"/>

@@ -1,5 +1,5 @@
 "use client";
-import { LEARNING_KEY } from "@/lib/learning/progress.mjs";
+import { readRecord, writeRecord, reportProgressError } from "@/lib/progressStorage";
 
 const STORAGE_PREFIX = "coptic-unit-progress:";
 const FAILED_STORAGE_PREFIX = "coptic-unit-failed-steps:";
@@ -12,66 +12,34 @@ export function getUnitFailedStepsStorageKey(unitId: string) {
   return `${FAILED_STORAGE_PREFIX}${unitId}`;
 }
 
-export function readCompletedSteps(unitId: string) {
+// null means unavailable; only a genuinely missing record becomes an empty list.
+export function readCompletedSteps(unitId: string): string[] | null {
   if (typeof window === "undefined") {
     return [] as string[];
   }
 
-  try {
-    const raw = window.localStorage.getItem(getUnitProgressStorageKey(unitId));
-    if (!raw) {
-      return [] as string[];
-    }
-
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === "string") : [];
-  } catch {
-    return [] as string[];
-  }
+  try { return (readRecord(getUnitProgressStorageKey(unitId)) ?? []) as string[]; }
+  catch (error) { reportProgressError(error); return null; }
 }
 
 export function writeCompletedSteps(unitId: string, stepIds: string[]) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(getUnitProgressStorageKey(unitId), JSON.stringify([...new Set(stepIds)]));
+  if (typeof window === "undefined") return;
+  writeRecord(getUnitProgressStorageKey(unitId), [...new Set(stepIds)]);
 }
 
-export function readFailedSteps(unitId: string) {
-  if (typeof window === "undefined") {
-    return [] as string[];
-  }
-
-  try {
-    const raw = window.localStorage.getItem(getUnitFailedStepsStorageKey(unitId));
-    if (!raw) {
-      return [] as string[];
-    }
-
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === "string") : [];
-  } catch {
-    return [] as string[];
-  }
+export function readFailedSteps(unitId: string): string[] | null {
+  if (typeof window === "undefined") return [];
+  try { return readRecord(getUnitFailedStepsStorageKey(unitId)) ?? []; }
+  catch (error) { reportProgressError(error); return null; }
 }
 
 export function writeFailedSteps(unitId: string, stepIds: string[]) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  const next = [...new Set(stepIds)];
-  if (next.length === 0) {
-    window.localStorage.removeItem(getUnitFailedStepsStorageKey(unitId));
-    return;
-  }
-
-  window.localStorage.setItem(getUnitFailedStepsStorageKey(unitId), JSON.stringify(next));
+  if (typeof window === "undefined") return;
+  writeRecord(getUnitFailedStepsStorageKey(unitId), [...new Set(stepIds)]);
 }
 
 export function markStepCompleted(unitId: string, stepId: string) {
-  const current = readCompletedSteps(unitId);
+  const current: string[] = readRecord(getUnitProgressStorageKey(unitId)) ?? [];
   if (current.includes(stepId)) {
     return current;
   }
@@ -82,7 +50,7 @@ export function markStepCompleted(unitId: string, stepId: string) {
 }
 
 export function markStepFailed(unitId: string, stepId: string) {
-  const current = readFailedSteps(unitId);
+  const current: string[] = readRecord(getUnitFailedStepsStorageKey(unitId)) ?? [];
   if (current.includes(stepId)) {
     return current;
   }
@@ -93,7 +61,7 @@ export function markStepFailed(unitId: string, stepId: string) {
 }
 
 export function clearStepFailed(unitId: string, stepId: string) {
-  const current = readFailedSteps(unitId);
+  const current: string[] = readRecord(getUnitFailedStepsStorageKey(unitId)) ?? [];
   if (!current.includes(stepId)) {
     return current;
   }
@@ -101,24 +69,4 @@ export function clearStepFailed(unitId: string, stepId: string) {
   const next = current.filter((entry) => entry !== stepId);
   writeFailedSteps(unitId, next);
   return next;
-}
-
-export function clearAllUnitProgress() {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  const keysToRemove: string[] = [];
-  for (let index = 0; index < window.localStorage.length; index += 1) {
-    const key = window.localStorage.key(index);
-    if (key?.startsWith(STORAGE_PREFIX) || key?.startsWith(FAILED_STORAGE_PREFIX)) {
-      keysToRemove.push(key);
-    }
-  }
-
-  window.localStorage.removeItem(LEARNING_KEY);
-  window.dispatchEvent(new Event("coptic-learning-change"));
-  keysToRemove.forEach((key) => {
-    window.localStorage.removeItem(key);
-  });
 }

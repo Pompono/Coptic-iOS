@@ -5,7 +5,8 @@ import { COPTIC_KEYBOARD_APP_STORE_URL } from "../KeyboardInstallPrompt";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { clearAllUnitProgress } from "../learn/progress";
+import ProgressBackup from "./ProgressBackup";
+import { makeBackup, replaceRecords } from "@/lib/progressStorage";
 import { lessons } from "@/lib/lesson";
 import {
   applyCopticFontMode,
@@ -17,7 +18,6 @@ import {
   BOHAIRIC_ONLY_STORAGE_KEY,
   isBohairicOnlyEnabled,
 } from "../BohairicPreference";
-import { clearProgress } from "@/lib/progress";
 import { subscribeToMediaQueryChange } from "@/lib/mediaQuery";
 
 
@@ -33,7 +33,8 @@ export default function SettingsPage() {
   const [isNarrowLayout, setIsNarrowLayout] = useState(false);
 
   useEffect(() => {
-    const savedFont = localStorage.getItem(COPTIC_FONT_STORAGE_KEY);
+    let savedFont: string | null = null;
+    try { savedFont = localStorage.getItem(COPTIC_FONT_STORAGE_KEY); } catch { /* The progress notice reports unavailable storage. */ }
     const font: CopticFontMode = savedFont === "unicode" ? "unicode" : "avva";
     setFontMode(font);
     applyCopticFontMode(font);
@@ -105,9 +106,12 @@ export default function SettingsPage() {
       return;
     }
 
-    clearProgress();
-    clearAllUnitProgress();
-    setResetMessage("All local learning progress has been reset.");
+    try {
+      const records = makeBackup().records;
+      const retained = Object.fromEntries(Object.entries(records).filter(([key]) => key === 'coptic-vocabulary:v1' || key === 'coptic-reader:v1'));
+      replaceRecords(retained);
+      setResetMessage("Lesson progress reset. A recovery copy is available in Progress & Backup.");
+    } catch (error) { setResetMessage(error instanceof Error ? error.message : 'Reset failed.'); }
   };
 
   const onOpenLearnMap = () => {
@@ -158,6 +162,7 @@ export default function SettingsPage() {
       <div className="settings-row"><label htmlFor="font-choice">Coptic font</label><select id="font-choice" value={fontMode} onChange={e=>onToggleFont(e.target.value as CopticFontMode)}><option value="unicode">Standard</option><option value="avva">Avva Shenouda</option></select></div>
     </div></section>
     <section><h2 className="settings-section-title">Language</h2><div className="settings-group"><div className="settings-row"><label htmlFor="bohairic-switch">Bohairic-only mode</label><input id="bohairic-switch" type="checkbox" className="ui-switch" role="switch" checked={bohairicOnlyEnabled} onChange={e=>onToggleBohairicOnlyEnabled(e.target.checked)}/></div></div><p className="settings-note">Use verified Bohairic entries and keep the translator in Bohairic.</p></section>
+    <ProgressBackup />
     <section><h2 className="settings-section-title">Developer</h2><div className="settings-group"><div className="settings-row" aria-label="Developer tools toggle"><label htmlFor="developer-switch">Developer tools</label><input id="developer-switch" type="checkbox" className="ui-switch" role="switch" checked={devToolsEnabled} onChange={e=>onToggleDevTools(e.target.checked)}/></div></div>
         {devToolsEnabled ? (
           <div

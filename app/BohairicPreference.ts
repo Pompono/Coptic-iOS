@@ -7,7 +7,8 @@ export function isBohairicOnlyEnabled(): boolean {
         return true;
     }
 
-    return localStorage.getItem(BOHAIRIC_ONLY_STORAGE_KEY) !== "false";
+    try { return localStorage.getItem(BOHAIRIC_ONLY_STORAGE_KEY) !== "false"; }
+    catch { return true; }
 }
 
 export function setBohairicOnlyEnabled(enabled: boolean): void {
