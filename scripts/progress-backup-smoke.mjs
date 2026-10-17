@@ -29,6 +29,7 @@ try {
   await select(backup);
   await page.getByRole('region', { name: 'Confirm progress restoration' }).waitFor();
   assert.match(await page.getByRole('region', { name: 'Confirm progress restoration' }).innerText(), /80 XP/);
+  assert.match(await page.getByRole('region', { name: 'Confirm progress restoration' }).innerText(), /Currently on this device:.*20 XP/s);
   assert.equal(await page.evaluate(() => localStorage.getItem('coptic-progress')), original);
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   assert.equal(await page.evaluate(() => localStorage.getItem('coptic-progress')), original);
@@ -37,7 +38,7 @@ try {
   assert.equal(await page.evaluate(() => localStorage.getItem('coptic-progress')), original);
   await select(backup);
   await page.getByRole('button', { name: 'Replace progress and restore' }).click();
-  await page.getByRole('status').filter({ hasText: 'successfully' }).waitFor();
+  await page.waitForFunction(() => document.querySelector('[role=status]')?.textContent === 'Progress restored successfully.');
   assert.equal(await page.evaluate(() => localStorage.getItem('coptic-progress')), records['coptic-progress']);
   assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('coptic-progress-recovery:v1')).records['coptic-progress']), original);
   const downloadWait = page.waitForEvent('download');
@@ -45,8 +46,20 @@ try {
   const download = await downloadWait;
   const exported = JSON.parse(await readFile(await download.path(), 'utf8'));
   assert.deepEqual(exported.records, records);
-  await page.getByRole('button', { name: 'Reload app' }).click();
-  await page.getByRole('button', { name: 'Import Progress' }).waitFor();
+  // A second window changes progress after the first window's preview.
+  const peer = await page.context().newPage();
+  await peer.goto(`http://127.0.0.1:${server.address().port}/settings/`);
+  await select(backup);
+  await page.getByRole('button', { name: 'Replace progress and restore' }).waitFor();
+  await peer.evaluate(() => {
+    const progress = JSON.parse(localStorage.getItem('coptic-progress'));
+    progress.xp = 81; localStorage.setItem('coptic-progress', JSON.stringify(progress));
+  });
+  await page.getByRole('button', { name: 'Replace progress and restore' }).click();
+  await page.getByRole('alert').filter({ hasText: 'changed after you selected' }).waitFor();
+  assert.equal(await peer.evaluate(() => JSON.parse(localStorage.getItem('coptic-progress')).xp), 81);
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await peer.close();
   await page.evaluate(() => localStorage.setItem('coptic-unit-progress:damaged', '{broken'));
   await page.reload();
   await page.getByRole('alert').filter({ hasText: 'Some saved progress' }).waitFor();

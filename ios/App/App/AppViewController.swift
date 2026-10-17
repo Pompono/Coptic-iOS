@@ -82,6 +82,9 @@ class AppViewController: CAPBridgeViewController {
                 if status == "passed" {
                     print("COPTIC_NATIVE_AUDIO_BRIDGE_READY")
                     fflush(stdout)
+                    if ProcessInfo.processInfo.environment["COPTIC_NATIVE_BACKUP_SMOKE"] == "1" {
+                        self.verifyBackupBridge()
+                    }
                     return
                 }
                 if status == "failed" {
@@ -93,6 +96,63 @@ class AppViewController: CAPBridgeViewController {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 self.verifyAudioBridge(attempt: attempt + 1)
             }
+        }
+    }
+    // Only enabled in a disposable CI Debug simulator, never normal app startup.
+    private var backupShareObserved = false
+    private func verifyBackupBridge(attempt: Int = 0) {
+        guard attempt < 450,
+              let url = Bundle.main.url(forResource: "native-backup-smoke", withExtension: "js", subdirectory: "public"),
+              let script = try? String(contentsOf: url, encoding: .utf8) else {
+            print("COPTIC_NATIVE_BACKUP_ERROR: missing CI fixture or timeout")
+            fflush(stdout)
+            return
+        }
+        if !backupShareObserved, let sheet = presentedViewController as? UIActivityViewController, !sheet.isBeingPresented {
+            backupShareObserved = true
+            do {
+                let cache = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("progress-backups")
+                let files = try FileManager.default.contentsOfDirectory(at: cache, includingPropertiesForKeys: nil).filter { $0.pathExtension == "json" }
+                guard let file = files.first,
+                      let backup = try JSONSerialization.jsonObject(with: Data(contentsOf: file)) as? [String: Any],
+                      backup["format"] as? String == "coptic-progress-backup",
+                      let records = backup["records"] as? [String: String], records.count == 6,
+                      let reader = records["coptic-reader:v1"],
+                      reader.unicodeScalars.contains(where: { $0.value == 0x0305 }),
+                      reader.unicodeScalars.contains(where: { $0.value == 0x0301 }) else {
+                    throw NSError(domain: "BackupSmoke", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid exported native JSON or Unicode"])
+                }
+                print("COPTIC_NATIVE_BACKUP_FILE_READY")
+                print("COPTIC_NATIVE_SHARE_SHEET_READY")
+            } catch {
+                print("COPTIC_NATIVE_BACKUP_ERROR: \(error.localizedDescription)")
+                fflush(stdout)
+                return
+            }
+            // Exercise the plugin's real cancellation callback without a save.
+            let completion = sheet.completionWithItemsHandler
+            sheet.completionWithItemsHandler = nil
+            sheet.dismiss(animated: false) { completion?(nil, false, nil, nil) }
+        }
+        webView?.evaluateJavaScript(script) { result, error in
+            if let error = error {
+                // A document reload can interrupt an evaluation; the next poll
+                // re-enters the fixture using its session-only phase marker.
+                if attempt > 440 { print("COPTIC_NATIVE_BACKUP_ERROR: \(error.localizedDescription)") }
+            }
+            if let state = result as? [String: Any], let status = state["status"] as? String {
+                if status == "passed" && self.backupShareObserved {
+                    print("COPTIC_NATIVE_BACKUP_READY")
+                    fflush(stdout)
+                    return
+                }
+                if status == "failed" {
+                    print("COPTIC_NATIVE_BACKUP_ERROR: \(state["message"] ?? "unknown")")
+                    fflush(stdout)
+                    return
+                }
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { self.verifyBackupBridge(attempt: attempt + 1) }
         }
     }
     #endif

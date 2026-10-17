@@ -16,9 +16,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - run: npm run typecheck
+      - run: npx eslint .
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:mobile
+      - run: npm run test:backup
       - uses: actions/upload-artifact@v4
         with:
           name: bundled-web-app
@@ -34,7 +37,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run ios:sync
+      - run: cp scripts/native-backup-smoke.js ios/App/App/public/native-backup-smoke.js
       - run: xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/coptic-derived CODE_SIGNING_ALLOWED=NO build
+      - run: python3 scripts/verify-native-backup.py /tmp/coptic-derived/Build/Products/Debug-iphonesimulator/App.app
       - run: bash scripts/native-startup-smoke.sh 2>&1 | tee /tmp/coptic-native-startup.log
         id: native_startup
         timeout-minutes: 18
