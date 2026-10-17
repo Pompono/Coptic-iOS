@@ -7,7 +7,7 @@ Lessons, pronunciation audio, fonts, dictionary data, and the interface are bund
 inside the app. Progress and preferences remain in the app's local WebView storage.
 The Translator screen uses CopticLingo’s existing hosted AI in both directions,
 with a separate offline published-text lookup. Scanner OCR and translation remain
-on-device; scanner translation still needs the optional offline-model build.
+on-device; scanner AI sends only text the user explicitly reviews and approves.
 No hosted website is required to open the app or use its learning content.
 
 ## Reading, vocabulary, and grammar
@@ -51,9 +51,9 @@ crop it if needed, then press **Read Coptic**. Tap a numbered block to check and
 correct the recognised text. **Translate block** displays English over its original
 position; **Translate remaining blocks** processes the remaining regions in order.
 Tap a bubble to read the full translation below the image. **Show original** reveals
-the photographed text again. The offline-model IPA is required for translation.
+the photographed text again. Published matching works offline; hosted AI requires internet and a separate text approval step.
 
-Recognition and translation run locally. Photos are not uploaded, saved to the
+Recognition and published matching run locally. AI sends only approved Coptic text over HTTPS to coptlingo.com, never photographs. Photos are not uploaded, saved to the
 photo library, or persisted by the scanner. Recognition scales photos to a maximum
 3072-pixel edge and uses a separate worker, released before translation. Cropping,
 rotation, edits, and dialect changes invalidate affected results. OCR is limited to
@@ -146,27 +146,40 @@ and App Store distribution require an Apple Developer membership. This repositor
 contains the native project, not a signed IPA. Replace the generated placeholder
 app icon and launch artwork before distributing a release.
 
-## Hosted Translator and offline scanner IPA
+## Hosted AI and offline content
 
-The Translator screen uses the existing public CopticLingo proxy for AI in both
-directions. Published text is a separate local, offline reference lookup, available
-without model weights. It covers supported Bohairic passages only and never
-silently replaces an AI request. AI needs internet, sends submitted text over
-HTTPS, accepts up to 1,200 Unicode characters, and can return inaccurate drafts.
+All AI translation uses the existing CopticLingo website proxy. Published text is
+a separate local, offline Bohairic reference lookup, available without AI weights.
+It never silently replaces an AI request. AI needs internet and can be inaccurate.
 
-The scanner is intentionally unchanged: OCR, photographs, editing, corrections,
-overlays, published matching, and AI translation remain on-device. Scanner
-translation still requires the optional offline-model IPA. See the
-[hosted translation migration and scanner follow-up plan](docs/hosted-translation.md).
-Do not remove the model/runtime assets while that scanner dependency remains.
+Scanner OCR, photos, crops, rotation, contrast, source/mark correction and overlays
+remain local. Selecting AI or detecting text sends nothing. **Translate block**
+or **Translate remaining blocks** opens a full text review. Check the approval
+box and press **Send approved text** to send only that snapshot. Cancel to edit
+first. Long blocks split safely into requests of at most 1,200 Unicode characters;
+an unbroken oversized word must be corrected rather than cut. Drafts from split
+text may lose context. Requests run sequentially with at least 2.5 seconds between
+starts; 429 stops the queue without an automatic retry. Completed blocks/chunks
+stay available, including when Stop is pressed. Resume requires fresh approval.
 
-In GitHub, **Actions → Build offline translation IPA** remains available as an
-explicit workflow for scanner users. It exports the pinned model and packages an
-unsigned device IPA on a hosted Mac; it is not run or published by this change.
-The model adds approximately 145 MB of weights plus its WASM runtime and needs
-WebAssembly SIMD (iOS 16.4 or newer). The scanner's worker uses one CPU thread;
-leaving the scanner releases its model memory. A local failure never uploads the
-photo or silently sends recognised text to a server.
+[Scanner migration, privacy, packaging and device checks](docs/scanner-hosted-migration.md)
+describes the implementation and its limitations. No private backend key belongs
+in the app or its build configuration. Server retention practices must be verified
+before publishing a final privacy policy; app code does not log translation text.
+
+Normal exports/IPAs exclude local AI weights and ONNX runtime, even when old model
+files exist in `public/`. OCR models and their Tesseract WASM runtime are distinct
+and remain bundled. The historical `offline-ipa.yml` filename now offers the manual
+**Build hosted translation IPA** workflow, which does not generate/download AI
+weights. It is not dispatched by normal CI. The normal validation workflow builds
+and verifies an unsigned device IPA temporarily, with no IPA upload/publication.
+
+### Retained model development tools
+
+Exporter/evaluation code is retained for research outside the app; it is not an
+app feature. Transformers.js is a development dependency. The commands below may
+prepare local development model assets, but normal release postbuild removes
+these assets from `out/`. Use a separate research harness to execute local models.
 
 Model files are generated, not committed to Git. To export them yourself on a
 machine with Python 3.12, run from the repository root:

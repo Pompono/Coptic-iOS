@@ -6,6 +6,7 @@ export type ScanRegion = {
   id: string; text: string; originalText: string; confidence: number;
   markedWords?: MarkedWord[];
   box: { x: number; y: number; width: number; height: number };
+  translationComplete?: boolean; completedParts?: number; totalParts?: number;
   translation?: string; translationMethod?: string; referenceText?: string; referenceRow?: string; error?: string;
 };
 

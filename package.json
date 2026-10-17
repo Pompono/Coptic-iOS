@@ -16,8 +16,8 @@
     "lint": "eslint .",
     "test:translation-assets": "node scripts/check-translation-assets.mjs",
     "test:mobile": "node scripts/mobile-smoke.mjs",
-    "prebuild": "node scripts/local-translation/copy-runtime.mjs && node scripts/scanner/prepare.mjs",
-    "postbuild": "node scripts/settle-static-html.mjs"
+    "prebuild": "node scripts/scanner/prepare.mjs",
+    "postbuild": "node scripts/settle-static-html.mjs && node scripts/prune-release-inference.mjs"
   },
   "dependencies": {
     "@capacitor/camera": "^7.0.3",
@@ -25,7 +25,6 @@
     "@capacitor/core": "7.6.9",
     "@capacitor/ios": "7.6.9",
     "@capacitor/keyboard": "^7.0.6",
-    "@huggingface/transformers": "3.8.1",
     "@supabase/supabase-js": "latest",
     "cheerio": "^1.2.0",
     "fast-xml-parser": "^5.4.2",
@@ -38,6 +37,7 @@
     "zod": "latest"
   },
   "devDependencies": {
+    "@huggingface/transformers": "3.8.1",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "autoprefixer": "^10",

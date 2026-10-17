@@ -1,67 +1,25 @@
-name: Build offline translation IPA
-env:
-  ONNXRUNTIME_NODE_INSTALL_CUDA: skip
+# Historical filename retained so existing workflow links remain valid.
+name: Build hosted translation IPA
 on:
   workflow_dispatch:
-    inputs:
-      model_run_id:
-        description: Optional run ID with an existing offline-translation-model artifact
-        required: false
-        type: string
-        default: ''
 permissions:
   contents: read
-  actions: read
 jobs:
-  model:
-    if: inputs.model_run_id == ''
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      HF_HUB_DISABLE_XET: '1'
-      OMP_NUM_THREADS: '2'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
-      - run: pip install -r scripts/local-translation/requirements.txt
-      - run: python scripts/local-translation/export.py
-      - run: npm ci
-      - run: node scripts/local-translation/check-tokenizer.mjs
-      - run: npm test
-      - run: npm run build
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:mobile
-      - uses: actions/upload-artifact@v4
-        with:
-          name: offline-translation-model
-          path: public/models
-          retention-days: 7
   ipa:
-    needs: model
-    if: always() && !cancelled() && (needs.model.result == 'success' || needs.model.result == 'skipped')
     runs-on: macos-latest
     timeout-minutes: 30
+    env:
+      ONNXRUNTIME_NODE_INSTALL_CUDA: skip
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - uses: actions/download-artifact@v4
-        with:
-          name: offline-translation-model
-          path: public/models
-          run-id: ${{ inputs.model_run_id || github.run_id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
       - run: npm ci
+      - run: npm test
       - run: npm run ios:sync
+      - run: npm run test:translation-assets
       - run: npx playwright install webkit
       - run: npm run test:mobile
         env:
@@ -72,11 +30,11 @@ jobs:
           mkdir -p /tmp/coptic-ipa/Payload
           cp -R /tmp/Coptic.xcarchive/Products/Applications/App.app /tmp/coptic-ipa/Payload/
           cd /tmp/coptic-ipa
-          zip -qr /tmp/Coptic-offline-unsigned.ipa Payload
-      - name: Verify learning and offline assets in IPA
-        run: python3 scripts/scanner/verify-ipa.py /tmp/Coptic-offline-unsigned.ipa
+          zip -qr /tmp/Coptic-hosted-unsigned.ipa Payload
+      - name: Verify offline OCR/content, absence of inference and private credentials
+        run: python3 scripts/scanner/verify-ipa.py /tmp/Coptic-hosted-unsigned.ipa
       - uses: actions/upload-artifact@v4
         with:
-          name: Coptic-offline-unsigned-IPA
-          path: /tmp/Coptic-offline-unsigned.ipa
+          name: Coptic-hosted-unsigned-IPA
+          path: /tmp/Coptic-hosted-unsigned.ipa
           retention-days: 7

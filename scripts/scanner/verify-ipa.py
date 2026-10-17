@@ -1,4 +1,4 @@
-"""Verify the uploaded device archive actually contains the offline scanner assets."""
+"""Verify the uploaded device archive actually contains the offline OCR/content without local AI inference."""
 import hashlib
 import json
 import plistlib
@@ -35,9 +35,11 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
     manifest = json.loads(archive.read(assets + 'ocr/manifest.json'))
     model = archive.read(assets + 'ocr/cop.traineddata')
     assert hashlib.sha256(model).hexdigest() == manifest['sha256']
-    translation = json.loads(archive.read(assets + 'models/coptic-english/manifest.json'))
-    for name, details in translation['files'].items():
-        data = archive.read(assets + 'models/coptic-english/' + name)
-        assert len(data) == details['bytes'], name
-        assert hashlib.sha256(data).hexdigest() == details['sha256'], name
-    print('PASS: IPA contains an arm64 app, reader, vocabulary reviews, dictionary, scanner, published-text references, and verified offline models.')
+    for name in archive.namelist():
+        if not name.startswith(assets) or name.endswith('/'):
+            continue
+        assert '/local-runtime/' not in name and '/models/coptic-english/' not in name, 'Local AI assets must not ship'
+        assert not name.endswith(('.onnx', '.onnx_data')), 'AI weights must not ship'
+        data = archive.read(name)
+        assert all(marker not in data for marker in (b'COPTIC_API_KEY', b'api.coptlingo.com', b'-----BEGIN PRIVATE KEY-----', b'-----BEGIN RSA PRIVATE KEY-----')), 'Forbidden private translation configuration; values withheld'
+    print('PASS: IPA contains arm64 app, offline reader, dictionary, learning audio, published references and verified OCR; no local AI assets or private translation configuration.')
