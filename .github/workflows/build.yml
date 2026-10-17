@@ -5,6 +5,10 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+# Push and pull_request events for the same branch share one validation run.
+concurrency:
+  group: mobile-validation-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 jobs:
   web:
     runs-on: ubuntu-latest
