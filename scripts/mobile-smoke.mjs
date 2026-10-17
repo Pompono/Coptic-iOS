@@ -122,6 +122,11 @@ try {
     await page.getByRole('button', { name: 'Translate', exact: true }).click();
     await page.getByText('You are the flower, of incense, that has blossomed, from the root of Jesse.').waitFor();
     await page.getByText(/Published translation · Coptic Corpora/).waitFor();
+    await page.getByRole('button', { name: 'Experimental translation', exact: true }).click();
+    assert.equal(await page.getByRole('textbox', { name: 'Coptic text', exact: true }).inputValue(), 'ⲛⲑⲟ ⲧⲉ ϯϩⲣⲏⲣⲓ: ⲛ̀ⲧⲉ ⲡⲓⲥⲑⲟⲓⲛⲟⲩϥⲓ: ⲑⲏⲉⲧⲁⲥⲫⲓⲣⲓ ⲉ̀ⲃⲟⲗ: ϧⲉⲛ ⲑⲛⲟⲩⲛⲓ ⲛ̀ⲓⲉⲥⲥⲉ.');
+    await page.getByText('You are the flower, of incense, that has blossomed, from the root of Jesse.').waitFor();
+    await page.getByText(/Published translation · Coptic Corpora/).waitFor();
+    await page.getByRole('button', { name: 'Published text match', exact: true }).click();
     await page.getByRole('button',{name:'Copy translation',exact:true}).click();
     await page.waitForFunction(()=>window.__copiedTranslation==='You are the flower, of incense, that has blossomed, from the root of Jesse.');
     await page.evaluate(()=>window.__copyFails=true);
@@ -133,8 +138,8 @@ try {
     await page.getByRole('button', { name: 'Translate', exact: true }).click();
     await page.getByText(/No unambiguous published translation/).waitFor();
     assert.equal(await page.getByText('You are the flower, of incense, that has blossomed, from the root of Jesse.').count(), 0);
-    await page.getByText('Translation options', { exact: true }).click();
-    await page.getByLabel('Translation method').selectOption('experimental');
+    await page.getByRole('button', { name: 'Experimental translation', exact: true }).click();
+    assert.equal(await page.getByRole('button', { name: 'Experimental translation', exact: true }).getAttribute('aria-pressed'), 'true');
     console.log('PASS: source-matched flower/incense/Jesse stanza and explicit refusal of damaged OCR.');
   }
   await page.getByRole('textbox', {name:'Coptic text', exact:true}).fill('ⲡⲉⲛⲛⲟⲩϯ');

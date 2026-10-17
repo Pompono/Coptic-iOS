@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { inspectMarkPhoto } from '@/lib/scanner/markPhoto';
+import AppIcon from '@/app/AppIcon';
 import { reviewableMarks } from '@/lib/scanner/markShape.mjs';
 import type { ScanRegion } from '@/lib/scanner/recognize';
 import type { ScanImage } from '@/lib/scanner/images';
@@ -27,7 +28,7 @@ export default function MarkReview({ image, region, disabled, onCorrect }: {
   const safe = reviewableMarks(region.text, region.originalText);
   const currentWord = word ? region.text.slice(word.start, word.start + word.text.length) : '';
   return <details className={styles.markReview} onToggle={event => setOpen(event.currentTarget.open)}>
-    <summary>Inspect marks in the photo ({words.length} words)</summary>
+    <summary className="disclosure-summary">Inspect marks in the photo ({words.length} words)<span className="disclosure-chevron"><AppIcon name="chevron" size={16}/></span></summary>
     {open && word && <>
       <label>Marked word <select aria-label="Marked word to inspect" value={index} disabled={disabled} onChange={event => setIndex(Number(event.target.value))}>
         {words.map((item, position) => <option key={position} value={position}>{position + 1}. {item.text}</option>)}

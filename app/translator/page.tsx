@@ -426,6 +426,14 @@ export default function TranslatorPage() {
     setDirection((current) => (current === "copticToEnglish" ? "englishToCoptic" : "copticToEnglish"));
   };
 
+  const handleTranslationMethodChange = (method: 'published' | 'experimental') => {
+    setTranslationMethod(method);
+    setCopyStatus('');
+    setTranslationError('');
+    if (translationState === 'error') setTranslationState('idle');
+    if (!translationOutput) setOutputMethod('');
+  };
+
   const handleDialectToggle = () => {
     if (translationState === "loading" || englishState === "loading") return;
     if (bohairicOnlyEnabled) {
@@ -460,6 +468,16 @@ export default function TranslatorPage() {
           <div className="translation-direction"><span>{isCopticToEnglish?'Coptic → English':'English → Coptic'}</span><button type="button" onClick={handleSwitchDirection} disabled={currentState==='loading'} aria-label="Switch translation direction"><AppIcon name="return"/></button></div>
           <form className="translation-form" onSubmit={handleSubmit}>
             <textarea ref={inputRef} aria-label={isCopticToEnglish?'Coptic text':'English text'} disabled={currentState==='loading'} value={currentInput} onChange={event=>{setCopyStatus('');if(isCopticToEnglish){setTranslationInput(event.target.value);setTranslationOutput('');setTranslationError('');setConfidence(null);setDraftSegments([]);setReferenceDetails({});setOutputMethod('');}else{setEnglishInput(event.target.value);setEnglishOutput('');setEnglishError('');setEnglishConfidence(null);}}} onKeyDown={handleInputKeyDown} onPointerDownCapture={hideKeyboardOnManualInputFocus} placeholder={isCopticToEnglish?'Type Coptic text...':'Type English text...'} className={isCopticToEnglish?'coptic-text':''} autoCorrect="off" autoCapitalize="none" spellCheck={false}/>
+            {isCopticToEnglish && localTranslationEnabled ? <div className="translation-method-control" role="group" aria-label="Translation method">
+              <span className="translation-method-title">Translation method</span>
+              <div className="translation-method-choices">
+                <button type="button" aria-pressed={translationMethod === 'published'} disabled={currentState === 'loading'} onClick={() => handleTranslationMethodChange('published')}>Published text match</button>
+                <button type="button" aria-pressed={translationMethod === 'experimental'} disabled={currentState === 'loading'} onClick={() => handleTranslationMethodChange('experimental')}>Experimental translation</button>
+              </div>
+              <p className="translation-method-description">{translationMethod === 'published'
+                ? 'Finds translations in supported published Coptic passages. Not all text can be matched.'
+                : 'Generates a translation of other text. Results may be inaccurate.'}</p>
+            </div> : null}
             <button type="submit" className="ui-primary" disabled={currentState==='loading'}>{currentState==='loading'?'Translating…':'Translate'}{currentState!=='loading'&&<AppIcon name="arrow" size={18}/>}</button>
           </form>
           {isCopticToEnglish&&currentState==='loading'&&<p role="status" className="mt-3 text-sm">{translationProgress}</p>}
@@ -468,21 +486,20 @@ export default function TranslatorPage() {
         <section className="translation-result" aria-label="Translation result" aria-live="polite">
           <div className="translation-result-header"><span>{isCopticToEnglish&&currentOutput?outputMethod==='published'?'Published translation · Coptic Corpora / Tasbeha':'Unverified AI draft':'Translation'}</span>
             {currentOutput&&<button type="button" aria-label="Copy translation" onClick={()=>{void copyText(currentOutput).then(()=>setCopyStatus('Copied')).catch(()=>setCopyStatus('Could not copy. Select the text to copy it.'));}}><AppIcon name="copy" size={16}/>{copyStatus==='Copied'?'Copied':'Copy'}</button>}</div>
-          <p className={!isCopticToEnglish&&currentOutput?'coptic-text':!currentOutput?'text-[var(--text-muted)]':''}>{currentOutput || (currentState === "idle" && currentInput.trim() && isCopticToEnglish && outputMethod === "published" ? "No published match for this text. Try a shorter passage, or choose an experimental draft in Translation options." : "Your translation will appear here.")}</p>
+          <p className={!isCopticToEnglish&&currentOutput?'coptic-text':!currentOutput?'text-[var(--text-muted)]':''}>{currentOutput || (currentState === "idle" && currentInput.trim() && isCopticToEnglish && outputMethod === "published" ? "No published match for this text. Try a shorter passage, or choose Experimental translation above." : "Your translation will appear here.")}</p>
           {copyStatus&&<span role="status" className={copyStatus==='Copied'?'sr-only':'text-sm'}>{copyStatus}</span>}
           {isCopticToEnglish&&currentOutput&&outputMethod==='published'&&<ReferenceDetails {...referenceDetails}/>}
           {isCopticToEnglish&&currentOutput&&outputMethod==='experimental'&&<p className="translation-help">Experimental translation. Check the meaning before relying on it.</p>}
-          {isCopticToEnglish&&currentOutput&&outputMethod==='experimental'&&draftSegments.length>1&&<details className="translation-help"><summary>Review each draft passage</summary>{draftSegments.map((segment,index)=><div key={index}><p className="coptic-text">{segment.text}</p><p>{segment.translation}</p></div>)}</details>}
+          {isCopticToEnglish&&currentOutput&&outputMethod==='experimental'&&draftSegments.length>1&&<details className="translation-help"><summary className="disclosure-summary">Review each draft passage<span className="disclosure-chevron"><AppIcon name="chevron" size={16}/></span></summary>{draftSegments.map((segment,index)=><div key={index}><p className="coptic-text">{segment.text}</p><p>{segment.translation}</p></div>)}</details>}
           {currentConfidence!==null&&<p className="translation-help">Confidence: {(currentConfidence*100).toFixed(1)}%</p>}
         </section>
-        <details className="translation-help"><summary>About translation & offline use</summary><p>Published text returns an existing translation when the letters match a supported passage. It does not guess missing text. Experimental AI drafts can contain wrong meanings.</p><p>Coptic → English runs on this device, including offline, when the translation model is installed. English → Coptic uses the configured online service. Bohairic-only mode follows Settings.</p></details>
+        <details className="translation-help"><summary className="disclosure-summary">About translation & offline use<span className="disclosure-chevron"><AppIcon name="chevron" size={16}/></span></summary><p>Published text returns an existing translation when the letters match a supported passage. It does not guess missing text. Experimental AI drafts can contain wrong meanings.</p><p>Coptic → English runs on this device, including offline, when the translation model is installed. English → Coptic uses the configured online service. Bohairic-only mode follows Settings.</p></details>
         <details className="translation-advanced">
-          <summary>Translation options</summary>
+          <summary className="disclosure-summary">Translation options<span className="disclosure-chevron"><AppIcon name="chevron" size={16}/></span></summary>
           <div className="translation-options">
-            {isCopticToEnglish && localTranslationEnabled ? <label>Method<select aria-label="Translation method" value={translationMethod} disabled={currentState === "loading"} onChange={event => { setTranslationMethod(event.target.value as typeof translationMethod); setTranslationOutput(""); setTranslationError(""); setOutputMethod(""); setCopyStatus(""); }}><option value="published">Published text match</option><option value="experimental">Experimental draft</option></select></label> : null}
             <div className="translation-dialect"><span>Dialect: {dialectLabel}</span><button type="button" onClick={handleDialectToggle} disabled={currentState === "loading" || bohairicOnlyEnabled} aria-label="Change translator dialect" title={bohairicOnlyEnabled ? "Locked by Bohairic-only mode in Settings" : "Change dialect"}>Change</button></div>
             {bohairicOnlyEnabled ? <p className="translation-option-note">Bohairic-only mode is active in Settings.</p> : null}
-            {isCopticToEnglish && localTranslationEnabled ? <p className="translation-option-note">Published matches only appear when the text matches a supported passage. Experimental drafts may be wrong and are labeled unverified.</p> : null}
+            {isCopticToEnglish && localTranslationEnabled ? <p className="translation-option-note">Experimental results are labeled unverified.</p> : null}
           </div>
         </details>
 

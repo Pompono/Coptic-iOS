@@ -1,6 +1,7 @@
 "use client";
 import AudioReplay from "../AudioReplay";
 import PageHeader, { PageBackLink } from "../PageHeader";
+import AppIcon from "../AppIcon";
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from '@/lib/AppLink';
 import SaveWord from '@/app/SaveWord';
@@ -75,7 +76,7 @@ export default function ReaderPage() {
     <div className={styles.segmented} role="group" aria-label="Reading passage">{practicePassages.map(item => <button key={item.id} aria-pressed={passageId === item.id} onClick={() => {
       setPassageId(item.id); setText(item.text); setSelected(null); setShowMeaning(false); rememberPassage(item.id);
     }}>{item.title}</button>)}</div>
-    <details><summary>Read your own passage</summary>
+    <details><summary className="disclosure-summary">Read your own passage<span className="disclosure-chevron"><AppIcon name="chevron" size={16}/></span></summary>
       <label htmlFor="reading-input">Paste Coptic text (up to 6,000 characters)</label>
       <textarea id="reading-input" className="coptic-text" maxLength={6000} value={draft} onChange={event => setDraft(event.target.value)} />
       <button disabled={!draft.trim()} onClick={() => { setText(draft.trim()); setPassageId('custom'); setSelected(null); setShowMeaning(false); rememberPassage('custom'); }}>Open passage</button>
@@ -116,7 +117,7 @@ export default function ReaderPage() {
       </section>}
     </div>
     <section className={styles.panel}><h2>Understand the grammar</h2>
-      {grammarNotes.map(note => <details key={note.id}><summary>{note.title}</summary><p>{note.text}</p><p className={styles.source}>{note.source}</p></details>)}
+      {grammarNotes.map(note => <details key={note.id}><summary className="disclosure-summary">{note.title}<span className="disclosure-chevron"><AppIcon name="chevron" size={16}/></span></summary><p>{note.text}</p><p className={styles.source}>{note.source}</p></details>)}
     </section>
   </main>;
 }
