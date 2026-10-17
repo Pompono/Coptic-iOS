@@ -1,0 +1,117 @@
+name: Build unsigned iOS device IPA
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unsigned-ipa:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out selected branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app and sync Capacitor iOS project
+        run: |
+          npm run build
+          npx cap sync ios
+
+      - name: Build unsigned iPhone app
+        run: >-
+          xcodebuild
+          -project ios/App/App.xcodeproj
+          -scheme App
+          -configuration Release
+          -sdk iphoneos
+          -destination 'generic/platform=iOS'
+          -derivedDataPath /tmp/coptic-ipa-build
+          CODE_SIGNING_ALLOWED=NO
+          CODE_SIGNING_REQUIRED=NO
+          build
+
+      - name: Package and verify unsigned device IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP_PATH="/tmp/coptic-ipa-build/Build/Products/Release-iphoneos/App.app"
+          IPA_PATH="$RUNNER_TEMP/CoptLingo-PR5-unsigned.ipa"
+          test -d "$APP_PATH" || { echo "Missing built device app: $APP_PATH" >&2; exit 1; }
+          mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          cp -R "$APP_PATH" "$RUNNER_TEMP/ipa/Payload/App.app"
+          (cd "$RUNNER_TEMP/ipa" && /usr/bin/zip -qry "$IPA_PATH" Payload)
+
+          python3 - "$IPA_PATH" <<'PY'
+          import pathlib, plistlib, subprocess, sys, tempfile, zipfile
+
+          ipa = pathlib.Path(sys.argv[1])
+          if not ipa.is_file() or ipa.stat().st_size == 0:
+              raise SystemExit("IPA is missing or empty")
+          with zipfile.ZipFile(ipa) as archive:
+              bad = archive.testzip()
+              if bad:
+                  raise SystemExit(f"Corrupt IPA member: {bad}")
+              names = set(archive.namelist())
+              prefix = "Payload/App.app/"
+              plist_name = prefix + "Info.plist"
+              if plist_name not in names:
+                  raise SystemExit("IPA does not contain Payload/App.app/Info.plist")
+              with archive.open(plist_name) as stream:
+                  info = plistlib.load(stream)
+              executable_name = info.get("CFBundleExecutable")
+              if not executable_name:
+                  raise SystemExit("Info.plist has no CFBundleExecutable")
+              executable_path = prefix + executable_name
+              if executable_path not in names:
+                  raise SystemExit(f"Missing app executable: {executable_path}")
+              if info.get("CFBundleIdentifier") != "com.pompono.coptic":
+                  raise SystemExit(f"Unexpected bundle identifier: {info.get('CFBundleIdentifier')}")
+              privacy = [n for n in names if n.endswith("PrivacyInfo.xcprivacy") and n.startswith(prefix)]
+              if not privacy:
+                  raise SystemExit("App bundle is missing PrivacyInfo.xcprivacy")
+              app_files = [n for n in names if n.startswith(prefix)]
+              if not any("/public/" in n or "/assets/" in n for n in app_files):
+                  raise SystemExit("IPA is missing compiled Capacitor web assets")
+
+              with tempfile.TemporaryDirectory() as tmp:
+                  archive.extract(executable_path, tmp)
+                  binary = pathlib.Path(tmp, executable_path)
+                  subprocess.run(["/usr/bin/xcrun", "lipo", "-verify_arch", "arm64", str(binary)], check=True)
+                  platform = subprocess.check_output(["/usr/bin/xcrun", "vtool", "-show-build", str(binary)], text=True)
+                  if "Platform: IOS" not in platform and "platform 2" not in platform:
+                      raise SystemExit("Mach-O build metadata does not identify an iOS device binary:\n" + platform)
+                  symbols = subprocess.check_output(["/usr/bin/strings", str(binary)], text=True, errors="replace")
+                  if "CapacitorFilesystem" not in symbols or "SharePlugin" not in symbols:
+                      raise SystemExit("Compiled app is missing Capacitor Filesystem or Share plugin symbols")
+
+              # Require the backup UI strings in packaged web content.
+              web_text = "\n".join(
+                  archive.read(n).decode("utf-8", errors="ignore")
+                  for n in app_files
+                  if n.endswith((".js", ".html"))
+              )
+              for phrase in ("Export Progress", "Progress backup"):
+                  if phrase not in web_text:
+                      raise SystemExit(f"Packaged web assets are missing progress backup UI text: {phrase}")
+
+          print(f"Verified {ipa} ({ipa.stat().st_size} bytes): valid IPA, arm64 iOS device binary, bundle ID com.pompono.coptic, app assets, backup UI, Filesystem/Share, and privacy manifest")
+          PY
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CoptLingo-PR5-Unsigned-IPA
+          path: ${{ runner.temp }}/CoptLingo-PR5-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 14
