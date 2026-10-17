@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
+import { checkScannerHosted } from './hosted-smoke.mjs';
 
-export async function checkScanner(page, base, localModel) {
+export async function checkScanner(page, base) {
   await page.goto(base + '/translator/scanner/');
   // Synthetic short OCR fixtures are deliberately outside published coverage.
-  // Select AI drafts explicitly for the existing worker-execution checks.
+  // AI requests are exercised only after explicit text approval, with mocks.
 
   await page.waitForLoadState('networkidle');
-  await page.evaluate(() => Object.defineProperty(navigator, 'onLine', { get: () => false }));
+  await page.evaluate(() => Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false }));
   const fixture = await page.evaluate(async () => {
     const font = new FontFace('ScannerFixture', 'url(/FreeSerifAvvaShenouda.ttf)');
     document.fonts.add(await font.load());
@@ -76,18 +77,16 @@ export async function checkScanner(page, base, localModel) {
   await input.evaluate(element => element.setSelectionRange(1, 2));
   await page.getByRole('button', { name: 'Insert ⲭ', exact: true }).click();
   assert.equal(await input.inputValue(), 'ⲡⲭⲥ');
-  await input.fill('ⲡⲉⲛⲛⲟⲩϯ');
-  if (localModel) {
-    await page.getByLabel('Translation method').selectOption('experimental');
-    await page.getByRole('button', { name: 'Translate block', exact: true }).click();
-    await page.getByRole('button', { name: 'Translate block', exact: true }).waitFor({ state: 'visible', timeout: 180000 });
-    await page.waitForFunction(() => [...document.querySelectorAll('button')].some(button => button.textContent === 'Translate block' && !button.disabled), null, { timeout: 180000 });
-    assert.match(await page.getByRole('button', { name: 'Review text block 1', exact: true }).innerText(), /our God/i);
+  // Review/correct every remaining OCR block before approving a batch. The
+  // synthetic font's initial '[' must not be silently sent as a Coptic letter.
+  for (let index = 1; index < count; index++) {
+    await blocks.nth(index).click();
     await input.fill('ⲓⲏⲥ ⲡⲭⲥ');
-    assert.doesNotMatch(await page.getByRole('button', { name: 'Review text block 1', exact: true }).innerText(), /our God/i);
-    await page.getByRole('button', { name: 'Translate block', exact: true }).click();
-    await page.waitForFunction(() => [...document.querySelectorAll('button')].some(button => button.textContent === 'Translate block' && !button.disabled), null, { timeout: 180000 });
-    assert.match(await page.getByRole('button', { name: 'Review text block 1', exact: true }).innerText(), /Jesus Christ/i);
+  }
+  await blocks.first().click();
+  await input.fill('ⲡⲉⲛⲛⲟⲩϯ');
+  await checkScannerHosted(page);
+  await page.evaluate(() => Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false }));
     const damagedMary = 'ⲉⲣⲉ ⲛⲉ ⲙⲁⲣⲓⲁ: ϯϭⲣⲟⲙⲡⲓ ⲉⲑⲛⲉⲥⲱⲥ: ⲑⲏⲉⲧⲁⲥⲙⲓⲥⲓ ⲛⲁⲛ: ⲙⲫⲛⲟⲩϯ ⲡⲓⲗⲟⲅⲟⲥ □';
     await input.fill(damagedMary);
     await page.getByText('Find a published passage to check these letters', { exact: true }).click();
@@ -110,9 +109,7 @@ export async function checkScanner(page, base, localModel) {
     if (process.env.COPTIC_SCANNER_SCREENSHOT) await page.screenshot({ path: process.env.COPTIC_SCANNER_SCREENSHOT, fullPage: true });
     await page.getByRole('button', { name: 'Show original', exact: true }).click();
     assert.doesNotMatch(await page.getByRole('button', { name: 'Review text block 1', exact: true }).innerText(), /Jesus Christ/i);
-  } else {
-    assert.equal(await page.getByRole('button', { name: 'Translate block', exact: true }).isDisabled(), true);
-  }
+
 
   await page.getByRole('button', { name: 'Rotate ↻', exact: true }).click();
   await page.waitForFunction(() => document.querySelector('img[alt="Selected Coptic page"]')?.naturalWidth === 500);
@@ -154,6 +151,6 @@ export async function checkScanner(page, base, localModel) {
   await page.getByRole('button', { name: 'Restore recognised text', exact: true }).click();
   assert.equal(await markedInput.inputValue(), before);
   console.log('PASS: original-photo mark inspection and single-word correction preserve other text.');
-  console.log('PASS: actual Coptic photo OCR, editable text, aligned overlays, rotate/crop/clear, and offline translation bubbles.');
+  console.log('PASS: actual Coptic photo OCR, editable text, aligned overlays, rotate/crop/clear, and offline published lookup with hosted AI approval checks.');
   await page.waitForLoadState('networkidle');
 }

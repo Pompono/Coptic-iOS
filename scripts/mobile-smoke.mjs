@@ -114,10 +114,9 @@ try {
     // tears down the document while Next's link prefetches are still running.
     await page.waitForLoadState('networkidle');
   }
-  const localModel = await access('out/models/coptic-english/manifest.json').then(() => true).catch(() => false);
   await checkHostedTranslation(page, context);
   await page.waitForLoadState('networkidle');
-  try { await checkScanner(page, base, localModel); }
+  try { await checkScanner(page, base); }
   catch (failure) {
     console.error('Scanner failure snapshot:', (await page.locator('body').innerText()).slice(0, 3000));
     console.error('Page errors:', errors);

@@ -123,6 +123,18 @@ test('invalid replies and native network errors are safe', async () => {
   await assert.rejects(request('/api/translate', options()), /unavailable/);
 });
 
+for (const native of [true, false]) {
+  test(`${native ? 'native' : 'browser'} preserves Retry-After for scanner pacing`, async () => {
+    const request = createTranslationRequest({ isNative: () => native,
+      nativePost: async () => ({ status: 429, headers: { 'retry-after': '90' }, data: { error: 'private' } }),
+      fetchImpl: async () => new Response('{}', { status: 429, headers: { 'Retry-After': '90' } }),
+    });
+    const response = await request('/api/translate', options());
+    assert.equal(response.headers.get('Retry-After'), '90');
+    assert.doesNotMatch(await response.text(), /private/);
+  });
+}
+
 test('Translator wiring never imports local inference or frontend API credentials', async () => {
   const service = await readFile('lib/translationService.ts', 'utf8');
   assert.match(service, /CapacitorHttp.post/);

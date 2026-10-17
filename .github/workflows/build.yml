@@ -37,7 +37,17 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run ios:sync
+      - run: node scripts/check-translation-assets.mjs ios/App/App/public
+      - run: npm run test:translation-assets
       - run: xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/coptic-derived CODE_SIGNING_ALLOWED=NO build
+      - name: Validate unsigned device archive without publishing
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphoneos -destination 'generic/platform=iOS' -archivePath /tmp/Coptic-validation.xcarchive CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO archive
+          mkdir -p /tmp/coptic-validation/Payload
+          cp -R /tmp/Coptic-validation.xcarchive/Products/Applications/App.app /tmp/coptic-validation/Payload/
+          (cd /tmp/coptic-validation && zip -qr /tmp/Coptic-validation.ipa Payload)
+          python3 scripts/scanner/verify-ipa.py /tmp/Coptic-validation.ipa
+          python3 -c "from pathlib import Path; print('Unsigned device IPA bytes:', Path('/tmp/Coptic-validation.ipa').stat().st_size)"
       - run: bash scripts/native-startup-smoke.sh 2>&1 | tee /tmp/coptic-native-startup.log
         id: native_startup
         timeout-minutes: 18
