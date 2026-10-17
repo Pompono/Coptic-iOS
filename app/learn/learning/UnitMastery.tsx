@@ -1,4 +1,5 @@
 "use client";
+import { readRecord } from "@/lib/progressStorage";
 import { useEffect, useState } from 'react';
 import { LEARNING_KEY, parseLearning, masteryState } from '@/lib/learning/progress.mjs';
 export default function UnitMastery({ unitId }: { unitId:string }) {
@@ -6,7 +7,7 @@ export default function UnitMastery({ unitId }: { unitId:string }) {
   useEffect(()=>{
     const update=()=>{
       try {
-        const skills=Object.values(parseLearning(localStorage.getItem(LEARNING_KEY)).skills).filter((skill:any)=>(skill.unitIds ?? [skill.unitId]).includes(unitId));
+        const skills=Object.values((readRecord(LEARNING_KEY) ?? parseLearning(null)).skills).filter((skill:any)=>(skill.unitIds ?? [skill.unitId]).includes(unitId));
         const result={}; for(const skill of skills){ const state=masteryState(skill);result[state]=(result[state]??0)+1; } setCounts(result);
       } catch { setCounts({}); }
     };

@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { startTransition, useEffect, useRef, useState } from "react";
 import { audioService, reportAudioFailure } from "@/lib/audioService";
 import { resolveLessonAudio } from "../../../lib/lessonAudio";
+import { reportProgressError } from "@/lib/progressStorage";
 import { clearStepFailed, markStepCompleted, markStepFailed } from "../progress";
 import { type ExerciseSetId, type Lesson, type UnitLessonStep } from "../../../lib/lesson";
 import Section1Unit2Lesson1Client from "./Section1Unit2Lesson1Client";
@@ -833,7 +834,7 @@ function PairLettersLesson({ lesson, step }: { lesson: Lesson; step: UnitLessonS
   };
 
   const triggerLessonFailure = () => {
-    markStepFailed(lesson.id, step.id);
+    try { markStepFailed(lesson.id, step.id); } catch (error) { reportProgressError(error); }
     clearCompletionTimeout();
     clearPairMismatchTimeout();
     clearPairMatchTimeout();

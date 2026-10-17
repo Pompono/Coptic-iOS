@@ -255,7 +255,7 @@ export default function LearnHubClient() {
   useEffect(() => {
     const next: Record<string, string[]> = {};
     for (const lesson of lessons) {
-      next[lesson.id] = readCompletedSteps(lesson.id);
+      next[lesson.id] = (readCompletedSteps(lesson.id) ?? []);
     }
     setCompletedByLessonId(next);
   }, []);

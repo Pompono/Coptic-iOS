@@ -15,14 +15,17 @@
     "typecheck": "tsc --noEmit",
     "test:mobile": "node scripts/mobile-smoke.mjs",
     "prebuild": "node scripts/local-translation/copy-runtime.mjs && node scripts/scanner/prepare.mjs",
-    "postbuild": "node scripts/settle-static-html.mjs"
+    "postbuild": "node scripts/settle-static-html.mjs",
+    "test:backup": "node scripts/progress-backup-smoke.mjs"
   },
   "dependencies": {
     "@capacitor/camera": "^7.0.3",
     "@capacitor/cli": "7.6.9",
     "@capacitor/core": "7.6.9",
+    "@capacitor/filesystem": "^7.1.9",
     "@capacitor/ios": "7.6.9",
     "@capacitor/keyboard": "^7.0.6",
+    "@capacitor/share": "^7.0.4",
     "@huggingface/transformers": "3.8.1",
     "@supabase/supabase-js": "latest",
     "cheerio": "^1.2.0",

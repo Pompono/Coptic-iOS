@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { audioService, reportAudioFailure } from "@/lib/audioService";
 import { resolveLessonAudio } from "../../../lib/lessonAudio";
+import { reportProgressError } from "@/lib/progressStorage";
 import { clearStepFailed, markStepCompleted, markStepFailed } from "../progress";
 import { type Lesson, type UnitLessonStep } from "../../../lib/lesson";
 
@@ -541,8 +542,10 @@ export default function Section1Unit2Lesson1Client({
     }
 
     playLessonAudio(step.id, "lesson-complete", "");
-    clearStepFailed(lesson.id, step.id);
-    markStepCompleted(lesson.id, step.id);
+    try {
+      clearStepFailed(lesson.id, step.id);
+      markStepCompleted(lesson.id, step.id);
+    } catch (error) { reportProgressError(error); return; }
     const timer = window.setTimeout(() => {
       router.replace(`/learn/${lesson.id}`);
     }, 1900);
@@ -615,7 +618,7 @@ export default function Section1Unit2Lesson1Client({
     }
 
     playLessonAudio(step.id, "incorrect-answer", "");
-    markStepFailed(lesson.id, step.id);
+    try { markStepFailed(lesson.id, step.id); } catch (error) { reportProgressError(error); }
     setResultState("wrong");
   };
 

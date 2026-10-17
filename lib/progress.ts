@@ -1,3 +1,4 @@
+import { readRecord, writeRecord } from "./progressStorage";
 type Progress = {
   xp: number;
   streak: number;
@@ -25,16 +26,16 @@ export function getProgress(): Progress {
     return createDefaultProgress();
   }
 
-  const stored = localStorage.getItem(KEY);
+  const stored = readRecord(KEY);
   if (!stored) {
     return createDefaultProgress();
   }
 
-  return JSON.parse(stored);
+  return stored;
 }
 
 export function saveProgress(progress: Progress) {
-  localStorage.setItem(KEY, JSON.stringify(progress));
+  writeRecord(KEY, progress);
 }
 
 export function addXpAndAdvanceStreak({
@@ -59,12 +60,4 @@ export function addXpAndAdvanceStreak({
   }
 
   saveProgress(progress);
-}
-
-export function clearProgress() {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  localStorage.removeItem(KEY);
 }

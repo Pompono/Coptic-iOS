@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { resultFeedback } from "@/lib/nativeExperience";
 import { audioService, reportAudioFailure } from '@/lib/audioService';
 import { resolveLessonAudio } from '@/lib/lessonAudio';
+import { readRecord, writeRecord } from "@/lib/progressStorage";
 import { clearStepFailed, markStepCompleted } from '../progress';
 import { createCard, gradeCard, cardId } from '@/lib/vocabulary/schedule.mjs';
 import { readVocabulary, writeVocabulary } from '@/lib/vocabulary/store';
@@ -46,7 +47,7 @@ export function LearningSession({ lesson, step, children, newLesson = false }: {
   const items = useMemo(() => getCourseItems(step.exerciseSet ?? ''), [step.exerciseSet]);
   useEffect(() => {
     try {
-      const progress = parseLearning(localStorage.getItem(LEARNING_KEY));
+      const progress = (readRecord(LEARNING_KEY) ?? parseLearning(null));
       const due = dueLearningItems(progress, Object.keys(progress.skills)).map(skill => ({...skill, explanation:skill.explanation ?? 'Read the complete expression and compare it with the meaning you learned.'}));
       setReviews(due); setCelebrationPlaying(false); setPhase('guide');
     } catch (failure) { setError(failure instanceof Error ? failure.message : 'Learning progress could not be loaded.'); setPhase('guide'); }
@@ -56,9 +57,9 @@ export function LearningSession({ lesson, step, children, newLesson = false }: {
     const firstTry = initialAttempt && !assisted; attempts.current.add(id);
     if (initialAttempt) void resultFeedback(correct);
     try {
-      let latest = parseLearning(localStorage.getItem(LEARNING_KEY));
+      let latest = (readRecord(LEARNING_KEY) ?? parseLearning(null));
       for (const item of concepts) latest = recordAttempt(latest, {...item, unitId:item.unitId ?? lesson.id}, correct, firstTry);
-      localStorage.setItem(LEARNING_KEY,JSON.stringify(latest));
+      writeRecord(LEARNING_KEY, latest);
       window.dispatchEvent(new Event('coptic-learning-change'));
       const cards = readVocabulary(); let changed = false;
       for (const item of concepts) {

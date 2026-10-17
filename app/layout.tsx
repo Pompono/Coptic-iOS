@@ -9,6 +9,7 @@ import CopticFontPreference from "./CopticFontPreference";
 import MobileChinDock from "./MobileChinDock";
 import ThemePreference, { themeInitScript } from "./ThemePreference";
 import NavigationScrollReset from './NavigationScrollReset';
+import ProgressStorageNotice from "./ProgressStorageNotice";
 import AppViewport from './AppViewport';
 
 export const metadata: Metadata = {
@@ -35,7 +36,7 @@ export default function RootLayout({
         <CopticFontPreference />
         <ThemePreference />
         <NavigationScrollReset />
-        <AppViewport>{children}</AppViewport>
+        <AppViewport><ProgressStorageNotice />{children}</AppViewport>
         <MobileChinDock />
         <KeyboardInstallPrompt />
       </body>
