@@ -1,6 +1,11 @@
 name: Build unsigned iOS device IPA
 
 on:
+  push:
+    branches:
+      - feat/progress-protection-backup
+    paths:
+      - '.github/workflows/unsigned-ipa.yml'
   workflow_dispatch:
 
 permissions:
@@ -89,7 +94,8 @@ jobs:
                   binary = pathlib.Path(tmp, executable_path)
                   subprocess.run(["/usr/bin/xcrun", "lipo", "-verify_arch", "arm64", str(binary)], check=True)
                   platform = subprocess.check_output(["/usr/bin/xcrun", "vtool", "-show-build", str(binary)], text=True)
-                  if "Platform: IOS" not in platform and "platform 2" not in platform:
+                  platform_lower = platform.lower()
+                  if "platform: ios" not in platform_lower and "platform 2" not in platform_lower:
                       raise SystemExit("Mach-O build metadata does not identify an iOS device binary:\n" + platform)
                   symbols = subprocess.check_output(["/usr/bin/strings", str(binary)], text=True, errors="replace")
                   if "CapacitorFilesystem" not in symbols or "SharePlugin" not in symbols:
