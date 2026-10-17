@@ -68,14 +68,14 @@ export async function checkDesign(browser,base){
    if(route==='/translator/'&&selector==='button[type=submit]'){
     const methods=page.getByRole('group',{name:'Translation method',exact:true});
     const published=methods.getByRole('button',{name:'Published text match',exact:true});
-    const experimental=methods.getByRole('button',{name:'Experimental translation',exact:true});
+    const experimental=methods.getByRole('button',{name:'Experimental AI · online',exact:true});
     assert.equal(await published.getAttribute('aria-pressed'),'true','Published matching remains the default method');
-    assert.match(await methods.innerText(),/Finds translations in supported published Coptic passages\. Not all text can be matched\./);
+    assert.match(await methods.innerText(),/Finds translations in supported published Coptic passages offline\./);
     const methodHeight=await experimental.evaluate(el=>el.getBoundingClientRect().height);
     assert.ok(methodHeight>=44,'Translation method choices keep a 44px touch target');
     await experimental.click();
     assert.equal(await experimental.getAttribute('aria-pressed'),'true','The active method is visible before translation');
-    assert.match(await methods.innerText(),/Generates a translation of other text\. Results may be inaccurate\./);
+    assert.match(await methods.innerText(),/Sends text over HTTPS to CopticLingo’s hosted AI\./);
     await published.click();
    }
    const heights=await page.locator(selector).evaluateAll(els=>els.filter(el=>el.getBoundingClientRect().height>0).map(el=>el.getBoundingClientRect().height));
@@ -106,7 +106,7 @@ export async function checkDesign(browser,base){
   await context.unroute('**/models/coptic-english/manifest.json');
   await context.route('**/models/coptic-english/manifest.json',route=>route.fulfill({status:404,body:'Not installed'}));
   await page.goto(base+'/translator/');await page.waitForLoadState('networkidle');
-  assert.equal(await page.getByRole('group',{name:'Translation method',exact:true}).count(),0,'An unavailable optional model does not expose methods it cannot run');
+  assert.equal(await page.getByRole('group',{name:'Translation method',exact:true}).count(),1,'Published lookup and hosted AI do not require an optional model');
   assert.ok((await page.getByRole('button',{name:'Translate',exact:true}).boundingBox()).height>=50,'Translation retains its action size without model controls');
   await page.getByRole('textbox',{name:'Coptic text',exact:true}).focus();
   await page.evaluate(()=>{Object.defineProperty(window.visualViewport,'height',{configurable:true,get:()=>400});window.visualViewport.dispatchEvent(new Event('resize'));});
