@@ -68,7 +68,8 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(args.source, revision=REVISION if args.source == MODEL else None)
     for filename in ['config.json', 'generation_config.json', 'tokenizer_config.json', 'special_tokens_map.json']:
         shutil.copyfile(intermediate / filename, destination / filename)
-    (destination / 'tokenizer.json').write_text(json.dumps(tokenizer_json(tokenizer), ensure_ascii=False))
+    (destination / 'tokenizer.json').write_text(
+        json.dumps(tokenizer_json(tokenizer), ensure_ascii=False), encoding='utf-8')
     for name in ['encoder_model', 'decoder_model_merged']:
         target = destination / 'onnx' / f'{name}_quantized.onnx'
         quantize_dynamic(intermediate / f'{name}.onnx', target,
@@ -78,23 +79,23 @@ def main():
         print(f'{target.name}: {target.stat().st_size / 1e6:.1f} MB', flush=True)
     shutil.copyfile(root / 'scripts/local-translation/LICENSE.model.txt', destination / 'LICENSE.txt')
     # Preserve the upstream license notice alongside the derived model files.
-    notice = Path(hf_hub_download(MODEL, 'README.md', revision=REVISION)).read_text()
-    (destination / 'UPSTREAM_README.md').write_text(notice)
+    notice = Path(hf_hub_download(MODEL, 'README.md', revision=REVISION)).read_text(encoding='utf-8')
+    (destination / 'UPSTREAM_README.md').write_text(notice, encoding='utf-8')
     (destination / 'SOURCE.txt').write_text(
         f'Model source and weights: https://huggingface.co/{MODEL}/tree/{REVISION}\n'
         f'License: AGPL-3.0 (see UPSTREAM_README.md).\n'
-        'Conversion source: scripts/local-translation/export.py in this repository.\n')
-    adaptation = json.loads(Path(args.adaptation_manifest).read_text()) if args.adaptation_manifest else None
+        'Conversion source: scripts/local-translation/export.py in this repository.\n', encoding='utf-8')
+    adaptation = json.loads(Path(args.adaptation_manifest).read_text(encoding='utf-8')) if args.adaptation_manifest else None
     if adaptation:
         with (destination / 'SOURCE.txt').open('a') as notice_file:
             notice_file.write('These weights include an experimental local adaptation; see ADAPTATION.json and the repository training source.\n')
-        (destination / 'ADAPTATION.json').write_text(json.dumps(adaptation, indent=2) + '\n')
+        (destination / 'ADAPTATION.json').write_text(json.dumps(adaptation, indent=2) + '\n', encoding='utf-8')
     files = {str(p.relative_to(destination)): {'bytes': p.stat().st_size,
              'sha256': hashlib.sha256(p.read_bytes()).hexdigest()}
              for p in destination.rglob('*') if p.is_file() and p.name != 'manifest.json'}
     (destination / 'manifest.json').write_text(json.dumps({
         'model': MODEL, 'revision': REVISION, 'license': 'AGPL-3.0',
-        'format': 'onnx-q8', 'adaptation': adaptation, 'files': files}, indent=2) + '\n')
+        'format': 'onnx-q8', 'adaptation': adaptation, 'files': files}, indent=2) + '\n', encoding='utf-8')
 
 
 if __name__ == '__main__':

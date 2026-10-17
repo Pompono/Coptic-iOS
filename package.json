@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --webpack",
     "dev:lan": "next dev --webpack --hostname 0.0.0.0",
-    "build": "next build --webpack",
+    "build": "node scripts/clean-export-output.mjs && next build --webpack",
     "start": "serve out --listen 3000",
     "start:lan": "npm run start",
     "preview:phone": "npm run build && serve out --listen 3000",

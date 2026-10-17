@@ -38,7 +38,7 @@ export async function checkDesign(browser,base){
    await page.goto(base+route);await page.waitForLoadState('networkidle');
    const header=page.locator('.page-header');
    assert.equal(await header.count(),1,route+' has one shared page header');
-   if(route==='/translator/')assert.equal(await page.getByRole('link',{name:'Scan a photo',exact:true}).count(),0,'Photo scanning is not offered in the translator');
+   if(route==='/translator/')assert.equal(await page.getByRole('link',{name:'Scan a photo',exact:true}).count(),1,'Photo scanning is available from the translator');
    assert.equal(await header.locator(':scope > p').count(),0,route+' omits page-header descriptions');
    const layout=await header.evaluate(el=>{const style=getComputedStyle(el.querySelector('h1'));return {font:style.fontSize,weight:style.fontWeight,line:style.lineHeight};});
    headings.push(layout);
@@ -47,11 +47,16 @@ export async function checkDesign(browser,base){
   }
   assert.ok(headings.every(style=>JSON.stringify(style)===JSON.stringify(headings[0])),'All main pages share title typography');
   for(const [route,selector,min] of [
-   ['/translator/','button[type=submit]',50],['/translator/','select[aria-label="Translation method"]',44],
+   ['/translator/','button[type=submit]',50],
    ['/settings/','select',44],['/dictionary/entry/?lemma=ⲁ','.dictionary-entry-toolbar button,.dictionary-entry-toolbar a',44],['/dictionary/','.dictionary-search-shell',44],
    ['/read/','[role=group][aria-label="Reading passage"] button',44],['/translator/scanner/','button',44]
   ]){
    await page.goto(base+route);await page.waitForLoadState('networkidle');
+   if(route==='/translator/'&&selector==='button[type=submit]'){
+    await page.getByText('Translation options',{exact:true}).click();
+    const methodHeight=await page.locator('select[aria-label="Translation method"]').evaluate(el=>el.getBoundingClientRect().height);
+    assert.ok(methodHeight>=44,'Advanced translation method keeps a 44px touch target');
+   }
    const heights=await page.locator(selector).evaluateAll(els=>els.filter(el=>el.getBoundingClientRect().height>0).map(el=>el.getBoundingClientRect().height));
    assert.ok(heights.length>0&&heights.every(height=>height>=min),route+' '+selector+' controls have consistent touch targets: '+JSON.stringify(heights));
   }
@@ -80,6 +85,7 @@ export async function checkDesign(browser,base){
   await context.unroute('**/models/coptic-english/manifest.json');
   await context.route('**/models/coptic-english/manifest.json',route=>route.fulfill({status:404,body:'Not installed'}));
   await page.goto(base+'/translator/');await page.waitForLoadState('networkidle');
+  await page.getByText('Translation options',{exact:true}).click();
   assert.equal(await page.getByRole('combobox',{name:'Translation method',exact:true}).count(),0,'An unavailable optional model does not expose its method picker');
   assert.ok((await page.getByRole('button',{name:'Translate',exact:true}).boundingBox()).height>=50,'Translation retains its action size without model controls');
   await page.getByRole('textbox',{name:'Coptic text',exact:true}).focus();

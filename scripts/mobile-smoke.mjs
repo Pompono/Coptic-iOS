@@ -133,6 +133,7 @@ try {
     await page.getByRole('button', { name: 'Translate', exact: true }).click();
     await page.getByText(/No unambiguous published translation/).waitFor();
     assert.equal(await page.getByText('You are the flower, of incense, that has blossomed, from the root of Jesse.').count(), 0);
+    await page.getByText('Translation options', { exact: true }).click();
     await page.getByLabel('Translation method').selectOption('experimental');
     console.log('PASS: source-matched flower/incense/Jesse stanza and explicit refusal of damaged OCR.');
   }
