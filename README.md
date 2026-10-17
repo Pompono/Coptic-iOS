@@ -5,9 +5,9 @@ The original repository remains independent. This repository retains its source 
 
 Lessons, pronunciation audio, fonts, dictionary data, and the interface are bundled
 inside the app. Progress and preferences remain in the app's local WebView storage.
-The offline translation build runs Coptic → English on the device. English → Coptic
-still uses the separate Python-backed server in `backend/`. Standard builds without
-the model files use that server for both directions.
+The Translator screen uses CopticLingo’s existing hosted AI in both directions,
+with a separate offline published-text lookup. Scanner OCR and translation remain
+on-device; scanner translation still needs the optional offline-model build.
 No hosted website is required to open the app or use its learning content.
 
 ## Reading, vocabulary, and grammar
@@ -146,29 +146,27 @@ and App Store distribution require an Apple Developer membership. This repositor
 contains the native project, not a signed IPA. Replace the generated placeholder
 app icon and launch artwork before distributing a release.
 
-## Offline Coptic → English and a Sideloadly IPA
+## Hosted Translator and offline scanner IPA
 
-In GitHub, open **Actions → Build offline translation IPA → Run workflow**.
-The workflow exports and quantizes the pinned upstream model, checks tokenizer
-parity, tests actual offline translations, and builds an unsigned **device** IPA
-on a hosted Mac. Download the `Coptic-offline-unsigned-IPA` artifact from the
-completed run, extract `Coptic-offline-unsigned.ipa`, and use Sideloadly to sign and
-install it with your Apple ID. No Mac of your own is needed. Artifacts expire after
-seven days; rerun the workflow to rebuild them.
+The Translator screen uses the existing public CopticLingo proxy for AI in both
+directions. Published text is a separate local, offline reference lookup, available
+without model weights. It covers supported Bohairic passages only and never
+silently replaces an AI request. AI needs internet, sends submitted text over
+HTTPS, accepts up to 1,200 Unicode characters, and can return inaccurate drafts.
 
-The model adds about 145 MB of weights plus the bundled WebAssembly runtime. It
-requires a browser/WebView with WebAssembly SIMD support (use iOS 16.4 or newer).
-It runs in a worker using one CPU thread, with no remote requests or model download
-after installation. Leaving the translator releases its worker and model memory.
-The interface indicates when on-device translation is available. A local inference
-failure is shown to the user; it does not silently send the input to a server.
+The scanner is intentionally unchanged: OCR, photographs, editing, corrections,
+overlays, published matching, and AI translation remain on-device. Scanner
+translation still requires the optional offline-model IPA. See the
+[hosted translation migration and scanner follow-up plan](docs/hosted-translation.md).
+Do not remove the model/runtime assets while that scanner dependency remains.
 
-This initial version uses greedy decoding and 8-bit quantization, so output can
-differ from the original server's beam-search translations. It accepts short
-passages (up to 1,200 characters and 512 model tokens) and generates up to 64 tokens.
-It does not present an uncalibrated confidence score. English → Coptic remains a
-server feature. iPhone speed, memory limits, and translation quality beyond the
-test examples still require device validation.
+In GitHub, **Actions → Build offline translation IPA** remains available as an
+explicit workflow for scanner users. It exports the pinned model and packages an
+unsigned device IPA on a hosted Mac; it is not run or published by this change.
+The model adds approximately 145 MB of weights plus its WASM runtime and needs
+WebAssembly SIMD (iOS 16.4 or newer). The scanner's worker uses one CPU thread;
+leaving the scanner releases its model memory. A local failure never uploads the
+photo or silently sends recognised text to a server.
 
 Model files are generated, not committed to Git. To export them yourself on a
 machine with Python 3.12, run from the repository root:
@@ -191,45 +189,31 @@ a manifest with file sizes and SHA-256 hashes. Converted model weights retain th
 upstream **AGPL-3.0** license; its notice, license text, and source links are bundled.
 The original model is at [megalaa/coptic-english-translator](https://huggingface.co/megalaa/coptic-english-translator).
 
-## Translation server
+## Shared translation server
 
-A standard build without generated model files has no translation service
-configured by default. The offline workflow bundles Coptic → English; use a server
-for English → Coptic or for builds without the local model.
-To enable translation, host `backend/` on a service that can run both Node.js and
-Python with enough memory for the Hugging Face models:
+No new backend or frontend environment variable is needed. AI uses only:
 
-```sh
-cd backend
-npm ci
-python3 -m pip install -r translator/requirements.txt
-cp .env.example .env.local
-npm run build
-npm start
-```
+- `POST https://coptlingo.com/api/translate` (Coptic → English)
+- `POST https://coptlingo.com/api/translate/en-coptic` (English → Coptic)
 
-The service listens on port 3001. Put it behind an HTTPS endpoint. Model weights are
-downloaded on first use, so the server needs Hugging Face access and persistent model
-cache storage. This preserves the upstream subprocess-based translator; model loading
-can be slow. Test actual translations after provisioning the server.
+Requests contain `text`, `dialect` (`bohairic` or `sahidic`), and
+`includeConfidence`. The website authenticates to the private FastAPI backend;
+**never put `COPTIC_API_KEY` in this app or its build environment**. The old
+`NEXT_PUBLIC_TRANSLATION_API_URL` setting is no longer used. The legacy
+`backend/` directory is retained for historical/development use and is not
+required, deployed, or bundled by this migration.
 
-At the repository root, copy `.env.example` to `.env.local` and set:
+Native iOS uses direct `CapacitorHttp.post`, bypassing browser CORS without
+patching global `fetch`. Calls use a 30-second deadline, no automatic retries,
+clear offline/service/429 errors, and no redirects. Cancellation discards stale
+results; Capacitor 7 cannot abort the underlying native call, so another native
+request is blocked until it settles. Bridge logging is disabled to avoid logging
+translation results. No photographs leave the device.
 
-```dotenv
-NEXT_PUBLIC_TRANSLATION_API_URL=https://your-translation-server.example
-```
-
-Then rerun `npm run ios:sync`. The URL is public build configuration, not a secret.
-The app uses Capacitor's native HTTP client on iOS, so native translation requests do
-not require browser CORS. For a browser preview, set the backend's
-`COPTIC_ALLOWED_ORIGINS` to the exact preview origin, for example
-`http://localhost:3000`. HTTPS remains required for the API URL.
-
-Endpoints are `POST /api/translate` and `POST /api/translate/en-coptic`, accepting
-`text`, `dialect` (`bohairic` or `sahidic`), and `includeConfidence`.
-
-The backend is not bundled into the iPhone app. Host it separately; configure access
-controls and request limits appropriate to the audience before exposing it publicly.
+The public proxy currently returns no browser CORS headers. A browser preview
+from another origin therefore cannot call it directly; smoke tests mock online
+responses. No CORS or production server change is part of this PR. Native iOS
+requests do not have that browser restriction.
 
 ## Browser preview and checks
 
@@ -240,8 +224,7 @@ npm start
 ```
 
 `npm start` serves the exported app on port 3000. `npm run dev` is available for
-interface development. Both production and development builds use the configured
-remote translation server.
+interface development. Both builds use the shared website proxy for AI on native iOS.
 
 For the mobile browser smoke check, run `npx playwright install chromium` once,
 then `npm run test:mobile` after building. It blocks external networking while

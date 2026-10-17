@@ -13,6 +13,8 @@
     "ios:open": "cap open ios",
     "test": "node --test tests/*.test.mjs",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test:translation-assets": "node scripts/check-translation-assets.mjs",
     "test:mobile": "node scripts/mobile-smoke.mjs",
     "prebuild": "node scripts/local-translation/copy-runtime.mjs && node scripts/scanner/prepare.mjs",
     "postbuild": "node scripts/settle-static-html.mjs"
