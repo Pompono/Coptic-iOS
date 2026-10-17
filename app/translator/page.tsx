@@ -10,7 +10,8 @@ import {copyText} from "@/lib/nativeExperience";
 import ReferenceDetails from "./ReferenceDetails";
 
 import { translationRequest } from "@/lib/translationService";
-import { hasLocalTranslator, disposeLocalTranslator } from "@/lib/localTranslation/client";
+import { publishedTranslation } from "@/lib/localTranslation/referenceClient";
+import { MAX_TRANSLATION_CHARACTERS } from "@/lib/hostedTranslation.mjs";
 
 import { type FormEvent as ReactFormEvent, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type TouchEvent as ReactTouchEvent, useEffect, useRef, useState } from "react";
 import {
@@ -37,11 +38,7 @@ type TranslationDirection = "copticToEnglish" | "englishToCoptic";
 
 export default function TranslatorPage() {
   const {show:showLock,notice}=useSettingsLockNotice();
-  const [localTranslationEnabled, setLocalTranslationEnabled] = useState(false);
-  useEffect(() => {
-    void hasLocalTranslator().then(setLocalTranslationEnabled);
-    return disposeLocalTranslator;
-  }, []);
+  const activeTranslation = useRef<AbortController | null>(null);
   const [direction, setDirection] = useState<TranslationDirection>("copticToEnglish");
   const [translationMethod, setTranslationMethod] = useState<'published' | 'experimental'>('published');
   const [translationProgress, setTranslationProgress] = useState('');
@@ -60,6 +57,10 @@ export default function TranslatorPage() {
   const [englishError, setEnglishError] = useState("");
   const [englishOutput, setEnglishOutput] = useState("");
   const [englishConfidence, setEnglishConfidence] = useState<number | null>(null);
+  useEffect(() => {
+    setTranslationState("idle"); setEnglishState("idle");
+    return () => activeTranslation.current?.abort();
+  }, [translationInput, englishInput, translatorDialect, translationMethod, direction]);
   const [showKeyboard, setShowKeyboard] = useState(false);
   const [keyboardEnabled, setKeyboardEnabled] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
@@ -326,23 +327,35 @@ export default function TranslatorPage() {
       return;
     }
 
+    if (translationMethod === "experimental" && Array.from(text).length > MAX_TRANSLATION_CHARACTERS) {
+      setTranslationOutput(""); setConfidence(null); setTranslationState("error");
+      setTranslationError("AI translation accepts up to 1,200 characters. Shorten this passage."); return;
+    }
+    activeTranslation.current?.abort();
+    const controller = new AbortController(); activeTranslation.current = controller;
     setTranslationState("loading");
-    setTranslationProgress("Preparing translation…");
+    setTranslationProgress(translationMethod === "published" ? "Looking up published text on this device…" : "Requesting hosted AI translation…");
     setTranslationError("");
 
     try {
-      const res = await translationRequest("/api/translate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text,
-          dialect: translatorDialect,
-          includeConfidence: true,
-          method: translationMethod,
-        }),
-      }, setTranslationProgress);
-
-      const payload = (await res.json()) as TranslationPayload;
+      let payload: TranslationPayload;
+      let res: Response;
+      if (translationMethod === "published") {
+        const reference = await publishedTranslation(text, translatorDialect);
+        if (controller.signal.aborted) return;
+        if (!reference) throw new Error(translatorDialect === "bohairic"
+          ? "No unambiguous published translation matches this passage. Try a supported passage, or explicitly choose Experimental AI."
+          : "Published-text lookup covers Bohairic only. Choose Experimental AI for Sahidic.");
+        payload = reference;
+        res = new Response(null, { status: 200 });
+      } else {
+        res = await translationRequest("/api/translate", {
+          method: "POST", signal: controller.signal,
+          body: JSON.stringify({ text, dialect: translatorDialect, includeConfidence: true }),
+        });
+        payload = { ...(await res.json()), method: "experimental" };
+      }
+      if (controller.signal.aborted) return;
       if (!res.ok) {
         setTranslationOutput("");
         setConfidence(null);
@@ -361,6 +374,7 @@ export default function TranslatorPage() {
       setConfidence(typeof payload.confidence === "number" ? payload.confidence : null);
       setTranslationState("idle");
     } catch (error) {
+      if (controller.signal.aborted) return;
       setTranslationOutput("");
       setConfidence(null);
       setTranslationState("error");
@@ -378,17 +392,24 @@ export default function TranslatorPage() {
       return;
     }
 
+    if (Array.from(text).length > MAX_TRANSLATION_CHARACTERS) {
+      setEnglishOutput(""); setEnglishConfidence(null); setEnglishState("error");
+      setEnglishError("AI translation accepts up to 1,200 characters. Shorten this passage."); return;
+    }
+    activeTranslation.current?.abort();
+    const controller = new AbortController(); activeTranslation.current = controller;
     setEnglishState("loading");
     setEnglishError("");
 
     try {
       const res = await translationRequest("/api/translate/en-coptic", {
-        method: "POST",
+        method: "POST", signal: controller.signal,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, dialect: translatorDialect, includeConfidence: true }),
       });
 
       const payload = (await res.json()) as TranslationPayload;
+      if (controller.signal.aborted) return;
       if (!res.ok) {
         setEnglishOutput("");
         setEnglishConfidence(null);
@@ -404,6 +425,7 @@ export default function TranslatorPage() {
       setEnglishConfidence(typeof payload.confidence === "number" ? payload.confidence : null);
       setEnglishState("idle");
     } catch (error) {
+      if (controller.signal.aborted) return;
       setEnglishOutput("");
       setEnglishConfidence(null);
       setEnglishState("error");
@@ -431,7 +453,7 @@ export default function TranslatorPage() {
     setCopyStatus('');
     setTranslationError('');
     if (translationState === 'error') setTranslationState('idle');
-    if (!translationOutput) setOutputMethod('');
+    setTranslationOutput(''); setConfidence(null); setDraftSegments([]); setReferenceDetails({}); setOutputMethod('');
   };
 
   const handleDialectToggle = () => {
@@ -468,16 +490,17 @@ export default function TranslatorPage() {
           <div className="translation-direction"><span>{isCopticToEnglish?'Coptic → English':'English → Coptic'}</span><button type="button" onClick={handleSwitchDirection} disabled={currentState==='loading'} aria-label="Switch translation direction"><AppIcon name="return"/></button></div>
           <form className="translation-form" onSubmit={handleSubmit}>
             <textarea ref={inputRef} aria-label={isCopticToEnglish?'Coptic text':'English text'} disabled={currentState==='loading'} value={currentInput} onChange={event=>{setCopyStatus('');if(isCopticToEnglish){setTranslationInput(event.target.value);setTranslationOutput('');setTranslationError('');setConfidence(null);setDraftSegments([]);setReferenceDetails({});setOutputMethod('');}else{setEnglishInput(event.target.value);setEnglishOutput('');setEnglishError('');setEnglishConfidence(null);}}} onKeyDown={handleInputKeyDown} onPointerDownCapture={hideKeyboardOnManualInputFocus} placeholder={isCopticToEnglish?'Type Coptic text...':'Type English text...'} className={isCopticToEnglish?'coptic-text':''} autoCorrect="off" autoCapitalize="none" spellCheck={false}/>
-            {isCopticToEnglish && localTranslationEnabled ? <div className="translation-method-control" role="group" aria-label="Translation method">
+            {isCopticToEnglish ? <div className="translation-method-control" role="group" aria-label="Translation method">
               <span className="translation-method-title">Translation method</span>
               <div className="translation-method-choices">
                 <button type="button" aria-pressed={translationMethod === 'published'} disabled={currentState === 'loading'} onClick={() => handleTranslationMethodChange('published')}>Published text match</button>
-                <button type="button" aria-pressed={translationMethod === 'experimental'} disabled={currentState === 'loading'} onClick={() => handleTranslationMethodChange('experimental')}>Experimental translation</button>
+                <button type="button" aria-pressed={translationMethod === 'experimental'} disabled={currentState === 'loading'} onClick={() => handleTranslationMethodChange('experimental')}>Experimental AI · online</button>
               </div>
               <p className="translation-method-description">{translationMethod === 'published'
-                ? 'Finds translations in supported published Coptic passages. Not all text can be matched.'
-                : 'Generates a translation of other text. Results may be inaccurate.'}</p>
+                ? 'Finds translations in supported published Coptic passages offline. Bohairic only; not all text can be matched.'
+                : 'Sends text over HTTPS to CopticLingo’s hosted AI. Internet required; up to 1,200 characters. Results may be inaccurate.'}</p>
             </div> : null}
+            {!isCopticToEnglish && <p className="translation-method-description">AI translation sends text over HTTPS to CopticLingo. Internet required · maximum 1,200 characters · results may be inaccurate.</p>}
             <button type="submit" className="ui-primary" disabled={currentState==='loading'}>{currentState==='loading'?'Translating…':'Translate'}{currentState!=='loading'&&<AppIcon name="arrow" size={18}/>}</button>
           </form>
           {isCopticToEnglish&&currentState==='loading'&&<p role="status" className="mt-3 text-sm">{translationProgress}</p>}
@@ -493,13 +516,13 @@ export default function TranslatorPage() {
           {isCopticToEnglish&&currentOutput&&outputMethod==='experimental'&&draftSegments.length>1&&<details className="translation-help"><summary className="disclosure-summary">Review each draft passage<span className="disclosure-chevron"><AppIcon name="chevron" size={16}/></span></summary>{draftSegments.map((segment,index)=><div key={index}><p className="coptic-text">{segment.text}</p><p>{segment.translation}</p></div>)}</details>}
           {currentConfidence!==null&&<p className="translation-help">Confidence: {(currentConfidence*100).toFixed(1)}%</p>}
         </section>
-        <details className="translation-help"><summary className="disclosure-summary">About translation & offline use<span className="disclosure-chevron"><AppIcon name="chevron" size={16}/></span></summary><p>Published text returns an existing translation when the letters match a supported passage. It does not guess missing text. Experimental AI drafts can contain wrong meanings.</p><p>Coptic → English runs on this device, including offline, when the translation model is installed. English → Coptic uses the configured online service. Bohairic-only mode follows Settings.</p></details>
+        <details className="translation-help"><summary className="disclosure-summary">About translation & offline use<span className="disclosure-chevron"><AppIcon name="chevron" size={16}/></span></summary><p>Published text returns an existing translation when the letters match a supported passage. It does not guess missing text. Experimental AI drafts can contain wrong meanings.</p><p>AI in both directions runs on CopticLingo’s hosted server, not on this device. Submitted text is sent over HTTPS; no photos are sent. AI requires internet and accepts up to 1,200 characters. Published-text lookup stays on-device and works offline. Scanner translation remains a separate on-device feature in offline-model builds. Bohairic-only mode follows Settings.</p></details>
         <details className="translation-advanced">
           <summary className="disclosure-summary">Translation options<span className="disclosure-chevron"><AppIcon name="chevron" size={16}/></span></summary>
           <div className="translation-options">
             <div className="translation-dialect"><span>Dialect: {dialectLabel}</span><button type="button" onClick={handleDialectToggle} disabled={currentState === "loading" || bohairicOnlyEnabled} aria-label="Change translator dialect" title={bohairicOnlyEnabled ? "Locked by Bohairic-only mode in Settings" : "Change dialect"}>Change</button></div>
             {bohairicOnlyEnabled ? <p className="translation-option-note">Bohairic-only mode is active in Settings.</p> : null}
-            {isCopticToEnglish && localTranslationEnabled ? <p className="translation-option-note">Experimental results are labeled unverified.</p> : null}
+            {isCopticToEnglish ? <p className="translation-option-note">Experimental results are labeled unverified.</p> : null}
           </div>
         </details>
 
