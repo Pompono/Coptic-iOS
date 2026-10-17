@@ -54,7 +54,7 @@ Tap a bubble to read the full translation below the image. **Show original** rev
 the photographed text again. Published matching works offline; hosted AI requires internet and a separate text approval step.
 
 Recognition and published matching run locally. AI sends only approved Coptic text over HTTPS to coptlingo.com, never photographs. Photos are not uploaded, saved to the
-photo library, or persisted by the scanner. Recognition scales photos to a maximum
+photo library by the scanner, or sent to our server. Camera/photo-picker plugins may use OS-managed local temporary files; clearing the scanner does not promise secure deletion of those caches. Recognition scales photos to a maximum
 3072-pixel edge and uses a separate worker, released before translation. Cropping,
 rotation, edits, and dialect changes invalidate affected results. OCR is limited to
 the first 24 text regions; crop a smaller part of dense pages. There is no live

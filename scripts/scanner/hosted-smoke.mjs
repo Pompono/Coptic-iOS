@@ -30,6 +30,12 @@ export async function checkScannerHosted(page) {
   try {
     await page.getByLabel('Translation method', { exact: true }).selectOption('experimental');
     assert.equal(calls.length, 0, 'Selecting AI or correcting text never transmits');
+    await input.fill('[[ⲑⲟ');
+    await translate.click();
+    await page.getByRole('alert').filter({ hasText: 'Correct the Coptic' }).waitFor();
+    assert.equal(await review.count(), 0);
+    assert.equal(calls.length, 0, 'OCR artifacts are refused before transmission');
+    await input.fill('ⲡⲉⲛⲛⲟⲩϯ');
     await translate.click();
     await review.waitFor();
     assert.equal(await review.getByRole('button', { name: 'Send approved text', exact: true }).isDisabled(), true);

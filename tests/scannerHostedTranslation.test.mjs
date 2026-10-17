@@ -32,6 +32,22 @@ test('an oversized unbroken word fails before any part can be sent', () => {
   assert.throws(() => splitScannerText('ⲁ'.repeat(1201)), /Nothing has been truncated/);
   assert.throws(() => planScannerTranslation([block('short'), block('ⲁ'.repeat(1201), 'bad')], 'bohairic'), /boundary/);
 });
+test('scanner refuses conspicuous OCR artifacts before review or transmission', () => {
+  for (const text of ['ⲉ 4 ⲙⲁⲣⲓⲁ', '[[ⲑⲟ', 'ⲁ □ ⲛⲁⲛ']) {
+    assert.throws(() => planScannerTranslation([block(text)], 'bohairic'), /Correct the Coptic/);
+  }
+});
+test('fragmentary and repetitive hosted output is refused before caching or overlays', async () => {
+  for (const translation of ['Halleluia', 'Thou hast born a fifth; '.repeat(4)]) {
+    let calls = 0;
+    const { queue } = harness(() => { calls++; return success(translation); });
+    const plan = planScannerTranslation([block('ⲁⲃ '.repeat(60))], 'bohairic');
+    for (let i = 0; i < 2; i++) {
+      await assert.rejects(queue.run(plan, { approved: true, onBlock: () => assert.fail('unreliable output must not appear') }), /fragment|refrain|unreliable/);
+    }
+    assert.equal(calls, 2, 'rejected output never enters the successful resume cache');
+  }
+});
 test('approval plans are immutable snapshots with text only; approval is required', async () => {
   const source = block('ⲁ');
   const plan = planScannerTranslation([source], 'bohairic');

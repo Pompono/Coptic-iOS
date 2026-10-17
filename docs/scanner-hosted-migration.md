@@ -30,9 +30,10 @@ the backend key stays server-side. There are no client credentials or new servic
 No sensitive text/response logging is added, and Capacitor bridge logging stays off.
 
 Published lookup and source suggestions stay local, work offline without AI weights,
-and never silently call AI. AI never substitutes a published match. Photos, edits,
-drafts and resume caches remain in screen memory and are cleared when the photo is
-reset or the screen is left; nothing is added to progress/account storage.
+and never silently call AI. AI never substitutes a published match. Edited image state, drafts and resume caches are screen-local and reset when the
+photo is cleared or the screen is left; nothing is added to progress/account
+storage. Camera/photo-picker plugins may use OS-managed local temporary files;
+clearing the screen does not promise secure deletion of OS caches.
 
 The server necessarily receives approved text and connection metadata such as IP.
 Server logging/retention policies are not established by this app change. Reconcile
@@ -45,7 +46,9 @@ The split planner counts Unicode code points, preserving the exact trimmed sourc
 when chunks are concatenated. Chunks are at most 1,200 points, break at whitespace
 or sentence punctuation, and never begin with a detached combining mark or split a
 surrogate pair. A single oversized unbroken word is refused before any transmission
-with a request to correct a boundary. Nothing is silently truncated. The editor no
+with a request to correct a boundary. Nothing is silently truncated. Existing pure OCR-artifact and fragment/repetition
+validation is retained without inference: damaged input is refused before review,
+and unreliable output cannot enter overlays or the successful resume cache. The editor no
 longer truncates pasted long blocks. Separately translated chunks can lose context;
 this limitation is visible in the scanner.
 

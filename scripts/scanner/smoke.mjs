@@ -77,6 +77,13 @@ export async function checkScanner(page, base) {
   await input.evaluate(element => element.setSelectionRange(1, 2));
   await page.getByRole('button', { name: 'Insert ⲭ', exact: true }).click();
   assert.equal(await input.inputValue(), 'ⲡⲭⲥ');
+  // Review/correct every remaining OCR block before approving a batch. The
+  // synthetic font's initial '[' must not be silently sent as a Coptic letter.
+  for (let index = 1; index < count; index++) {
+    await blocks.nth(index).click();
+    await input.fill('ⲓⲏⲥ ⲡⲭⲥ');
+  }
+  await blocks.first().click();
   await input.fill('ⲡⲉⲛⲛⲟⲩϯ');
   await checkScannerHosted(page);
   await page.evaluate(() => Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false }));
