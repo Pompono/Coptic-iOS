@@ -94,7 +94,7 @@ jobs:
               with tempfile.TemporaryDirectory() as tmp:
                   archive.extract(executable_path, tmp)
                   binary = pathlib.Path(tmp, executable_path)
-                  subprocess.run(["/usr/bin/xcrun", "lipo", "-verify_arch", "arm64", str(binary)], check=True)
+                  subprocess.run(["/usr/bin/xcrun", "lipo", str(binary), "-verify_arch", "arm64"], check=True)
                   platform = subprocess.check_output(["/usr/bin/xcrun", "vtool", "-show-build", str(binary)], text=True)
                   platform_lower = platform.lower()
                   if "platform ios" not in platform_lower and "platform 2" not in platform_lower:
