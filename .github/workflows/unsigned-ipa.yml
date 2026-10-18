@@ -6,6 +6,8 @@ on:
       - feat/progress-protection-backup
     paths:
       - '.github/workflows/unsigned-ipa.yml'
+      - 'lib/progressFiles.ts'
+      - 'tests/progressFiles.test.mjs'
   workflow_dispatch:
 
 permissions:
