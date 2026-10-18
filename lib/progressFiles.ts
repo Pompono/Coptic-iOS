@@ -1,5 +1,39 @@
 import { Capacitor } from '@capacitor/core';
 
+async function ensureBackupDirectory(Filesystem: typeof import('@capacitor/filesystem').Filesystem, directory: import('@capacitor/filesystem').Directory, path: string) {
+  const conflict = (type: string) => new Error(`Cannot export progress because '${path}' is a ${type}, not a folder. Remove or rename that item in app storage, then try again.`);
+  const statDirectory = async () => {
+    const info = await Filesystem.stat({ path, directory });
+    if (info.type === 'directory') return true;
+    if (info.type === 'file') throw conflict('file');
+    throw conflict('unsupported item');
+  };
+
+  try {
+    if (await statDirectory()) return;
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Cannot export progress because')) throw error;
+    // A missing directory and an existence race both reach mkdir. Other errors
+    // are only accepted if mkdir or a subsequent stat proves the directory exists.
+  }
+
+  try {
+    await Filesystem.mkdir({ path, directory, recursive: true });
+    return;
+  } catch (mkdirError) {
+    // Another export may have created it between stat and mkdir. Verify its type
+    // before treating that native mkdir error as a harmless race.
+    try {
+      if (await statDirectory()) return;
+    } catch (statError) {
+      if (statError instanceof Error && statError.message.startsWith('Cannot export progress because')) throw statError;
+      const mkdirMessage = String((mkdirError as { message?: string })?.message ?? mkdirError);
+      const statMessage = String((statError as { message?: string })?.message ?? statError);
+      throw new Error(`Could not prepare the progress backup folder. Check that the app has storage access and enough free space, then try Export Progress again. ${mkdirMessage} ${statMessage}`);
+    }
+  }
+}
+
 export async function saveProgressFile(json: string, name = 'coptic-progress.json') {
   const random = Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, '0')).join('');
   const datedName = `${name.replace(/\.json$/i, '')}-${new Date().toISOString().replace(/[:.]/g, '-')}-${random}.json`;
@@ -8,7 +42,7 @@ export async function saveProgressFile(json: string, name = 'coptic-progress.jso
     const { Share } = await import('@capacitor/share');
     const directory = Directory.Cache;
     const folder = 'progress-backups';
-    await Filesystem.mkdir({ path: folder, directory, recursive: true });
+    await ensureBackupDirectory(Filesystem, directory, folder);
     // Keep files for a day in case an external recipient is still reading one.
     // Pruning is best effort and only touches this feature's own JSON files.
     try {
