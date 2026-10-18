@@ -127,10 +127,10 @@ export default function UnitProgressClient({ focusLessonId = null }: { focusLess
 
   useLayoutEffect(() => {
     const nextCompletedStepIdsByLessonId = Object.fromEntries(
-      lessons.map((entry) => [entry.id, readCompletedSteps(entry.id)])
+      lessons.map((entry) => [entry.id, (readCompletedSteps(entry.id) ?? [])])
     ) as Record<string, string[]>;
     const nextFailedStepIdsByLessonId = Object.fromEntries(
-      lessons.map((entry) => [entry.id, readFailedSteps(entry.id)])
+      lessons.map((entry) => [entry.id, (readFailedSteps(entry.id) ?? [])])
     ) as Record<string, string[]>;
 
     setCompletedStepIdsByLessonId(nextCompletedStepIdsByLessonId);

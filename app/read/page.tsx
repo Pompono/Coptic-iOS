@@ -1,4 +1,5 @@
 "use client";
+import { readRecord, writeRecord } from "@/lib/progressStorage";
 import AudioReplay from "../AudioReplay";
 import PageHeader, { PageBackLink } from "../PageHeader";
 import AppIcon from "../AppIcon";
@@ -30,9 +31,9 @@ export default function ReaderPage() {
     let mounted = true;
     setBohairicOnly(isBohairicOnlyEnabled());
     try {
-      const raw = localStorage.getItem('coptic-reader:v1');
+      const raw = readRecord('coptic-reader:v1');
       if (raw) {
-        const saved = JSON.parse(raw);
+        const saved = raw;
         if (saved.version === 1 && typeof saved.draft === 'string' && saved.draft.length <= 6000) {
           setDraft(saved.draft);
           const known = practicePassages.find(item => item.id === saved.passageId);
@@ -52,7 +53,7 @@ export default function ReaderPage() {
   const recording = selected ? resolveLessonAudio('', selected.text.toLowerCase()) : null;
   const tokens = useMemo(() => passageTokens(text), [text]);
   function rememberPassage(id: string, customText = draft) {
-    try { localStorage.setItem('coptic-reader:v1', JSON.stringify({ version: 1, passageId: id, draft: customText })); }
+    try { writeRecord('coptic-reader:v1', { version: 1, passageId: id, draft: customText }); }
     catch { setError('This passage could not be saved for later. You can still read it now.'); }
   }
   function wordEntry(entry: DictionaryEntry) {
