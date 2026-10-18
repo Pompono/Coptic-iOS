@@ -60,7 +60,7 @@ jobs:
           (cd "$RUNNER_TEMP/ipa" && /usr/bin/zip -qry "$IPA_PATH" Payload)
 
           python3 - "$IPA_PATH" <<'PY'
-          import pathlib, plistlib, subprocess, sys, tempfile, zipfile
+          import json, pathlib, plistlib, subprocess, sys, tempfile, zipfile
 
           ipa = pathlib.Path(sys.argv[1])
           if not ipa.is_file() or ipa.stat().st_size == 0:
@@ -87,6 +87,12 @@ jobs:
               privacy = [n for n in names if n.endswith("PrivacyInfo.xcprivacy") and n.startswith(prefix)]
               if not privacy:
                   raise SystemExit("App bundle is missing PrivacyInfo.xcprivacy")
+              config_name = prefix + "capacitor.config.json"
+              if config_name not in names:
+                  raise SystemExit("App bundle is missing capacitor.config.json")
+              config = json.loads(archive.read(config_name))
+              if not {"FilesystemPlugin", "SharePlugin"} <= set(config.get("packageClassList", [])):
+                  raise SystemExit("Packaged Capacitor registry is missing Filesystem or Share")
               app_files = [n for n in names if n.startswith(prefix)]
               if not any("/public/" in n or "/assets/" in n for n in app_files):
                   raise SystemExit("IPA is missing compiled Capacitor web assets")
@@ -99,10 +105,6 @@ jobs:
                   platform_lower = platform.lower()
                   if "platform ios" not in platform_lower and "platform 2" not in platform_lower:
                       raise SystemExit("Mach-O build metadata does not identify an iOS device binary:\n" + platform)
-                  symbols = subprocess.check_output(["/usr/bin/strings", str(binary)], text=True, errors="replace")
-                  if "CapacitorFilesystem" not in symbols or "SharePlugin" not in symbols:
-                      raise SystemExit("Compiled app is missing Capacitor Filesystem or Share plugin symbols")
-
               # Require the backup UI strings in packaged web content.
               web_text = "\n".join(
                   archive.read(n).decode("utf-8", errors="ignore")
