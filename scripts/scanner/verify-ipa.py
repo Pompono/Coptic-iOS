@@ -1,4 +1,4 @@
-"""Verify the uploaded device archive actually contains the offline scanner assets."""
+"""Verify the uploaded unsigned device IPA contains branding and offline app assets."""
 import hashlib
 import json
 import plistlib
@@ -8,6 +8,11 @@ import zipfile
 with zipfile.ZipFile(sys.argv[1]) as archive:
     root = 'Payload/App.app/'
     info = plistlib.loads(archive.read(root + 'Info.plist'))
+    assert info['CFBundleDisplayName'] == 'CoptLingo', 'Home Screen display name must be CoptLingo'
+    assert info['CFBundleName'] == 'CoptLingo', 'Bundle name must be CoptLingo'
+    assert info['CFBundleIdentifier'] == 'com.pompono.coptic', 'App identity must remain unchanged'
+    assert any('com.pompono.coptic' in item.get('CFBundleURLSchemes', [])
+               for entry in info.get('CFBundleURLTypes', []) for item in [entry]), 'Native auth callback URL scheme missing'
     alternate = info['CFBundleIcons']['CFBundleAlternateIcons']['CopticDark']
     assert alternate.get('CFBundleIconName') == 'CopticDark' or any('CopticDark' in name for name in alternate.get('CFBundleIconFiles', [])), 'Gold alternate icon must be registered'
     binary = archive.read(root + 'App')

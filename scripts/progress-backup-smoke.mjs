@@ -74,7 +74,12 @@ try {
   const blockedErrors = [];
   blockedPage.on('pageerror', error => blockedErrors.push(error.message));
   await blockedPage.goto(`http://127.0.0.1:${server.address().port}/settings/`);
-  await blockedPage.getByRole('alert').filter({ hasText: 'Storage access denied' }).waitFor().catch(async error => { console.error('Blocked storage page:', await blockedPage.locator('body').innerText(), blockedErrors); throw error; });
+  const storageNotice = blockedPage.locator('aside[role="alert"]').filter({ hasText: 'Storage access denied' });
+  const accountNotice = blockedPage.locator('p.account-alert[role="alert"]').filter({ hasText: 'Storage access denied' });
+  await storageNotice.waitFor().catch(async error => { console.error('Blocked storage page:', await blockedPage.locator('body').innerText(), blockedErrors); throw error; });
+  await accountNotice.waitFor();
+  assert.equal(await storageNotice.count(), 1);
+  assert.equal(await accountNotice.count(), 1);
   await blockedPage.getByRole('button', { name: 'Export Progress', exact: true }).click();
   assert.equal(await blockedPage.getByRole('button', { name: 'Import Progress' }).isEnabled(), true);
   assert.ok(blockedErrors.every(message => message.includes('Storage access denied')), `Unexpected blocked-storage errors: ${blockedErrors.join('; ')}`);
