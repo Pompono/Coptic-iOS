@@ -134,8 +134,8 @@ input[type=checkbox] { accent-color:var(--teal); }
 .dictionary-detail .flex { flex-wrap:wrap; }.dictionary-detail>div>.flex:first-child>a,.dictionary-detail>div>.flex:first-child>button { padding:10px 14px; max-width:100%; border-radius:12px; }
 .dictionary-settings section { border:0; border-radius:20px; padding:20px; box-shadow:var(--surface-shadow); }.dictionary-settings select { font-family:inherit; }
 /* Settings: inset groups, sentence-case headings and full-size preference rows. */
-.settings-page { gap:28px!important; }.settings-page .page-header { margin-bottom:0; }
-.settings-group { display:grid; gap:0; background:var(--surface-1); border:0; border-radius:16px; overflow:hidden; box-shadow:var(--surface-shadow); }
+.settings-page { width:100%; min-width:0; box-sizing:border-box; gap:28px!important; }.settings-page>section { min-width:0; }.settings-page .page-header { margin-bottom:0; }
+.settings-group { display:grid; gap:0; background:var(--surface-1); border:0; border-radius:16px; box-shadow:var(--surface-shadow); }
 .settings-section-title { font-size:.875rem; font-weight:500; color:var(--text-muted); margin:0 0 8px; padding-left:16px; }
 .settings-row { min-height:58px; padding:7px 16px; display:flex; align-items:center; justify-content:space-between; gap:16px; position:relative; }
 .settings-row+.settings-row:before { content:''; height:1px; background:var(--separator-color); position:absolute; top:0; left:16px; right:0; }
@@ -144,7 +144,42 @@ input[type=checkbox] { accent-color:var(--teal); }
 .ui-switch { appearance:none; width:51px; height:31px; border-radius:20px; background:var(--border-color); position:relative; flex-shrink:0; transition:background .15s; }
 .ui-switch:before { content:''; position:absolute; width:27px; height:27px; top:2px; left:2px; border-radius:50%; background:white; box-shadow:0 1px 3px #0003; transition:transform .15s; }
 .ui-switch:checked { background:var(--teal); }.ui-switch:checked:before { transform:translateX(20px); }
-.settings-note { font-size:.8125rem; color:var(--text-muted); margin:8px 16px 0; line-height:1.5; }
+.settings-note { font-size:.8125rem; color:var(--text-muted); margin:8px 16px 0; line-height:1.5; overflow-wrap:anywhere; }
+.settings-group--content { gap:16px; padding:clamp(16px,4vw,20px); }
+.settings-group--content>p { min-width:0; margin:0; line-height:1.6; overflow-wrap:anywhere; }
+.settings-action-row { display:flex; flex-wrap:wrap; align-items:stretch; gap:10px; min-width:0; }
+.settings-action-row>button { flex:1 1 14rem; min-width:min(100%,11rem); min-height:48px; max-width:100%; padding:12px 16px; line-height:1.3; white-space:normal; overflow-wrap:anywhere; }
+.settings-cloud-progress { min-width:0; }
+.settings-cloud-progress__intro { max-width:68ch; }
+.settings-cloud-progress__toggle { min-height:48px; margin-inline:-4px; padding:8px 4px; flex-wrap:wrap; }
+.settings-cloud-progress__toggle label { min-width:0; flex:1 1 12rem; line-height:1.45; }
+.settings-cloud-progress__sync-action { width:100%; }
+.settings-cloud-progress__message,.settings-cloud-progress__error { min-width:0; margin:0; padding:12px 14px; border-radius:12px; line-height:1.55; overflow-wrap:anywhere; }
+.settings-cloud-progress__message { color:var(--text-color); background:var(--surface-2); }
+.settings-cloud-progress__error { color:var(--lesson-choice-wrong-text); background:var(--lesson-error-bg); }
+.settings-cloud-progress__pending { display:grid; gap:12px; min-width:0; padding:clamp(14px,4vw,18px); border-radius:14px; background:var(--surface-2); }
+.settings-cloud-progress__pending h3,.settings-cloud-progress__pending p { min-width:0; margin:0; line-height:1.5; overflow-wrap:anywhere; }
+.settings-cloud-progress__actions { width:100%; }
+.settings-cloud-progress__note { max-width:72ch; margin-inline:4px; line-height:1.6; }
+.settings-account { min-width:0; }
+.account-settings-card { min-width:0; }
+.account-summary { display:grid; gap:12px; min-width:0; }
+.account-summary__identity,.account-summary__email { display:grid; gap:4px; min-width:0; }
+.account-summary__label { color:var(--text-muted); font-size:.8125rem; font-weight:600; line-height:1.4; }
+.account-summary__identity strong,.account-summary__value { min-width:0; color:var(--text-color); line-height:1.5; overflow-wrap:anywhere; word-break:normal; }
+.account-summary__verification { justify-self:start; max-width:100%; padding:6px 10px; border-radius:999px; color:var(--text-color); background:var(--surface-2); font-size:.875rem; line-height:1.4; overflow-wrap:anywhere; }
+.account-actions { display:flex; flex-wrap:wrap; align-items:stretch; gap:10px; min-width:0; }
+.account-actions>button { flex:1 1 11rem; min-width:min(100%,10rem); min-height:48px; max-width:100%; padding:12px 16px; line-height:1.3; white-space:normal; overflow-wrap:anywhere; }
+.account-alert { min-width:0; margin:0; padding:12px 14px; border-radius:12px; line-height:1.55; overflow-wrap:anywhere; background:var(--surface-2); }
+.account-sync-note { margin:0; line-height:1.55; }
+@media(max-width:430px) {
+  .settings-group--content { gap:14px; padding:16px; }
+  .settings-action-row,.account-actions { display:grid; grid-template-columns:minmax(0,1fr); }
+  .settings-action-row>button,.account-actions>button { width:100%; min-width:0; }
+  .settings-cloud-progress__toggle { gap:12px; }
+}
+:root[data-large-text=true] .settings-group--content { gap:18px; }
+:root[data-large-text=true] .settings-action-row>button,:root[data-large-text=true] .account-actions>button { flex-basis:100%; }
 .developer-panel { padding:16px; background:var(--surface-1); border:0; border-radius:16px; margin-top:12px; }
 .keyboard-resource { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px; font-size:1rem; padding:16px; }.keyboard-resource img { width:130px; height:auto; }
 /* Translation: clear language headers and matched input/output surfaces. */

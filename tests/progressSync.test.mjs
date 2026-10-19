@@ -22,6 +22,22 @@ test('record comparison ignores object key ordering while retaining exact payloa
   assert.equal(syncModule.sameProgressRecords({ a: '1' }, { a: '2' }), false);
 });
 
+test('sync diagnostics keep useful codes and safe descriptions without exposing server details', () => {
+  const message = syncModule.progressSyncErrorMessage({
+    code: '42702',
+    message: 'column reference "revision" is ambiguous; passage=PRIVATE-TEXT',
+    details: 'token=PRIVATE-TOKEN email=learner@example.invalid',
+  });
+  assert.match(message, /42702/u);
+  assert.match(message, /ambiguous database column/u);
+  assert.doesNotMatch(message, /PRIVATE|learner@example|token=/u);
+
+  const unknown = syncModule.progressSyncErrorMessage({ code: 'PGRST202', message: 'sensitive payload detail' });
+  assert.match(unknown, /PGRST202/u);
+  assert.match(unknown, /schema cache/u);
+  assert.doesNotMatch(unknown, /sensitive payload/u);
+});
+
 test('removing prior learning progress is treated as a destructive change', () => {
   assert.equal(syncModule.removesProgressRecords({ 'coptic-progress': raw(20) }, {}), true);
   assert.equal(syncModule.removesProgressRecords({ 'coptic-progress': raw(20) }, { 'coptic-progress': raw(10) }), true);
@@ -99,6 +115,28 @@ test('invalid cloud records are rejected before an RPC is sent', async () => {
   const client = { rpc() { called = true; throw new Error('must not send invalid records'); } };
   await assert.rejects(syncModule.writeProgressSnapshot(client, 0, { 'coptic-progress': '{bad-json' }));
   assert.equal(called, false);
+});
+
+test('RPC accepts app-valid fractional totals and large individual learning records', async () => {
+  const records = {
+    'coptic-progress': JSON.stringify({ xp: 12.5, streak: 1.5, completedLessons: [], lastCompletedDate: null }),
+    'coptic-learning:v1': JSON.stringify({ version: 1, skills: {
+      skill: { word: 'ⲙⲁ', meaning: 'bread', attempts: 2, correct: 1, lapses: 1, dueAt: 1700000000000,
+        lastSeen: 1700000000000, successfulDays: 1, explanation: 'x'.repeat(1_048_600) },
+    } }),
+  };
+  let request;
+  const client = {
+    rpc(name, args) {
+      request = { name, args };
+      return Promise.resolve({ data: [{ revision: 1, records: args.p_records, updated_at: null, conflict: false }], error: null });
+    },
+  };
+  const result = await syncModule.writeProgressSnapshot(client, 0, records);
+  assert.equal(request.name, 'save_progress_snapshot');
+  assert.equal(JSON.parse(request.args.p_records['coptic-progress']).xp, 12.5);
+  assert.ok(request.args.p_records['coptic-learning:v1'].length > 1_048_576);
+  assert.equal(result.revision, 1);
 });
 
 test('malformed cloud snapshots and unsafe revisions are rejected before reconciliation', async () => {

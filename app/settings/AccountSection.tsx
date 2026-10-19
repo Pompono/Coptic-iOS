@@ -22,14 +22,20 @@ export default function AccountSection() {
     } finally { setBusy(false); }
   }
 
-  return <section aria-labelledby="account-title">
+  return <section className="settings-account" aria-labelledby="account-title">
     <h2 id="account-title" className="settings-section-title">Account</h2>
-    <div className="settings-group account-settings-card">
+    <div className="settings-group settings-group--content account-settings-card">
       {loading ? <p role="status">Checking account…</p> : session ? <>
         <div className="account-summary">
-          <strong>{String(session.user.user_metadata?.display_name ?? session.user.email ?? 'Account')}</strong>
-          {session.user.email && <span>{session.user.email}</span>}
-          <span role="status">{session.user.email_confirmed_at ? 'Email verified' : 'Email not verified'}</span>
+          <div className="account-summary__identity">
+            <span className="account-summary__label">Signed in as</span>
+            <strong>{String(session.user.user_metadata?.display_name ?? session.user.email ?? 'Account')}</strong>
+          </div>
+          {session.user.email && <div className="account-summary__email">
+            <span className="account-summary__label">Email</span>
+            <span className="account-summary__value">{session.user.email}</span>
+          </div>}
+          <span className="account-summary__verification" role="status">{session.user.email_confirmed_at ? 'Email verified' : 'Email not verified'}</span>
         </div>
         <div className="account-actions">
           <button className="ui-secondary" type="button" onClick={() => router.push('/account/')}>Account settings</button>

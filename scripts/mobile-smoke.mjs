@@ -33,6 +33,37 @@ const server = http.createServer(async (request, response) => {
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const base = `http://127.0.0.1:${server.address().port}`;
 let browser;
+async function checkSettingsLayout(page) {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.evaluate(() => {
+    document.documentElement.dataset.largeText = 'true';
+    document.documentElement.style.fontSize = '180%';
+    const fixture = document.createElement('section');
+    fixture.className = 'settings-group settings-group--content account-settings-card';
+    fixture.setAttribute('aria-label', 'Long account identity layout fixture');
+    fixture.innerHTML = '<div class="account-summary"><div class="account-summary__identity"><span class="account-summary__label">Signed in as</span><strong>A long display name for a learner account</strong></div><div class="account-summary__email"><span class="account-summary__label">Email</span><span class="account-summary__value">learner.with.a.long.address.for.mobile.layout@example.invalid</span></div><span class="account-summary__verification">Email not verified</span></div><div class="account-actions"><button type="button">Account settings</button><button type="button">Sign Out</button></div>';
+    document.querySelector('.settings-page').append(fixture);
+  });
+  const result = await page.evaluate(() => {
+    const email = document.querySelector('[aria-label="Long account identity layout fixture"] .account-summary__value');
+    const buttons = [...document.querySelectorAll('[aria-label="Long account identity layout fixture"] button')];
+    return {
+      viewport: document.documentElement.clientWidth,
+      document: document.documentElement.scrollWidth,
+      emailFits: email.scrollWidth <= email.clientWidth + 1,
+      buttonHeights: buttons.map(button => button.getBoundingClientRect().height),
+    };
+  });
+  assert.ok(result.document <= result.viewport + 1, 'Settings has no horizontal overflow at a narrow, large-text viewport');
+  assert.equal(result.emailFits, true, 'Long account emails wrap within their content column');
+  assert.ok(result.buttonHeights.every(height => height >= 44), 'Account actions remain large enough to tap with large text');
+  await page.evaluate(() => {
+    document.querySelector('[aria-label="Long account identity layout fixture"]').remove();
+    delete document.documentElement.dataset.largeText;
+    document.documentElement.style.removeProperty('font-size');
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+}
 try {
   const engine = process.env.COPTIC_BROWSER === 'webkit' ? webkit : chromium;
   browser = await engine.launch({ headless: true });
@@ -108,11 +139,13 @@ try {
       assert.match(await page.locator('body').innerText(), /Cloud sync is optional and stays off until you enable it under Cloud Progress\./u);
       await page.getByRole('combobox', { name: 'App theme', exact: true }).selectOption('dark');
       await page.waitForLoadState('networkidle');
+      await checkSettingsLayout(page);
       await page.reload();
       await page.waitForLoadState('networkidle');
       await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark');
       assert.equal(await page.evaluate(() => localStorage.getItem('theme-mode')), 'dark');
       await page.getByRole('combobox', { name: 'App theme', exact: true }).selectOption('light');
+      await checkSettingsLayout(page);
     }
     // WebKit reports aborted speculative fetches as page errors if a test
     // tears down the document while Next's link prefetches are still running.

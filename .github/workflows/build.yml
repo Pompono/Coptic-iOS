@@ -12,6 +12,51 @@ concurrency:
   group: mobile-validation-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 jobs:
+  progress-sync-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: coptic_progress_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d coptic_progress_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install --yes postgresql-client
+      - name: Create disposable Supabase auth fixtures
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE anon NOLOGIN;
+          CREATE ROLE authenticated NOLOGIN;
+          CREATE SCHEMA auth;
+          CREATE TABLE auth.users (id uuid PRIMARY KEY);
+          CREATE FUNCTION auth.uid() RETURNS uuid
+            LANGUAGE sql STABLE
+            AS $$ SELECT nullif(current_setting('request.jwt.claims', true)::jsonb ->> 'sub', '')::uuid $$;
+          GRANT USAGE ON SCHEMA auth TO anon, authenticated;
+          GRANT EXECUTE ON FUNCTION auth.uid() TO anon, authenticated;
+          SQL
+      - name: Apply progress snapshot migrations to disposable PostgreSQL
+        env:
+          PGPASSWORD: postgres
+        run: |
+          for migration in supabase/migrations/*.sql; do
+            psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f "$migration"
+          done
+      - name: Exercise authenticated snapshot RPC with realistic records
+        env:
+          PGPASSWORD: postgres
+        run: psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/tests/progress_sync_rpc.sql
   web:
     runs-on: ubuntu-latest
     steps:

@@ -5,7 +5,7 @@ import { getSupabaseClient, supabaseAuthConfigured } from '@/lib/auth/client';
 import { useAuth } from '../AuthProvider';
 import { makeBackup } from '@/lib/progressStorage';
 import {
-  fetchProgressSnapshot, installCloudProgress, PROGRESS_SYNC_OPT_IN_KEY,
+  fetchProgressSnapshot, installCloudProgress, PROGRESS_SYNC_OPT_IN_KEY, progressSyncErrorMessage,
   readSyncBase, removesProgressRecords, sameProgressRecords, saveSyncBase, writeProgressSnapshot,
   type ProgressSnapshot,
 } from '@/lib/progressSync';
@@ -118,7 +118,7 @@ export default function ProgressSync() {
         setMessage('Both this device and the cloud changed since the last sync. Choose which copy to keep.');
       }
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'Cloud sync failed. Your local progress is unchanged.');
+      if (!controller.signal.aborted) setError(progressSyncErrorMessage(failure));
     } finally {
       if (requestRef.current === controller) requestRef.current = null;
       setBusy(false);
@@ -191,7 +191,7 @@ export default function ProgressSync() {
         setMessage('Cloud progress downloaded. Your previous device copy is available in Recovery copy.');
       }
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'The selection could not be synced. Your local progress is unchanged.');
+      if (!controller.signal.aborted) setError(progressSyncErrorMessage(failure));
     } finally {
       if (requestRef.current === controller) requestRef.current = null;
       setBusy(false);
@@ -218,33 +218,35 @@ export default function ProgressSync() {
   }
 
   if (!supabaseAuthConfigured) return null;
-  return <section aria-labelledby="progress-sync-title">
+  return <section className="settings-cloud-progress" aria-labelledby="progress-sync-title">
     <h2 id="progress-sync-title" className="settings-section-title">Cloud Progress</h2>
-    <div className="settings-group">
+    <div className="settings-group settings-group--content">
       {!userId ? <p>Sign in to enable optional cloud progress sync. Learning stays on this device while signed out.</p> : <>
-        <p>Sync lesson completion, practice results, vocabulary reviews, and saved reader passages or drafts across devices. Sync starts only after you turn it on. Offline learning continues locally.</p>
-        <div className="settings-row">
+        <p className="settings-cloud-progress__intro">Sync lesson completion, practice results, vocabulary reviews, and saved reader passages or drafts across devices. Sync starts only after you turn it on. Offline learning continues locally.</p>
+        <div className="settings-row settings-cloud-progress__toggle">
           <label htmlFor="progress-sync-switch">Enable Cloud Sync</label>
           <input id="progress-sync-switch" type="checkbox" className="ui-switch" role="switch" checked={enabled} disabled={!ready || busy} onChange={event => toggle(event.target.checked)} />
         </div>
-        {enabled && <div className="settings-row">
+        {enabled && <div className="settings-action-row settings-cloud-progress__sync-action">
           <button type="button" className="ui-secondary" disabled={busy} onClick={() => void synchronize()}>{busy ? 'Syncing…' : 'Sync now'}</button>
         </div>}
-        {message && <p role="status">{message}</p>}
-        {error && <p role="alert">{error}</p>}
-        {pending && <div className="ui-panel" role="region" aria-label="Review cloud progress" style={{ padding: 16 }}>
+        {message && <p className="settings-cloud-progress__message" role="status">{message}</p>}
+        {error && <p className="settings-cloud-progress__error" role="alert">{error}</p>}
+        {pending && <div className="ui-panel settings-cloud-progress__pending" role="region" aria-label="Review cloud progress">
           <h3>{pending.kind === 'upload' ? 'Upload this device’s progress?' : pending.kind === 'download' ? 'Download cloud progress?' : 'Choose a progress copy'}</h3>
           <p>{pending.kind === 'upload'
             ? 'This sends the validated learning records on this device to your signed-in account.'
             : pending.kind === 'download'
               ? 'This replaces progress on this device with the cloud copy. A recovery copy of this device’s progress will be saved first.'
               : 'Both copies changed since the last sync. Keeping one replaces the other copy. A recovery copy is saved before a cloud download.'}</p>
-          {pending.kind !== 'upload' && <button type="button" className="ui-primary" disabled={busy} onClick={() => void choose('download')}>Use cloud progress on this device</button>}{' '}
-          {pending.kind !== 'download' && <button type="button" className="ui-secondary" disabled={busy} onClick={() => void choose('upload')}>{pending.kind === 'conflict' ? 'Replace cloud with this device' : 'Upload this device’s progress'}</button>}{' '}
-          <button type="button" className="ui-secondary" disabled={busy} onClick={() => { setPending(null); setMessage('No progress was changed. Sync is paused until you choose or review again.'); }}>Cancel</button>
+          <div className="settings-action-row settings-cloud-progress__actions">
+            {pending.kind !== 'upload' && <button type="button" className="ui-primary" disabled={busy} onClick={() => void choose('download')}>Use cloud progress on this device</button>}
+            {pending.kind !== 'download' && <button type="button" className="ui-secondary" disabled={busy} onClick={() => void choose('upload')}>{pending.kind === 'conflict' ? 'Replace cloud with this device' : 'Upload this device’s progress'}</button>}
+            <button type="button" className="ui-secondary" disabled={busy} onClick={() => { setPending(null); setMessage('No progress was changed. Sync is paused until you choose or review again.'); }}>Cancel</button>
+          </div>
         </div>}
       </>}
     </div>
-    <p className="settings-note">Your account is identified by its signed-in user ID. Only that account can read or change its cloud snapshot. Turning sync off stops future syncs but does not delete the cloud copy.</p>
+    <p className="settings-note settings-cloud-progress__note">Your account is identified by its signed-in user ID. Only that account can read or change its cloud snapshot. Turning sync off stops future syncs but does not delete the cloud copy.</p>
   </section>;
 }
