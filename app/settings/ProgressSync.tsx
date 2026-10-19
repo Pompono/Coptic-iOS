@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getSupabaseClient, supabaseAuthConfigured } from '@/lib/auth/client';
 import { useAuth } from '../AuthProvider';
 import { makeBackup } from '@/lib/progressStorage';
@@ -23,9 +23,12 @@ export default function ProgressSync() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [pending, setPending] = useState<PendingChoice | null>(null);
+  const requestRef = useRef<AbortController | null>(null);
 
   const synchronize = useCallback(async () => {
-    if (!userId) return;
+    if (!userId || requestRef.current) return;
+    const controller = new AbortController();
+    requestRef.current = controller;
     setBusy(true); setError(''); setPending(null);
     try {
       if (localStorage.getItem(PROGRESS_SYNC_OPT_IN_KEY) !== userId) return;
@@ -33,8 +36,9 @@ export default function ProgressSync() {
       const local = makeBackup().records;
       const [base, cloud] = await Promise.all([
         Promise.resolve(readSyncBase(userId)),
-        fetchProgressSnapshot(client, userId),
+        fetchProgressSnapshot(client, userId, controller.signal),
       ]);
+      if (controller.signal.aborted) return;
       const active = await client.auth.getSession();
       if (active.data.session?.user.id !== userId || localStorage.getItem(PROGRESS_SYNC_OPT_IN_KEY) !== userId) return;
       const previousUser = localStorage.getItem(LAST_USER_KEY);
@@ -75,7 +79,8 @@ export default function ProgressSync() {
         setPending({ kind: 'conflict', local, cloud });
         setMessage('This device is missing progress that was in the last sync. Review before replacing either copy.');
       } else if (localChanged && !cloudChanged) {
-        const written = await writeProgressSnapshot(client, cloud.revision, local);
+        const written = await writeProgressSnapshot(client, cloud.revision, local, controller.signal);
+        if (controller.signal.aborted) return;
         const afterWrite = await client.auth.getSession();
         if (afterWrite.data.session?.user.id !== userId || localStorage.getItem(PROGRESS_SYNC_OPT_IN_KEY) !== userId) return;
         if ('conflict' in written) {
@@ -94,7 +99,8 @@ export default function ProgressSync() {
         setPending({ kind: 'conflict', local, cloud });
         setMessage('The cloud copy is missing progress that was in the last sync. Review before replacing either copy.');
       } else if (!localChanged && cloudChanged) {
-        const latestCloud = await fetchProgressSnapshot(client, userId);
+        const latestCloud = await fetchProgressSnapshot(client, userId, controller.signal);
+        if (controller.signal.aborted) return;
         const currentSession = await client.auth.getSession();
         if (currentSession.data.session?.user.id !== userId || localStorage.getItem(PROGRESS_SYNC_OPT_IN_KEY) !== userId) return;
         const latestLocal = makeBackup().records;
@@ -113,7 +119,10 @@ export default function ProgressSync() {
       }
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Cloud sync failed. Your local progress is unchanged.');
-    } finally { setBusy(false); }
+    } finally {
+      if (requestRef.current === controller) requestRef.current = null;
+      setBusy(false);
+    }
   }, [userId]);
 
   useEffect(() => {
@@ -126,12 +135,17 @@ export default function ProgressSync() {
     if (optedIn) void synchronize();
   }, [userId, synchronize]);
 
+  useEffect(() => () => { requestRef.current?.abort(); }, [userId]);
+
   async function choose(kind: 'upload' | 'download') {
-    if (!userId || !pending) return;
+    if (!userId || !pending || requestRef.current) return;
+    const controller = new AbortController();
+    requestRef.current = controller;
     setBusy(true); setError(''); setPending(null);
     try {
       const client = await getSupabaseClient();
-      const cloud = await fetchProgressSnapshot(client, userId);
+      const cloud = await fetchProgressSnapshot(client, userId, controller.signal);
+      if (controller.signal.aborted) return;
       const currentSession = await client.auth.getSession();
       if (currentSession.data.session?.user.id !== userId || localStorage.getItem(PROGRESS_SYNC_OPT_IN_KEY) !== userId) return;
       const local = makeBackup().records;
@@ -146,7 +160,8 @@ export default function ProgressSync() {
         return;
       }
       if (kind === 'upload') {
-        const written = await writeProgressSnapshot(client, cloud?.revision ?? 0, local);
+        const written = await writeProgressSnapshot(client, cloud?.revision ?? 0, local, controller.signal);
+        if (controller.signal.aborted) return;
         const afterWrite = await client.auth.getSession();
         if (afterWrite.data.session?.user.id !== userId || localStorage.getItem(PROGRESS_SYNC_OPT_IN_KEY) !== userId) return;
         if ('conflict' in written) {
@@ -177,7 +192,10 @@ export default function ProgressSync() {
       }
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'The selection could not be synced. Your local progress is unchanged.');
-    } finally { setBusy(false); }
+    } finally {
+      if (requestRef.current === controller) requestRef.current = null;
+      setBusy(false);
+    }
   }
 
   function toggle(enabledNext: boolean) {
