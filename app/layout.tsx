@@ -12,6 +12,7 @@ import NavigationScrollReset from './NavigationScrollReset';
 import ProgressStorageNotice from "./ProgressStorageNotice";
 import AppViewport from './AppViewport';
 import AuthProvider from './AuthProvider';
+import ProgressSyncLifecycle from './ProgressSyncLifecycle';
 
 export const metadata: Metadata = {
   title: "Coptic",
@@ -32,6 +33,7 @@ export default function RootLayout({
       </head>
       <body>
         <AuthProvider>
+          <ProgressSyncLifecycle />
           <div className="status-bar-backdrop" aria-hidden="true" />
           <AudioUnlock />
           <NativeExperience />

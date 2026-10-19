@@ -12,6 +12,7 @@ import {
 import type { Records } from '@/lib/progressStorage';
 
 type PendingChoice = { kind: 'upload' | 'download' | 'conflict'; local: Records; cloud: ProgressSnapshot | null };
+const LAST_USER_KEY = 'coptic-progress-sync-last-user:v1';
 
 export default function ProgressSync() {
   const { session } = useAuth();
@@ -34,6 +35,14 @@ export default function ProgressSync() {
         Promise.resolve(readSyncBase(userId)),
         fetchProgressSnapshot(client, userId),
       ]);
+      const active = await client.auth.getSession();
+      if (active.data.session?.user.id !== userId || localStorage.getItem(PROGRESS_SYNC_OPT_IN_KEY) !== userId) return;
+      const previousUser = localStorage.getItem(LAST_USER_KEY);
+      if (previousUser && previousUser !== userId) {
+        setPending({ kind: 'conflict', local, cloud });
+        setMessage('This device was last synced with another account. Review both copies before continuing.');
+        return;
+      }
 
       if (!cloud) {
         if (!Object.keys(local).length) { setMessage('Cloud sync is on. Progress will sync after you start learning.'); return; }
@@ -45,6 +54,7 @@ export default function ProgressSync() {
       if (!base) {
         if (sameProgressRecords(local, cloud.records)) {
           saveSyncBase(userId, cloud.revision, cloud.records);
+          localStorage.setItem(LAST_USER_KEY, userId);
           setMessage('Your progress is synced.');
         } else if (!Object.keys(local).length) {
           setPending({ kind: 'download', local, cloud });
@@ -66,25 +76,35 @@ export default function ProgressSync() {
         setMessage('This device is missing progress that was in the last sync. Review before replacing either copy.');
       } else if (localChanged && !cloudChanged) {
         const written = await writeProgressSnapshot(client, cloud.revision, local);
+        const afterWrite = await client.auth.getSession();
+        if (afterWrite.data.session?.user.id !== userId || localStorage.getItem(PROGRESS_SYNC_OPT_IN_KEY) !== userId) return;
         if ('conflict' in written) {
           setPending({ kind: 'conflict', local: makeBackup().records, cloud: written.snapshot });
           setMessage('Cloud progress changed on another device. Choose which copy to keep.');
         } else {
           saveSyncBase(userId, written.revision, local);
-          setMessage('Your progress is synced.');
+          localStorage.setItem(LAST_USER_KEY, userId);
+          if (sameProgressRecords(makeBackup().records, local)) setMessage('Your progress is synced.');
+          else {
+            setMessage('More progress changed during upload. The uploaded copy is safe; the newer local progress is still pending sync.');
+            window.dispatchEvent(new Event('coptic-progress-change'));
+          }
         }
       } else if (!localChanged && cloudChanged && removesProgressRecords(base.records, cloud.records)) {
         setPending({ kind: 'conflict', local, cloud });
         setMessage('The cloud copy is missing progress that was in the last sync. Review before replacing either copy.');
       } else if (!localChanged && cloudChanged) {
         const latestCloud = await fetchProgressSnapshot(client, userId);
+        const currentSession = await client.auth.getSession();
+        if (currentSession.data.session?.user.id !== userId || localStorage.getItem(PROGRESS_SYNC_OPT_IN_KEY) !== userId) return;
         const latestLocal = makeBackup().records;
         if (latestCloud?.revision !== cloud.revision || !sameProgressRecords(latestLocal, base.records)) {
           setPending({ kind: 'conflict', local: latestLocal, cloud: latestCloud });
           setMessage('Progress changed while sync was running. Review both copies before continuing.');
         } else {
-          saveSyncBase(userId, latestCloud.revision, latestCloud.records);
           installCloudProgress(latestCloud.records);
+          saveSyncBase(userId, latestCloud.revision, latestCloud.records);
+          localStorage.setItem(LAST_USER_KEY, userId);
           setMessage('New cloud progress was downloaded. Your previous device copy is available in Recovery copy.');
         }
       } else {
@@ -106,27 +126,14 @@ export default function ProgressSync() {
     if (optedIn) void synchronize();
   }, [userId, synchronize]);
 
-  useEffect(() => {
-    if (!enabled || !userId) return;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const schedule = () => { clearTimeout(timer); timer = setTimeout(() => void synchronize(), 1200); };
-    window.addEventListener('coptic-progress-change', schedule);
-    window.addEventListener('online', schedule);
-    window.addEventListener('focus', schedule);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('coptic-progress-change', schedule);
-      window.removeEventListener('online', schedule);
-      window.removeEventListener('focus', schedule);
-    };
-  }, [enabled, userId, synchronize]);
-
   async function choose(kind: 'upload' | 'download') {
     if (!userId || !pending) return;
     setBusy(true); setError(''); setPending(null);
     try {
       const client = await getSupabaseClient();
       const cloud = await fetchProgressSnapshot(client, userId);
+      const currentSession = await client.auth.getSession();
+      if (currentSession.data.session?.user.id !== userId || localStorage.getItem(PROGRESS_SYNC_OPT_IN_KEY) !== userId) return;
       const local = makeBackup().records;
       if (!sameProgressRecords(local, pending.local)) {
         setPending({ kind: 'conflict', local, cloud });
@@ -140,16 +147,32 @@ export default function ProgressSync() {
       }
       if (kind === 'upload') {
         const written = await writeProgressSnapshot(client, cloud?.revision ?? 0, local);
+        const afterWrite = await client.auth.getSession();
+        if (afterWrite.data.session?.user.id !== userId || localStorage.getItem(PROGRESS_SYNC_OPT_IN_KEY) !== userId) return;
         if ('conflict' in written) {
           setPending({ kind: 'conflict', local: makeBackup().records, cloud: written.snapshot });
           setMessage('Cloud progress changed on another device. Review both copies before continuing.');
         } else {
           saveSyncBase(userId, written.revision, local);
-          setMessage('This device’s progress is synced to your account.');
+          localStorage.setItem(LAST_USER_KEY, userId);
+          if (sameProgressRecords(makeBackup().records, local)) setMessage('This device’s progress is synced to your account.');
+          else {
+            setMessage('More progress changed during upload. The uploaded copy is safe; the newer local progress is still pending sync.');
+            window.dispatchEvent(new Event('coptic-progress-change'));
+          }
         }
       } else if (cloud) {
-        saveSyncBase(userId, cloud.revision, cloud.records);
+        const beforeInstall = await client.auth.getSession();
+        if (beforeInstall.data.session?.user.id !== userId || localStorage.getItem(PROGRESS_SYNC_OPT_IN_KEY) !== userId) return;
+        const currentLocal = makeBackup().records;
+        if (!sameProgressRecords(currentLocal, pending.local)) {
+          setPending({ kind: 'conflict', local: currentLocal, cloud });
+          setMessage('This device changed while you were reviewing. Review the latest copies before continuing.');
+          return;
+        }
         installCloudProgress(cloud.records);
+        saveSyncBase(userId, cloud.revision, cloud.records);
+        localStorage.setItem(LAST_USER_KEY, userId);
         setMessage('Cloud progress downloaded. Your previous device copy is available in Recovery copy.');
       }
     } catch (failure) {

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { parseBackup, replaceRecords, type Records } from './progressStorage';
+import { parseBackup, replaceRecordsForCloudSync, type Records } from './progressStorage';
 
 export const PROGRESS_SYNC_OPT_IN_KEY = 'coptic-progress-sync-enabled:v1';
 const SYNC_BASE_PREFIX = 'coptic-progress-sync-base:v1:';
@@ -64,13 +64,16 @@ export function saveSyncBase(userId: string, revision: number, records: Records)
   localStorage.setItem(`${SYNC_BASE_PREFIX}${userId}`, JSON.stringify({ version: 1, revision, records: checkedRecords(records) }));
 }
 
-export async function fetchProgressSnapshot(client: SupabaseClient, userId: string): Promise<ProgressSnapshot | null> {
-  const { data, error } = await client.from('progress_sync_snapshots')
-    .select('revision, records, updated_at').eq('user_id', userId).maybeSingle();
+export async function fetchProgressSnapshot(client: SupabaseClient, userId: string, signal?: AbortSignal): Promise<ProgressSnapshot | null> {
+  let query = client.from('progress_sync_snapshots').select('revision, records, updated_at').eq('user_id', userId);
+  if (signal) query = query.abortSignal(signal);
+  const { data, error } = await query.maybeSingle();
   if (error) throw error;
   if (!data) return null;
+  const revision = Number(data.revision);
+  if (!Number.isSafeInteger(revision) || revision < 1) throw new Error('The cloud progress revision is invalid. Local progress was not changed.');
   return {
-    revision: Number(data.revision),
+    revision,
     records: checkedRecords(data.records),
     updatedAt: typeof data.updated_at === 'string' ? data.updated_at : null,
   };
@@ -80,16 +83,21 @@ export async function writeProgressSnapshot(
   client: SupabaseClient,
   expectedRevision: number,
   records: Records,
+  signal?: AbortSignal,
 ): Promise<ProgressSnapshot | { conflict: true; snapshot: ProgressSnapshot | null }> {
-  const { data, error } = await client.rpc('save_progress_snapshot', {
+  let query = client.rpc('save_progress_snapshot', {
     p_expected_revision: expectedRevision,
     p_records: checkedRecords(records),
   });
+  if (signal) query = query.abortSignal(signal);
+  const { data, error } = await query;
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;
   if (!row || typeof row !== 'object') throw new Error('The cloud progress response was incomplete. Your local progress is unchanged.');
-  const snapshot = Number(row.revision) > 0 ? {
-    revision: Number(row.revision),
+  const rowRevision = Number(row.revision);
+  if (!Number.isSafeInteger(rowRevision) || rowRevision < 0) throw new Error('The cloud progress revision is invalid. Local progress was not changed.');
+  const snapshot = rowRevision > 0 ? {
+    revision: rowRevision,
     records: checkedRecords(row.records),
     updatedAt: typeof row.updated_at === 'string' ? row.updated_at : null,
   } : null;
@@ -99,7 +107,7 @@ export async function writeProgressSnapshot(
 }
 
 export function installCloudProgress(records: Records) {
-  replaceRecords(checkedRecords(records));
+  replaceRecordsForCloudSync(checkedRecords(records));
   window.dispatchEvent(new Event('coptic-learning-change'));
   window.dispatchEvent(new Event('coptic-vocabulary-change'));
   window.dispatchEvent(new Event('storage'));

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from 'react';
-import { backupSummary, makeBackup, parseBackupBytes, inspectCurrentProgress, recoveryFile, restoreBackup, undoRestore, type Backup } from '@/lib/progressStorage';
+import { backupSummary, CLOUD_SYNC_RECOVERY_KEY, makeBackup, parseBackupBytes, inspectCurrentProgress, recoveryFile, restoreBackup, undoRestore, type Backup } from '@/lib/progressStorage';
 import { saveProgressFile } from '@/lib/progressFiles';
 
 export default function ProgressBackup() {
@@ -68,6 +68,7 @@ export default function ProgressBackup() {
     <details><summary>Recovery copy</summary>
       <p className="settings-note">The progress saved before the most recent restore or reset is kept on this device. Export it before another restore. Raw recovery files preserve damaged records for repair and cannot be imported as normal backups.</p>
       <button disabled={busy || restored} onClick={() => void action(async () => setMessage(await saveProgressFile(recoveryFile(), 'coptic-progress-recovery.json')))}>Export recovery copy</button>{' '}
+      <button disabled={busy || restored} onClick={() => void action(async () => setMessage(await saveProgressFile(recoveryFile(localStorage, CLOUD_SYNC_RECOVERY_KEY), 'coptic-cloud-sync-recovery.json')))}>Export pre-sync recovery copy</button>{' '}
       <button disabled={busy || restored} onClick={() => setRecover(true)}>Recover previous progress</button>
       {recover && <div><p>Replace current progress with the saved recovery copy? This may restore damaged records if they were already damaged before import.</p><button disabled={busy || restored} onClick={() => void action(() => { undoRestore(); setRecover(false); finishRestore('Previous progress recovered.'); })}>Confirm recovery</button>{' '}<button disabled={busy || restored} onClick={() => setRecover(false)}>Cancel recovery</button></div>}
     </details>

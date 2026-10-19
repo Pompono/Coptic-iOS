@@ -2,7 +2,7 @@
 -- auth.uid() and row-level security bind every operation to the signed-in user.
 create table if not exists public.progress_sync_snapshots (
   user_id uuid primary key references auth.users (id) on delete cascade,
-  revision bigint not null check (revision > 0),
+  revision bigint not null check (revision > 0 and revision <= 9007199254740991),
   records jsonb not null check (jsonb_typeof(records) = 'object'),
   updated_at timestamptz not null default now()
 );
@@ -30,17 +30,44 @@ declare
   v_revision bigint;
   v_records jsonb;
   v_updated_at timestamptz;
+  v_key text;
+  v_raw jsonb;
 begin
   if v_user_id is null then
     raise exception 'Authentication is required.' using errcode = '28000';
   end if;
-  if p_expected_revision is null or p_expected_revision < 0 then
+  if p_expected_revision is null or p_expected_revision < 0
+     or p_expected_revision > 9007199254740991 then
     raise exception 'Invalid expected progress revision.' using errcode = '22023';
   end if;
   if p_records is null or jsonb_typeof(p_records) <> 'object'
-     or octet_length(p_records::text) > 20971520 then
+     or octet_length(p_records::text) > 20971520
+     or (select count(*) from jsonb_each(p_records)) > 10000 then
     raise exception 'Invalid or oversized progress snapshot.' using errcode = '22023';
   end if;
+
+  -- Store only local progress records understood by the application. Reject arbitrary keys,
+  -- non-string payloads, malformed JSON, and oversized individual records at the trust boundary.
+  for v_key in select key from jsonb_each(p_records) loop
+    if not (v_key in ('coptic-progress', 'coptic-learning:v1', 'coptic-vocabulary:v1', 'coptic-reader:v1')
+        or v_key ~ '^coptic-unit-(progress|failed-steps):[^[:space:]]{1,256}$') then
+      raise exception 'Unsupported progress record key.' using errcode = '22023';
+    end if;
+    if jsonb_typeof(p_records -> v_key) <> 'string'
+       or octet_length(p_records ->> v_key) > 1048576 then
+      raise exception 'Invalid or oversized progress record.' using errcode = '22023';
+    end if;
+    begin
+      v_raw := (p_records ->> v_key)::jsonb;
+    exception when others then
+      raise exception 'Malformed progress record.' using errcode = '22023';
+    end;
+    if (v_key in ('coptic-progress', 'coptic-learning:v1', 'coptic-vocabulary:v1', 'coptic-reader:v1')
+        and jsonb_typeof(v_raw) <> 'object')
+       or (v_key like 'coptic-unit-%' and jsonb_typeof(v_raw) <> 'array') then
+      raise exception 'Invalid progress record shape.' using errcode = '22023';
+    end if;
+  end loop;
 
   select snapshot.revision, snapshot.records, snapshot.updated_at
     into v_revision, v_records, v_updated_at
@@ -74,6 +101,10 @@ begin
   if v_revision <> p_expected_revision then
     return query select v_revision, v_records, v_updated_at, true;
     return;
+  end if;
+
+  if v_revision >= 9007199254740991 then
+    raise exception 'Progress revision limit reached.' using errcode = '22003';
   end if;
 
   update public.progress_sync_snapshots as snapshot

@@ -5,11 +5,20 @@ on:
     branches:
       - feat/progress-protection-backup
       - feat/phase-2a-secure-authentication
+      - codex/phase-2b-cloud-progress-sync
     paths:
       - '.github/workflows/unsigned-ipa.yml'
       - 'lib/progressFiles.ts'
       - 'tests/progressFiles.test.mjs'
       - 'lib/auth/**'
+      - 'lib/progressSync.ts'
+      - 'lib/progressStorage.ts'
+      - 'app/ProgressSyncLifecycle.tsx'
+      - 'app/settings/ProgressSync.tsx'
+      - 'supabase/migrations/**'
+      - 'supabase/tests/**'
+      - 'docs/progress-sync.md'
+      - 'tests/progressSync*.test.mjs'
       - 'app/AuthProvider.tsx'
       - 'app/auth/**'
       - 'app/account/**'
@@ -81,7 +90,7 @@ jobs:
         run: |
           set -euo pipefail
           APP_PATH="/tmp/coptic-ipa-build/Build/Products/Release-iphoneos/App.app"
-          IPA_PATH="$RUNNER_TEMP/CoptLingo-Phase2A-unsigned.ipa"
+          IPA_PATH="$RUNNER_TEMP/CoptLingo-Phase2B-unsigned.ipa"
           test -d "$APP_PATH" || { echo "Missing built device app: $APP_PATH" >&2; exit 1; }
           mkdir -p "$RUNNER_TEMP/ipa/Payload"
           cp -R "$APP_PATH" "$RUNNER_TEMP/ipa/Payload/App.app"
@@ -151,7 +160,7 @@ jobs:
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CoptLingo-Phase2A-Unsigned-IPA
-          path: ${{ runner.temp }}/CoptLingo-Phase2A-unsigned.ipa
+          name: CoptLingo-Phase2B-Unsigned-IPA
+          path: ${{ runner.temp }}/CoptLingo-Phase2B-unsigned.ipa
           if-no-files-found: error
           retention-days: 14
