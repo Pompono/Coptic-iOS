@@ -31,6 +31,14 @@ export interface AuthApi {
 export interface AuthServiceOptions {
   api: AuthApi;
   redirectUrl: string;
+  recoveryRedirectUrl: string;
+  recoveryContext: {
+    begin(): Promise<void>;
+    authorize(userId: string): Promise<boolean>;
+    isRequested(): Promise<boolean>;
+    isAuthorized(userId?: string): Promise<boolean>;
+    clear(): Promise<void>;
+  };
 }
 
 function normalizeEmail(email: string): string {
@@ -86,7 +94,7 @@ function requireValidPassword(password: string): void {
   }
 }
 
-export function createAuthService({ api, redirectUrl }: AuthServiceOptions) {
+export function createAuthService({ api, redirectUrl, recoveryRedirectUrl, recoveryContext }: AuthServiceOptions) {
   return {
     async register(email: string, password: string, displayName = '') {
       const normalizedEmail = requireValidEmail(email);
@@ -106,19 +114,27 @@ export function createAuthService({ api, redirectUrl }: AuthServiceOptions) {
       if (!password) throw new Error('Enter your password.');
       const { data, error } = await api.signInWithPassword({ email: normalizedEmail, password });
       requireNoError(error, 'signIn');
+      await recoveryContext.clear();
       return data.session;
     },
 
     async signOut() {
       const { error } = await api.signOut({ scope: 'local' });
       requireNoError(error, 'signOut');
+      await recoveryContext.clear();
     },
 
     async requestPasswordReset(email: string) {
       const normalizedEmail = requireValidEmail(email);
-      const { error } = await api.resetPasswordForEmail(normalizedEmail, { redirectTo: redirectUrl });
-      requireNoError(error, 'passwordReset');
-      return 'If an account can receive a reset email at that address, instructions will arrive shortly.';
+      await recoveryContext.begin();
+      try {
+        const { error } = await api.resetPasswordForEmail(normalizedEmail, { redirectTo: recoveryRedirectUrl });
+        requireNoError(error, 'passwordReset');
+        return 'If an account can receive a reset email at that address, instructions will arrive shortly.';
+      } catch (failure) {
+        await recoveryContext.clear();
+        throw failure;
+      }
     },
 
     async resendVerification(email: string) {
@@ -152,6 +168,29 @@ export function createAuthService({ api, redirectUrl }: AuthServiceOptions) {
       requireNoError(error, 'updatePassword');
     },
 
+    async completePasswordRecovery(password: string, confirmation: string) {
+      requireValidPassword(password);
+      if (password !== confirmation) throw new Error('The passwords do not match. Enter the same password in both fields.');
+      const { data: sessionData, error: sessionError } = await api.getSession();
+      requireNoError(sessionError, 'session');
+      const userId = sessionData.session?.user.id;
+      if (!userId || !(await recoveryContext.isAuthorized(userId))) {
+        throw new Error('This password reset is not authorized or has expired. Request a new reset email and open it on this device.');
+      }
+      const { data, error } = await api.updateUser({ password });
+      requireNoError(error, 'updatePassword');
+      if (data.user?.id !== userId) throw new Error('The account service did not confirm the password change. Try again.');
+      await recoveryContext.clear();
+    },
+
+    async cancelPasswordRecovery() {
+      await recoveryContext.clear();
+    },
+
+    async isPasswordRecoveryAuthorized(userId?: string) {
+      return recoveryContext.isAuthorized(userId);
+    },
+
     async updateDisplayName(displayName: string) {
       const name = displayName.trim().slice(0, 60);
       const { error } = await api.updateUser({ data: { display_name: name } });
@@ -171,9 +210,20 @@ export function createAuthService({ api, redirectUrl }: AuthServiceOptions) {
       return data.session;
     },
 
-    async completeCallback(code: string) {
+    async completeCallback(code: string, isPasswordRecovery = false) {
+      if (isPasswordRecovery && !(await recoveryContext.isRequested())) {
+        throw new Error('This password-reset link was not requested from this app session. Request a new reset email on this device.');
+      }
       const { data, error } = await api.exchangeCodeForSession(code);
       requireNoError(error, 'callback');
+      if (isPasswordRecovery) {
+        const userId = data.session?.user.id;
+        if (!userId || !(await recoveryContext.authorize(userId))) {
+          await api.signOut({ scope: 'local' });
+          await recoveryContext.clear();
+          throw new Error('This password-reset request expired. Request a new reset email and try again.');
+        }
+      }
       return data.session;
     },
   };

@@ -7,7 +7,7 @@ export interface AuthCallbackSession {
 type CallbackResult = 'ignored' | 'duplicate' | 'completed' | 'failed';
 
 export function createAuthCallbackProcessor(options: {
-  complete(code: string): Promise<AuthCallbackSession | null>;
+  complete(code: string, isPasswordRecovery: boolean): Promise<AuthCallbackSession | null>;
   onComplete(session: AuthCallbackSession, isPasswordRecovery: boolean): void;
   onError(error: Error): void;
 }): (value: string) => Promise<CallbackResult> {
@@ -26,7 +26,7 @@ export function createAuthCallbackProcessor(options: {
 
     inFlight.add(parsed.code);
     try {
-      const session = await options.complete(parsed.code);
+      const session = await options.complete(parsed.code, parsed.isPasswordRecovery);
       if (!session) throw new Error('This account link did not return a session. Request a new email and try again.');
       completed.add(parsed.code);
       if (completed.size > 16) completed.delete(completed.values().next().value as string);

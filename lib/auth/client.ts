@@ -4,8 +4,10 @@ import { Capacitor } from '@capacitor/core';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { createAuthStorage, browserAuthStorage } from './storage';
 import { isAuthConfigured } from './redirect';
+import { createPasswordRecoveryContext, type PasswordRecoveryContext } from './recovery';
 
 let clientPromise: Promise<SupabaseClient> | undefined;
+let passwordRecoveryContext: PasswordRecoveryContext | undefined;
 
 export const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 export const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '';
@@ -24,6 +26,12 @@ export function getSupabaseClient(): Promise<SupabaseClient> {
     });
   }
   return clientPromise;
+}
+
+export async function getPasswordRecoveryContext(): Promise<PasswordRecoveryContext> {
+  await getSupabaseClient();
+  if (!passwordRecoveryContext) throw new Error('Secure password-recovery storage is unavailable. Update the app and try again.');
+  return passwordRecoveryContext;
 }
 
 async function makeClient(): Promise<SupabaseClient> {
@@ -48,6 +56,7 @@ async function makeClient(): Promise<SupabaseClient> {
     secureStorage ?? { getItem: async () => null, setItem: async () => undefined, removeItem: async () => undefined },
     browserAuthStorage(),
   );
+  passwordRecoveryContext = createPasswordRecoveryContext(storage);
   return createClient(supabaseUrl, supabasePublishableKey, {
     auth: {
       flowType: 'pkce',

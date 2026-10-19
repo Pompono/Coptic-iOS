@@ -11,10 +11,11 @@ type Mode = 'sign-in' | 'create' | 'forgot' | 'verification' | 'reset' | 'settin
 
 export default function AccountPage() {
   const router = useRouter();
-  const { configured, loading, session, error: authError, clearError, recoveryPending, service, retrySession } = useAuth();
+  const { configured, loading, session, error: authError, clearError, recoveryPending, clearRecoveryPending, service, retrySession } = useAuth();
   const [mode, setMode] = useState<Mode>('sign-in');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [verificationToken, setVerificationToken] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [newEmail, setNewEmail] = useState('');
@@ -58,7 +59,7 @@ export default function AccountPage() {
   }, []);
 
   function changeMode(next: Mode) {
-    setMode(next); setMessage(''); setError(''); setVerificationToken(''); clearError();
+    setMode(next); setMessage(''); setError(''); setVerificationToken(''); setPassword(''); setConfirmPassword(''); clearError();
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -85,9 +86,13 @@ export default function AccountPage() {
         setMessage('Email verified. Your account is ready to use.');
         setMode('settings');
       } else if (mode === 'reset') {
-        await service.updatePassword(password);
+        if (!recoveryPending || !session) throw new Error('Open a valid password-reset link before changing your password.');
+        await service.completePasswordRecovery(password, confirmPassword);
+        clearRecoveryPending();
+        setPassword('');
+        setConfirmPassword('');
         setMessage('Password updated. Your account is ready to use.');
-        changeMode('settings');
+        setMode('settings');
       } else if (mode === 'settings') {
         if (displayName.trim() !== String(session?.user.user_metadata?.display_name ?? '')) {
           await service.updateDisplayName(displayName);
@@ -118,6 +123,21 @@ export default function AccountPage() {
     try { await service.signOut(); setMessage('You are signed out. Your learning progress remains on this device.'); setMode('sign-in'); }
     catch (failure) { setError(failure instanceof Error ? failure.message : 'Could not sign out. Try again.'); }
     finally { setBusy(false); }
+  }
+
+  async function cancelRecovery(nextMode: Mode = 'settings') {
+    if (!service) return;
+    setBusy(true); setError(''); setMessage(''); clearError();
+    try {
+      await service.cancelPasswordRecovery();
+      clearRecoveryPending();
+      setPassword('');
+      setConfirmPassword('');
+      setMode(nextMode);
+      setMessage('Password reset canceled. Your password was not changed.');
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Password reset could not be canceled. Try again.');
+    } finally { setBusy(false); }
   }
 
   const formHeading = mode === 'sign-in' ? 'Sign in' : mode === 'create' ? 'Create account'
@@ -169,10 +189,16 @@ export default function AccountPage() {
           <label className={styles.field}>New password
             <input type="password" value={password} onChange={event => setPassword(event.target.value)} autoComplete="new-password" minLength={MINIMUM_PASSWORD_LENGTH} required />
           </label>
+          <label className={styles.field}>Confirm new password
+            <input type="password" value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} autoComplete="new-password" minLength={MINIMUM_PASSWORD_LENGTH} required />
+          </label>
           <p className={styles.copy}>Use at least {MINIMUM_PASSWORD_LENGTH} characters.</p>
           <button className={styles.button} type="submit" disabled={busy}>{busy ? 'Updating…' : 'Update password'}</button>
         </form>}
-        <button className={styles.linkButton} type="button" onClick={() => changeMode('forgot')}>Request another reset email</button>
+        {recoveryPending ? <>
+          <button className={styles.linkButton} type="button" disabled={busy} onClick={() => void cancelRecovery('settings')}>Cancel password reset</button>
+          <button className={styles.linkButton} type="button" disabled={busy} onClick={() => void cancelRecovery('forgot')}>Request another reset email</button>
+        </> : <button className={styles.linkButton} type="button" onClick={() => changeMode('forgot')}>Request a new reset email</button>}
       </> : configured ? <>
         <p className={styles.copy}>{mode === 'create'
           ? 'Create an optional account. You can keep learning as a guest; account sign-in does not sync or change your progress.'
