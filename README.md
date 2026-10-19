@@ -5,7 +5,7 @@ The original repository remains independent. This repository retains its source 
 
 Lessons, pronunciation audio, fonts, dictionary data, and the interface are bundled
 inside the app. Progress and preferences remain in the app's local WebView storage.
-The Translator screen uses CopticLingo’s existing hosted AI in both directions,
+The Translator screen uses CoptLingo’s existing hosted AI in both directions,
 with a separate offline published-text lookup. Scanner OCR and translation remain
 on-device; scanner translation still needs the optional offline-model build.
 No hosted website is required to open the app or use its learning content.
@@ -148,7 +148,7 @@ app icon and launch artwork before distributing a release.
 
 ## Hosted Translator and offline scanner IPA
 
-The Translator screen uses the existing public CopticLingo proxy for AI in both
+The Translator screen uses the existing public CoptLingo proxy for AI in both
 directions. Published text is a separate local, offline reference lookup, available
 without model weights. It covers supported Bohairic passages only and never
 silently replaces an AI request. AI needs internet, sends submitted text over
