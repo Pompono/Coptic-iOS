@@ -101,6 +101,24 @@ test('invalid cloud records are rejected before an RPC is sent', async () => {
   assert.equal(called, false);
 });
 
+test('malformed cloud snapshots and unsafe revisions are rejected before reconciliation', async () => {
+  let row = { revision: 1, records: { 'unsupported-key': '[]' }, updated_at: null };
+  const client = {
+    from() {
+      const query = {
+        select() { return this; },
+        eq() { return this; },
+        abortSignal() { return this; },
+        maybeSingle: async () => ({ data: row, error: null }),
+      };
+      return query;
+    },
+  };
+  await assert.rejects(syncModule.fetchProgressSnapshot(client, 'user-a'));
+  row = { revision: Number.MAX_SAFE_INTEGER + 1, records: {}, updated_at: null };
+  await assert.rejects(syncModule.fetchProgressSnapshot(client, 'user-a'), /revision is invalid/);
+});
+
 function coordinatorFixture(options = {}) {
   const base = options.base ?? { revision: 1, records: { 'coptic-progress': raw(1) } };
   const state = {
@@ -153,7 +171,7 @@ test('local-only progress uploads by compare-and-swap and retains exact Unicode/
   const records = {
     'coptic-progress': raw(33),
     'coptic-unit-progress:lesson-1': JSON.stringify(['ⲁⲃ', 'ⲙ̄ⲛ']),
-    'coptic-vocabulary:v1': JSON.stringify({ version: 1, cards: [{ id: 'ⲙⲁ', dueAt: 1700000000, interval: 3, ease: 2.5, repetitions: 2 }] }),
+    'coptic-vocabulary:v1': JSON.stringify({ version: 1, cards: [{ id: 'ⲙⲁ', word: 'ⲙⲁ', meaning: 'word', createdAt: 1700000000, dueAt: 1700000000, intervalDays: 3, reviews: 2, lapses: 1, streak: 2, lastReviewedAt: null }] }),
   };
   const fixture = coordinatorFixture({ local: records });
   await fixture.coordinator.request();
