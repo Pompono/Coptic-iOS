@@ -32,6 +32,7 @@ on:
       - 'package-lock.json'
       - 'tests/auth.test.mjs'
       - 'scripts/progress-backup-smoke.mjs'
+      - 'scripts/mobile-smoke.mjs'
       - 'scripts/native-backup-smoke.js'
       - 'scripts/native-startup-smoke.sh'
       - 'scripts/verify-native-backup.py'
