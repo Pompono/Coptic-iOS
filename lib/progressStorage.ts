@@ -141,6 +141,7 @@ export function writeRecord(key: string, data: unknown, storage: Storage = local
     if (storage.getItem(JOURNAL_KEY) !== null || storage.getItem(key) !== previous) throw new Error('Saved progress changed in another window. Reload before saving.');
     storage.setItem(key, raw);
     seen?.set(key, raw);
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('coptic-progress-change'));
   } catch (error) { reportProgressError(error); throw error; }
 }
 export function makeBackup(storage: Storage = localStorage): Backup {
