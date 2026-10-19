@@ -22,7 +22,7 @@ export interface AuthApi {
   resetPasswordForEmail(email: string, options: { redirectTo: string }): Promise<AuthResult<Record<string, never>>>;
   resend(args: { type: 'signup'; email: string; options: { emailRedirectTo: string } }): Promise<AuthResult<Record<string, never>>>;
   updateUser(args: { password?: string; email?: string; data?: Record<string, string> }, options?: { emailRedirectTo?: string }): Promise<AuthResult<{ user: AuthUser | null }>>;
-  exchangeCodeForSession(code: string): Promise<AuthResult<{ user: AuthUser | null; session: AuthSession | null }>>;
+  exchangeCodeForSession(code: string): Promise<AuthResult<{ user: AuthUser | null; session: AuthSession | null; redirectType?: string | null }>>;
   verifyOtp(args: { email: string; token: string; type: 'email' }): Promise<AuthResult<{ user: AuthUser | null; session: AuthSession | null }>>;
   getSession(): Promise<AuthResult<{ session: AuthSession | null }>>;
   onAuthStateChange(callback: (event: string, session: AuthSession | null) => void): { data: { subscription: { unsubscribe(): void } } };
@@ -33,9 +33,7 @@ export interface AuthServiceOptions {
   redirectUrl: string;
   recoveryRedirectUrl: string;
   recoveryContext: {
-    begin(): Promise<void>;
     authorize(userId: string): Promise<boolean>;
-    isRequested(): Promise<boolean>;
     isAuthorized(userId?: string): Promise<boolean>;
     clear(): Promise<void>;
   };
@@ -57,7 +55,7 @@ function failureMessage(error: AuthError | null, operation: string): string {
     return 'You appear to be offline or the service could not be reached. Check your connection and try again.';
   }
   if (/pkce|code verifier|flow state/u.test(message) || code.includes('code_verifier')) {
-    return 'This email link cannot be completed in this app session. Open it on the same device and in the same app or browser where you started, or request a new verification code.';
+    return 'This email link cannot be completed in this app session. Open it on the same device and in the same app or browser where you started, or request a new email.';
   }
   if (operation === 'verification' && /otp|token|expired|invalid/u.test(`${message} ${code}`)) {
     return 'That verification code is invalid or expired. Request a new verification email and try again.';
@@ -126,15 +124,9 @@ export function createAuthService({ api, redirectUrl, recoveryRedirectUrl, recov
 
     async requestPasswordReset(email: string) {
       const normalizedEmail = requireValidEmail(email);
-      await recoveryContext.begin();
-      try {
-        const { error } = await api.resetPasswordForEmail(normalizedEmail, { redirectTo: recoveryRedirectUrl });
-        requireNoError(error, 'passwordReset');
-        return 'If an account can receive a reset email at that address, instructions will arrive shortly.';
-      } catch (failure) {
-        await recoveryContext.clear();
-        throw failure;
-      }
+      const { error } = await api.resetPasswordForEmail(normalizedEmail, { redirectTo: recoveryRedirectUrl });
+      requireNoError(error, 'passwordReset');
+      return 'If an account can receive a reset email at that address, instructions will arrive shortly.';
     },
 
     async resendVerification(email: string) {
@@ -211,12 +203,18 @@ export function createAuthService({ api, redirectUrl, recoveryRedirectUrl, recov
     },
 
     async completeCallback(code: string, isPasswordRecovery = false) {
-      if (isPasswordRecovery && !(await recoveryContext.isRequested())) {
-        throw new Error('This password-reset link was not requested from this app session. Request a new reset email on this device.');
-      }
       const { data, error } = await api.exchangeCodeForSession(code);
       requireNoError(error, 'callback');
-      if (isPasswordRecovery) {
+      // Supabase tags the PKCE verifier in configured storage for recovery requests
+      // and returns that verified flow purpose from exchangeCodeForSession().
+      const redirectType = data.redirectType;
+      const recoveryAuthorizedByPkce = redirectType === 'PASSWORD_RECOVERY';
+      if (isPasswordRecovery && !recoveryAuthorizedByPkce) {
+        await api.signOut({ scope: 'local' });
+        await recoveryContext.clear();
+        throw new Error('This password-reset link could not be verified as a recovery request. Request a new reset email and try again.');
+      }
+      if (recoveryAuthorizedByPkce) {
         const userId = data.session?.user.id;
         if (!userId || !(await recoveryContext.authorize(userId))) {
           await api.signOut({ scope: 'local' });
@@ -224,7 +222,7 @@ export function createAuthService({ api, redirectUrl, recoveryRedirectUrl, recov
           throw new Error('This password-reset request expired. Request a new reset email and try again.');
         }
       }
-      return data.session;
+      return { session: data.session, isPasswordRecovery: recoveryAuthorizedByPkce };
     },
   };
 }

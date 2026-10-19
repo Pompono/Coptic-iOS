@@ -4,7 +4,7 @@ const RECOVERY_CONTEXT_KEY = 'coptic-auth-password-recovery-v1';
 const RECOVERY_CONTEXT_TTL_MS = 24 * 60 * 60 * 1000;
 
 type RecoveryContext = {
-  status: 'requested' | 'authorized';
+  status: 'authorized';
   createdAt: number;
   userId?: string;
 };
@@ -15,7 +15,7 @@ export function createPasswordRecoveryContext(storage: AsyncStringStorage, now =
     if (!value) return null;
     try {
       const parsed = JSON.parse(value) as Partial<RecoveryContext>;
-      if ((parsed.status !== 'requested' && parsed.status !== 'authorized')
+      if (parsed.status !== 'authorized'
         || typeof parsed.createdAt !== 'number'
         || !Number.isFinite(parsed.createdAt)
         || parsed.createdAt > now()
@@ -31,24 +31,16 @@ export function createPasswordRecoveryContext(storage: AsyncStringStorage, now =
   }
 
   return {
-    async begin(): Promise<void> {
-      await storage.setItem(RECOVERY_CONTEXT_KEY, JSON.stringify({ status: 'requested', createdAt: now() } satisfies RecoveryContext));
-    },
-
     async authorize(userId: string): Promise<boolean> {
-      const context = await read();
-      if (!context || context.status !== 'requested' || !userId) return false;
-      await storage.setItem(RECOVERY_CONTEXT_KEY, JSON.stringify({ ...context, status: 'authorized', userId } satisfies RecoveryContext));
+      if (!userId) return false;
+      const authorized: RecoveryContext = { status: 'authorized', createdAt: now(), userId };
+      await storage.setItem(RECOVERY_CONTEXT_KEY, JSON.stringify(authorized));
       return true;
-    },
-
-    async isRequested(): Promise<boolean> {
-      return (await read())?.status === 'requested';
     },
 
     async isAuthorized(userId?: string): Promise<boolean> {
       const context = await read();
-      return context?.status === 'authorized' && Boolean(context.userId) && (!userId || context.userId === userId);
+      return context?.status === 'authorized' && Boolean(userId) && context.userId === userId;
     },
 
     async clear(): Promise<void> {

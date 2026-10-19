@@ -61,9 +61,8 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       }
       const restored = await service.restoreSession();
       setSession(restored as Session | null);
-      const isRecoveryAuthorized = restored
-        ? await service.isPasswordRecoveryAuthorized(restored.user.id)
-        : false;
+      const hasRecoveryContext = await service.isPasswordRecoveryAuthorized(restored?.user.id);
+      const isRecoveryAuthorized = Boolean(restored && hasRecoveryContext);
       setRecoveryPending(isRecoveryAuthorized);
       if (isRecoveryAuthorized) router.replace('/account/');
     } catch (failure) {
@@ -153,9 +152,10 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         if (!disposed) {
           setSession(restored.session);
           const service = serviceRef.current;
-          const isRecoveryAuthorized = restored.session && service
-            ? await service.isPasswordRecoveryAuthorized(restored.session.user.id)
+          const hasRecoveryContext = service
+            ? await service.isPasswordRecoveryAuthorized(restored.session?.user.id)
             : false;
+          const isRecoveryAuthorized = Boolean(restored.session && hasRecoveryContext);
           setRecoveryPending(isRecoveryAuthorized);
           if (isRecoveryAuthorized) router.replace('/account/');
         }

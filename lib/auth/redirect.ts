@@ -44,7 +44,8 @@ export function parseAuthCallback(value: string): ParsedAuthCallback {
   return {
     ok: true,
     code,
-    // Only the purpose-specific redirect path identifies a recovery operation.
+    // This path marks the expected purpose; service code separately verifies the
+    // SDK's Keychain-backed PKCE flow marker before enabling recovery.
     // Query/fragment values such as type=recovery are caller-controlled and ignored.
     isPasswordRecovery: isNativeCallback ? url.pathname === '/recovery'
       : url.pathname === AUTH_RECOVERY_CALLBACK_PATH || url.pathname === AUTH_RECOVERY_CALLBACK_PATH.slice(0, -1),

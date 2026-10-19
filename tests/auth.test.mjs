@@ -30,6 +30,17 @@ function makeService(api, context = makeRecoveryContext().context) {
   });
 }
 
+function makeRecoveryApi(overrides = {}) {
+  const result = makeApi(overrides);
+  const exchange = result.api.exchangeCodeForSession;
+  result.api.exchangeCodeForSession = async code => {
+    const response = await exchange(code);
+    if (!response.error) response.data.redirectType = 'PASSWORD_RECOVERY';
+    return response;
+  };
+  return result;
+}
+
 function makeApi(overrides = {}) {
   const calls = [];
   const session = { user: { id: 'user-1', email: 'learner@example.com', email_confirmed_at: '2026-01-01' }, expires_at: 9999999999 };
@@ -94,7 +105,6 @@ test('verification resend and password recovery use PKCE redirect and generic re
   assert.match(await service.resendVerification('someone@example.com'), /If that address has a pending verification/);
   assert.equal(calls[0][0], 'resetPasswordForEmail');
   assert.equal(calls[0][2].redirectTo, AUTH_RECOVERY_CALLBACK_URL);
-  assert.equal(await context.isRequested(), true);
   assert.equal(calls[1][1].type, 'signup');
   assert.equal(calls[1][1].options.emailRedirectTo, AUTH_CALLBACK_URL);
 });
@@ -112,7 +122,7 @@ test('password recovery and verified email changes require valid inputs and nati
 });
 
 test('a code-only purpose-specific recovery callback authorizes recovery after PKCE exchange', async () => {
-  const { api, calls } = makeApi();
+  const { api, calls } = makeRecoveryApi();
   const { context } = makeRecoveryContext();
   const service = makeService(api, context);
   await service.requestPasswordReset('learner@example.com');
@@ -139,7 +149,7 @@ test('ordinary sign-in callbacks cannot enter recovery mode from a caller-suppli
   assert.equal(callback.ok && callback.isPasswordRecovery, false);
   const completed = [];
   const processor = createAuthCallbackProcessor({
-    complete: async () => ({ user: { id: 'user-1' } }),
+    complete: async () => ({ session: { user: { id: 'user-1' } }, isPasswordRecovery: false }),
     onComplete: (_session, isRecovery) => completed.push(isRecovery),
     onError(error) { throw error; },
   });
@@ -148,7 +158,7 @@ test('ordinary sign-in callbacks cannot enter recovery mode from a caller-suppli
 });
 
 test('password recovery completion requires an authorized live session and matching passwords', async () => {
-  const { api, calls } = makeApi();
+  const { api, calls } = makeRecoveryApi();
   const { context } = makeRecoveryContext();
   const service = makeService(api, context);
   await service.requestPasswordReset('learner@example.com');
@@ -163,7 +173,7 @@ test('password recovery completion requires an authorized live session and match
 });
 
 test('successful recovery updates the password and clears its context; sign-in remains ordinary afterward', async () => {
-  const base = makeApi();
+  const base = makeRecoveryApi();
   const { calls, session } = base;
   base.api.signInWithPassword = async args => { calls.push(['signIn', args]); return { data: { user: session.user, session }, error: null }; };
   const { context } = makeRecoveryContext();
@@ -178,7 +188,7 @@ test('successful recovery updates the password and clears its context; sign-in r
 });
 
 test('failed password updates keep recovery available and never report success', async () => {
-  const api = makeApi({ updateUser: async () => ({ data: { user: null }, error: { message: 'fetch failed' } }) });
+  const api = makeRecoveryApi({ updateUser: async () => ({ data: { user: null }, error: { message: 'fetch failed' } }) });
   const { context } = makeRecoveryContext();
   const service = makeService(api.api, context);
   await service.requestPasswordReset('learner@example.com');
@@ -189,8 +199,7 @@ test('failed password updates keep recovery available and never report success',
 
 test('expired, duplicate, and already-consumed recovery callbacks fail safely', async () => {
   const { context } = makeRecoveryContext();
-  const service = makeService(makeApi().api, context);
-  await service.requestPasswordReset('learner@example.com');
+  const service = makeService(makeRecoveryApi().api, context);
   const expiredApi = makeApi({ exchangeCodeForSession: async () => ({ data: { user: null, session: null }, error: { message: 'Token has expired or is invalid' } }) });
   const expiredService = makeService(expiredApi.api, context);
   await assert.rejects(expiredService.completeCallback('expired-code', true), /invalid or has expired/i);
@@ -199,7 +208,7 @@ test('expired, duplicate, and already-consumed recovery callbacks fail safely', 
   let resolveExchange;
   let exchangeCount = 0;
   const processor = createAuthCallbackProcessor({
-    complete: async () => { exchangeCount++; return new Promise(resolve => { resolveExchange = () => resolve({ user: { id: 'user-1' } }); }); },
+    complete: async () => { exchangeCount++; return new Promise(resolve => { resolveExchange = () => resolve({ session: { user: { id: 'user-1' } }, isPasswordRecovery: true }); }); },
     onComplete() {},
     onError(error) { throw error; },
   });
@@ -219,10 +228,8 @@ test('Keychain-backed recovery intent survives restart and expires safely', asyn
     removeItem: async key => values.delete(key),
   };
   const firstApp = createPasswordRecoveryContext(storage, () => now);
-  await firstApp.begin();
+  assert.equal(await firstApp.authorize('user-1'), true);
   const reopenedApp = createPasswordRecoveryContext(storage, () => now);
-  assert.equal(await reopenedApp.isRequested(), true);
-  assert.equal(await reopenedApp.authorize('user-1'), true);
   assert.equal(await createPasswordRecoveryContext(storage, () => now).isAuthorized('user-1'), true);
   now += 25 * 60 * 60 * 1000;
   assert.equal(await reopenedApp.isAuthorized('user-1'), false);
@@ -288,7 +295,7 @@ test('cold-start and already-running callbacks share one exchange; failed callba
       exchanges++;
       assert.equal(code, 'one-time-code');
       if (failFirst) { failFirst = false; throw new Error('temporary connection failure'); }
-      return { user: { id: 'user-1', email_confirmed_at: 'verified' } };
+      return { session: { user: { id: 'user-1', email_confirmed_at: 'verified' } }, isPasswordRecovery: false };
     },
     onComplete: (session, recovery) => completed.push([session.user.id, recovery]),
     onError: error => errors.push(error.message),
@@ -309,7 +316,7 @@ test('simultaneous cold-start and appUrlOpen delivery exchange a callback code o
   const processor = createAuthCallbackProcessor({
     complete: async () => {
       exchanges++;
-      return new Promise(resolve => { resolveExchange = () => resolve({ user: { id: 'user-1' } }); });
+      return new Promise(resolve => { resolveExchange = () => resolve({ session: { user: { id: 'user-1' } }, isPasswordRecovery: false }); });
     },
     onComplete() {},
     onError(error) { throw error; },

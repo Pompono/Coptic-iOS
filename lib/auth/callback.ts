@@ -3,11 +3,15 @@ import { parseAuthCallback } from './redirect';
 export interface AuthCallbackSession {
   user: { id: string; email?: string; email_confirmed_at?: string | null };
 }
+export interface AuthCallbackResult {
+  session: AuthCallbackSession | null;
+  isPasswordRecovery: boolean;
+}
 
 type CallbackResult = 'ignored' | 'duplicate' | 'completed' | 'failed';
 
 export function createAuthCallbackProcessor(options: {
-  complete(code: string, isPasswordRecovery: boolean): Promise<AuthCallbackSession | null>;
+  complete(code: string, isPasswordRecovery: boolean): Promise<AuthCallbackResult>;
   onComplete(session: AuthCallbackSession, isPasswordRecovery: boolean): void;
   onError(error: Error): void;
 }): (value: string) => Promise<CallbackResult> {
@@ -26,11 +30,11 @@ export function createAuthCallbackProcessor(options: {
 
     inFlight.add(parsed.code);
     try {
-      const session = await options.complete(parsed.code, parsed.isPasswordRecovery);
-      if (!session) throw new Error('This account link did not return a session. Request a new email and try again.');
+      const result = await options.complete(parsed.code, parsed.isPasswordRecovery);
+      if (!result.session) throw new Error('This account link did not return a session. Request a new email and try again.');
       completed.add(parsed.code);
       if (completed.size > 16) completed.delete(completed.values().next().value as string);
-      options.onComplete(session, parsed.isPasswordRecovery);
+      options.onComplete(result.session, result.isPasswordRecovery);
       return 'completed';
     } catch (failure) {
       options.onError(failure instanceof Error ? failure : new Error('This account link could not be completed. Request a new email and try again.'));
