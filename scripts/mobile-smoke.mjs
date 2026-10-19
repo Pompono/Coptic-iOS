@@ -105,7 +105,7 @@ try {
       await page.getByRole('heading', { name: 'Account', exact: true }).waitFor();
       await page.getByRole('button', { name: 'Sign In', exact: true }).waitFor();
       await page.getByRole('button', { name: 'Create Account', exact: true }).waitFor();
-      assert.match(await page.locator('body').innerText(), /Progress syncing is coming later/u);
+      assert.match(await page.locator('body').innerText(), /Cloud sync is optional and stays off until you enable it under Cloud Progress\./u);
       await page.getByRole('combobox', { name: 'App theme', exact: true }).selectOption('dark');
       await page.waitForLoadState('networkidle');
       await page.reload();
