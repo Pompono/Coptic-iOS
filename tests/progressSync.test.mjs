@@ -43,6 +43,17 @@ test('cloud restore keeps the Phase 1 recovery file and writes an independent pr
   assert.equal(storage.getItem('coptic-progress'), raw(80));
 });
 
+test('pre-sync recovery can be restored and first saves the current progress in Phase 1 recovery', () => {
+  const storage = new MemoryStorage();
+  storage.setItem('coptic-progress', raw(80));
+  const preSync = JSON.stringify({ version: 1, savedAt: 'before-cloud', records: { 'coptic-progress': raw(41) } });
+  storage.setItem(storageModule.CLOUD_SYNC_RECOVERY_KEY, preSync);
+  storageModule.undoCloudSync(storage);
+  assert.equal(storage.getItem('coptic-progress'), raw(41));
+  assert.equal(JSON.parse(storageModule.recoveryFile(storage)).records['coptic-progress'], raw(80));
+  assert.equal(storage.getItem(storageModule.CLOUD_SYNC_RECOVERY_KEY), preSync);
+});
+
 test('failed cloud restore does not write the new local snapshot or replace prior recovery', () => {
   const storage = new MemoryStorage();
   const oldRaw = raw(2);

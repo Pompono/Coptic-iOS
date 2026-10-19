@@ -254,3 +254,7 @@ export function undoRestore(storage: Storage = localStorage) {
   }
   transaction(storage, data.records, null);
 }
+export function undoCloudSync(storage: Storage = localStorage) {
+  const data = JSON.parse(recoveryFile(storage, CLOUD_SYNC_RECOVERY_KEY));
+  replaceRecords(data.records, storage);
+}

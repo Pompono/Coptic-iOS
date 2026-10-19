@@ -185,6 +185,7 @@ export default function ProgressSync() {
     if (!enabledNext) {
       try {
         localStorage.removeItem(PROGRESS_SYNC_OPT_IN_KEY);
+        window.dispatchEvent(new Event('coptic-progress-sync-optout'));
         setEnabled(false);
         setMessage('Cloud sync is off. Progress already synced to your account remains there.');
       } catch { setError('Device storage is unavailable. Cloud sync could not be turned off on this device.'); }

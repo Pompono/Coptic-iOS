@@ -49,6 +49,8 @@ export default function ProgressSyncLifecycle() {
       }, 900);
     };
     window.addEventListener('coptic-progress-change', schedule);
+    const stopCurrentSync = () => { activeController?.abort(); coordinator.cancel(); };
+    window.addEventListener('coptic-progress-sync-optout', stopCurrentSync);
     window.addEventListener('online', schedule);
     window.addEventListener('focus', schedule);
     document.addEventListener('visibilitychange', schedule);
@@ -73,6 +75,7 @@ export default function ProgressSyncLifecycle() {
       activeController?.abort();
       clearTimeout(timer);
       window.removeEventListener('coptic-progress-change', schedule);
+      window.removeEventListener('coptic-progress-sync-optout', stopCurrentSync);
       window.removeEventListener('online', schedule);
       window.removeEventListener('focus', schedule);
       document.removeEventListener('visibilitychange', schedule);

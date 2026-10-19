@@ -32,6 +32,8 @@ declare
   v_updated_at timestamptz;
   v_key text;
   v_raw jsonb;
+  v_item jsonb;
+  v_skill jsonb;
 begin
   if v_user_id is null then
     raise exception 'Authentication is required.' using errcode = '28000';
@@ -62,10 +64,81 @@ begin
     exception when others then
       raise exception 'Malformed progress record.' using errcode = '22023';
     end;
-    if (v_key in ('coptic-progress', 'coptic-learning:v1', 'coptic-vocabulary:v1', 'coptic-reader:v1')
-        and jsonb_typeof(v_raw) <> 'object')
-       or (v_key like 'coptic-unit-%' and jsonb_typeof(v_raw) <> 'array') then
-      raise exception 'Invalid progress record shape.' using errcode = '22023';
+    if v_key = 'coptic-progress' then
+      if jsonb_typeof(v_raw) <> 'object'
+         or jsonb_typeof(v_raw -> 'xp') is distinct from 'number'
+         or jsonb_typeof(v_raw -> 'streak') is distinct from 'number'
+         or jsonb_typeof(v_raw -> 'completedLessons') is distinct from 'array'
+         or not (v_raw ? 'lastCompletedDate')
+         or (v_raw -> 'lastCompletedDate' <> 'null'::jsonb and
+             (jsonb_typeof(v_raw -> 'lastCompletedDate') is distinct from 'string'
+              or (v_raw ->> 'lastCompletedDate') !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$')) then
+        raise exception 'Invalid progress totals record.' using errcode = '22023';
+      end if;
+      if (v_raw ->> 'xp')::numeric < 0 or trunc((v_raw ->> 'xp')::numeric) <> (v_raw ->> 'xp')::numeric
+         or (v_raw ->> 'streak')::numeric < 0 or trunc((v_raw ->> 'streak')::numeric) <> (v_raw ->> 'streak')::numeric
+         or exists (select 1 from jsonb_array_elements(v_raw -> 'completedLessons') as lesson(value) where jsonb_typeof(lesson.value) <> 'string') then
+        raise exception 'Invalid progress totals record.' using errcode = '22023';
+      end if;
+    elsif v_key = 'coptic-reader:v1' then
+      if jsonb_typeof(v_raw) <> 'object' or v_raw -> 'version' <> '1'::jsonb
+         or jsonb_typeof(v_raw -> 'passageId') is distinct from 'string'
+         or jsonb_typeof(v_raw -> 'draft') is distinct from 'string'
+         or length(v_raw ->> 'draft') > 6000 then
+        raise exception 'Invalid saved reader record.' using errcode = '22023';
+      end if;
+    elsif v_key = 'coptic-learning:v1' then
+      if jsonb_typeof(v_raw) is distinct from 'object' or v_raw -> 'version' is distinct from '1'::jsonb
+         or jsonb_typeof(v_raw -> 'skills') is distinct from 'object' then
+        raise exception 'Invalid practice record.' using errcode = '22023';
+      end if;
+      for v_skill in select value from jsonb_each(v_raw -> 'skills') loop
+        if jsonb_typeof(v_skill) is distinct from 'object' or jsonb_typeof(v_skill -> 'word') is distinct from 'string'
+           or jsonb_typeof(v_skill -> 'meaning') is distinct from 'string'
+           or exists (select 1 from unnest(array['unitId','audio','pos','explanation']) as field(name)
+             where v_skill ? field.name and jsonb_typeof(v_skill -> field.name) is distinct from 'string')
+           or exists (select 1 from unnest(array['unitIds','accepted']) as field(name)
+             where v_skill ? field.name and (jsonb_typeof(v_skill -> field.name) is distinct from 'array'
+               or exists (select 1 from jsonb_array_elements(v_skill -> field.name) as item(value) where jsonb_typeof(item.value) is distinct from 'string')))
+           or (v_skill ? 'needsPractice' and jsonb_typeof(v_skill -> 'needsPractice') is distinct from 'boolean')
+           or (v_skill ? 'lastSuccessfulDay' and v_skill -> 'lastSuccessfulDay' <> 'null'::jsonb
+             and (jsonb_typeof(v_skill -> 'lastSuccessfulDay') is distinct from 'number'
+               or (v_skill ->> 'lastSuccessfulDay')::numeric < 0))
+           or exists (select 1 from unnest(array['attempts','correct','lapses','dueAt','lastSeen','successfulDays']) as field(name)
+             where jsonb_typeof(v_skill -> field.name) is distinct from 'number'
+                or (v_skill ->> field.name)::numeric < 0) then
+          raise exception 'Invalid practice skill.' using errcode = '22023';
+        end if;
+      end loop;
+    elsif v_key = 'coptic-vocabulary:v1' then
+      if jsonb_typeof(v_raw) is distinct from 'object' or v_raw -> 'version' is distinct from '1'::jsonb
+         or jsonb_typeof(v_raw -> 'cards') is distinct from 'array' then
+        raise exception 'Invalid vocabulary record.' using errcode = '22023';
+      end if;
+      for v_item in select value from jsonb_array_elements(v_raw -> 'cards') loop
+        if jsonb_typeof(v_item) is distinct from 'object' or jsonb_typeof(v_item -> 'id') is distinct from 'string'
+           or jsonb_typeof(v_item -> 'word') is distinct from 'string' or length(btrim(v_item ->> 'word')) = 0
+           or jsonb_typeof(v_item -> 'meaning') is distinct from 'string' or length(btrim(v_item ->> 'meaning')) = 0
+           or exists (select 1 from unnest(array['pos','dialect','context','source','audio']) as field(name)
+             where v_item ? field.name and jsonb_typeof(v_item -> field.name) is distinct from 'string')
+           or (v_item ? 'lastReviewedAt' and v_item -> 'lastReviewedAt' <> 'null'::jsonb
+             and (jsonb_typeof(v_item -> 'lastReviewedAt') is distinct from 'number'
+               or (v_item ->> 'lastReviewedAt')::numeric < 0))
+           or exists (select 1 from unnest(array['createdAt','dueAt','intervalDays','reviews','lapses','streak']) as field(name)
+             where jsonb_typeof(v_item -> field.name) is distinct from 'number'
+                or (v_item ->> field.name)::numeric < 0) then
+          raise exception 'Invalid vocabulary card.' using errcode = '22023';
+        end if;
+      end loop;
+      if exists (select 1 from jsonb_array_elements(v_raw -> 'cards') as card(value)
+        group by card.value ->> 'id' having count(*) > 1) then
+        raise exception 'Duplicate vocabulary card ID.' using errcode = '22023';
+      end if;
+    else
+      if jsonb_typeof(v_raw) is distinct from 'array'
+         or exists (select 1 from jsonb_array_elements(v_raw) as step(value) where jsonb_typeof(step.value) is distinct from 'string') then
+        raise exception 'Invalid lesson progress record.' using errcode = '22023';
+      end if;
     end if;
   end loop;
 
