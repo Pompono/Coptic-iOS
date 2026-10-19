@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import ProgressBackup from "./ProgressBackup";
+import ProgressSync from "./ProgressSync";
 import AccountSection from "./AccountSection";
 import { makeBackup, replaceRecords } from "@/lib/progressStorage";
 import { lessons } from "@/lib/lesson";
@@ -164,6 +165,7 @@ export default function SettingsPage() {
     </div></section>
     <section><h2 className="settings-section-title">Language</h2><div className="settings-group"><div className="settings-row"><label htmlFor="bohairic-switch">Bohairic-only mode</label><input id="bohairic-switch" type="checkbox" className="ui-switch" role="switch" checked={bohairicOnlyEnabled} onChange={e=>onToggleBohairicOnlyEnabled(e.target.checked)}/></div></div><p className="settings-note">Use verified Bohairic entries and keep the translator in Bohairic.</p></section>
     <ProgressBackup />
+    <ProgressSync />
     <AccountSection />
     <section><h2 className="settings-section-title">Developer</h2><div className="settings-group"><div className="settings-row" aria-label="Developer tools toggle"><label htmlFor="developer-switch">Developer tools</label><input id="developer-switch" type="checkbox" className="ui-switch" role="switch" checked={devToolsEnabled} onChange={e=>onToggleDevTools(e.target.checked)}/></div></div>
         {devToolsEnabled ? (

@@ -67,5 +67,5 @@ Automated callback parser tests, simulator build checks for both callback routes
 ## Deferred roadmap
 
 - Sign in with Apple and Google need provider setup, native system-browser flows, and provider-specific redirect testing. Neither provider is enabled here.
-- Cloud progress sync needs a separate design for stable account identity, local/account reconciliation, revisions and conflict handling, offline queues, RLS policies, privacy/retention, and self-hosting compatibility. No progress uploads or downloads exist in this phase.
+- Phase 2B adds opt-in cloud progress sync. Apply `supabase/migrations/20261019000000_progress_sync.sql` to the existing project before enabling it in a build. The project’s live schema and policies remain unverified from this repository.
 - Account deletion needs the trusted backend described above, plus an explicit policy for associated data and backups. It remains a release blocker until then.

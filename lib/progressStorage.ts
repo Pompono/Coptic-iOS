@@ -2,6 +2,7 @@ import { parseLearning } from './learning/progress.mjs';
 import { parseDeck } from './vocabulary/schedule.mjs';
 
 export const RECOVERY_KEY = 'coptic-progress-recovery:v1';
+export const CLOUD_SYNC_RECOVERY_KEY = 'coptic-progress-cloud-recovery:v1';
 const JOURNAL_KEY = 'coptic-progress-transaction:v1';
 const DAMAGED_JOURNAL_KEY = 'coptic-progress-damaged-journal:v1';
 const JOURNAL_LEASE_MS = 30000;
@@ -141,6 +142,7 @@ export function writeRecord(key: string, data: unknown, storage: Storage = local
     if (storage.getItem(JOURNAL_KEY) !== null || storage.getItem(key) !== previous) throw new Error('Saved progress changed in another window. Reload before saving.');
     storage.setItem(key, raw);
     seen?.set(key, raw);
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('coptic-progress-change'));
   } catch (error) { reportProgressError(error); throw error; }
 }
 export function makeBackup(storage: Storage = localStorage): Backup {
@@ -187,7 +189,7 @@ export function restoreBackup(backup: Backup, confirmed: boolean, storage: Stora
   replaceRecords(validated.records, storage);
   return true;
 }
-function transaction(storage: Storage, records: Records, keepRecovery: boolean) {
+function transaction(storage: Storage, records: Records, recoveryKey: string | null) {
   const previous = rawSnapshot(storage);
   const recovery = JSON.stringify({ version: 1, savedAt: new Date().toISOString(), records: previous });
   const journal = JSON.stringify({ version: 1, records: previous, digest: snapshotDigest(previous), owner: Math.random().toString(36), activeUntil: Date.now() + JOURNAL_LEASE_MS });
@@ -202,25 +204,35 @@ function transaction(storage: Storage, records: Records, keepRecovery: boolean) 
     throw new Error('Progress changed in another window. Reload before continuing.');
   }
   try {
-    if (keepRecovery) {
-      storage.setItem(RECOVERY_KEY, recovery);
-      if (storage.getItem(RECOVERY_KEY) !== recovery) throw storageFailure();
+    if (recoveryKey) {
+      storage.setItem(recoveryKey, recovery);
+      if (storage.getItem(recoveryKey) !== recovery) throw storageFailure();
     }
     apply(storage, records, journal);
     assertJournal(storage, journal);
     storage.removeItem(JOURNAL_KEY);
+    if (typeof window !== 'undefined') {
+      try { if (storage === window.localStorage) window.dispatchEvent(new Event('coptic-progress-change')); }
+      catch { /* A progress notification must not turn a committed restore into a failure. */ }
+    }
   } catch {
     try { rollback(storage, journal); } catch { throw new Error('Restore failed. Recovery is pending; learning writes are blocked. Free device storage if necessary, wait 30 seconds, then reload. Your original data is retained.'); }
     throw new Error('Restore failed. Your previous progress has been restored.');
   }
 }
 export function replaceRecords(records: Records, storage: Storage = localStorage) {
+  replaceRecordsWithRecovery(records, storage, RECOVERY_KEY);
+}
+export function replaceRecordsForCloudSync(records: Records, storage: Storage = localStorage) {
+  replaceRecordsWithRecovery(records, storage, CLOUD_SYNC_RECOVERY_KEY);
+}
+function replaceRecordsWithRecovery(records: Records, storage: Storage, recoveryKey: string) {
   checkRecords(records, true);
   recoverPending(storage);
-  transaction(storage, records, true);
+  transaction(storage, records, recoveryKey);
 }
-export function recoveryFile(storage: Storage = localStorage) {
-  const raw = storage.getItem(RECOVERY_KEY);
+export function recoveryFile(storage: Storage = localStorage, key: typeof RECOVERY_KEY | typeof CLOUD_SYNC_RECOVERY_KEY = RECOVERY_KEY) {
+  const raw = storage.getItem(key);
   if (raw === null) throw new Error('No recovery copy is available.');
   const data = JSON.parse(raw);
   if (data.version !== 1) throw new Error('Unsupported recovery copy.');
@@ -240,5 +252,9 @@ export function undoRestore(storage: Storage = localStorage) {
     assertJournal(storage, damaged);
     storage.removeItem(JOURNAL_KEY);
   }
-  transaction(storage, data.records, false);
+  transaction(storage, data.records, null);
+}
+export function undoCloudSync(storage: Storage = localStorage) {
+  const data = JSON.parse(recoveryFile(storage, CLOUD_SYNC_RECOVERY_KEY));
+  replaceRecords(data.records, storage);
 }

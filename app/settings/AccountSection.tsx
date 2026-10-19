@@ -36,8 +36,8 @@ export default function AccountSection() {
           <button className="ui-secondary" type="button" disabled={busy} onClick={() => void signOut()}>{busy ? 'Signing out…' : 'Sign Out'}</button>
         </div>
       </> : <>
-        <p>An optional account gives you email-based access and prepares your account for future features. You can continue learning as a guest.</p>
-        <p className="settings-note account-sync-note">Progress syncing is coming later. Your account will not upload, download, or change learning progress in this phase.</p>
+        <p>An optional account gives you email-based access and cloud progress sync. You can continue learning as a guest.</p>
+        <p className="settings-note account-sync-note">Cloud sync is optional and stays off until you enable it under Cloud Progress.</p>
         <div className="account-actions">
           <button className="ui-primary" type="button" onClick={() => router.push('/account/?mode=sign-in')}>Sign In</button>
           <button className="ui-secondary" type="button" onClick={() => router.push('/account/?mode=create')}>Create Account</button>
