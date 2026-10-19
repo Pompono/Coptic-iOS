@@ -15,6 +15,7 @@ export default function AccountPage() {
   const [mode, setMode] = useState<Mode>('sign-in');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [verificationToken, setVerificationToken] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [busy, setBusy] = useState(false);
@@ -57,7 +58,7 @@ export default function AccountPage() {
   }, []);
 
   function changeMode(next: Mode) {
-    setMode(next); setMessage(''); setError(''); clearError();
+    setMode(next); setMessage(''); setError(''); setVerificationToken(''); clearError();
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -69,7 +70,7 @@ export default function AccountPage() {
         const result = await service.register(email, password, displayName);
         setEmail(result.email);
         setMessage(result.needsVerification
-          ? 'Check your inbox for a verification link. Open it on this device to verify your email.'
+          ? 'Check your inbox for a verification code, then enter it here to verify your email.'
           : 'Your account is ready.');
         setMode(result.needsVerification ? 'verification' : 'settings');
       } else if (mode === 'sign-in') {
@@ -78,8 +79,11 @@ export default function AccountPage() {
       } else if (mode === 'forgot') {
         setMessage(await service.requestPasswordReset(email));
       } else if (mode === 'verification') {
-        setMessage(await service.resendVerification(email));
-        setResendSeconds(60);
+        await service.verifyEmail(email, verificationToken);
+        setVerificationToken('');
+        await retrySession();
+        setMessage('Email verified. Your account is ready to use.');
+        setMode('settings');
       } else if (mode === 'reset') {
         await service.updatePassword(password);
         setMessage('Password updated. Your account is ready to use.');
@@ -92,6 +96,17 @@ export default function AccountPage() {
         else setMessage('Account settings saved.');
         setNewEmail('');
       }
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'The request could not be completed. Try again.');
+    } finally { setBusy(false); }
+  }
+
+  async function resendVerification() {
+    if (!service) { setError('Account sign-in is not configured in this build. You can keep using Coptic as a guest.'); return; }
+    setBusy(true); setError(''); setMessage(''); clearError();
+    try {
+      setMessage(await service.resendVerification(email));
+      setResendSeconds(60);
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'The request could not be completed. Try again.');
     } finally { setBusy(false); }
@@ -137,13 +152,17 @@ export default function AccountPage() {
           <button className={styles.linkButton} type="button" disabled={busy} onClick={() => void signOut()}>{busy ? 'Signing out…' : 'Sign Out'}</button>
         </div>
       </> : configured && !session && mode === 'verification' ? <>
-        <p className={styles.copy}>We sent verification instructions to <span className={styles.email}>{email}</span>. Open the link on this device to finish verification.</p>
+        <p className={styles.copy}>We sent a verification code to <span className={styles.email}>{email}</span>. Enter the code here. Email security checks can consume one-time links before you open them, so verification uses a code instead.</p>
         <form className={styles.form} onSubmit={submit}>
           <label className={styles.field}>Email
             <input type="email" value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" inputMode="email" required />
           </label>
-          <button className={styles.button} type="submit" disabled={busy || resendSeconds > 0}>{busy ? 'Sending…' : resendSeconds ? `Try again in ${resendSeconds}s` : 'Resend verification email'}</button>
+          <label className={styles.field}>Verification code
+            <input type="text" value={verificationToken} onChange={event => setVerificationToken(event.target.value)} autoComplete="one-time-code" inputMode="numeric" maxLength={16} required />
+          </label>
+          <button className={styles.button} type="submit" disabled={busy}>{busy ? 'Verifying…' : 'Verify email'}</button>
         </form>
+        <button className={styles.linkButton} type="button" onClick={() => void resendVerification()} disabled={busy || resendSeconds > 0}>{busy ? 'Sending…' : resendSeconds ? `Resend available in ${resendSeconds}s` : 'Resend verification code'}</button>
       </> : configured && mode === 'reset' ? <>
         <p className={styles.copy}>{recoveryPending ? 'Choose a new password for your account.' : 'Open the latest password-reset email on this device. If the link expired, request another one.'}</p>
         {recoveryPending && <form className={styles.form} onSubmit={submit}>
@@ -158,7 +177,7 @@ export default function AccountPage() {
         <p className={styles.copy}>{mode === 'create'
           ? 'Create an optional account. You can keep learning as a guest; account sign-in does not sync or change your progress.'
           : mode === 'forgot' ? 'Enter your email and we will send password-reset instructions if the address can receive them.'
-            : mode === 'verification' ? 'Open the verification email on this device. We will not change local learning progress.'
+          : mode === 'verification' ? 'Enter the verification code from your email. We will not change local learning progress.'
               : 'Sign in to your account. Your learning progress stays on this device.'}</p>
         <form className={styles.form} onSubmit={submit}>
           {mode === 'create' && <label className={styles.field}>Display name (optional)

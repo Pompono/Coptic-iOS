@@ -7,6 +7,7 @@ const { createAuthService, MINIMUM_PASSWORD_LENGTH } = await loadTsModule('lib/a
 const { createAuthStorage } = await loadTsModule('lib/auth/storage.ts');
 const { getAuthRedirectUrl, parseAuthCallback, isAuthConfigured, AUTH_CALLBACK_URL } = await loadTsModule('lib/auth/redirect.ts');
 const { bindNativeAuthLifecycle } = await loadTsModule('lib/auth/lifecycle.ts');
+const { createAuthCallbackProcessor } = await loadTsModule('lib/auth/callback.ts');
 
 function makeApi(overrides = {}) {
   const calls = [];
@@ -19,6 +20,7 @@ function makeApi(overrides = {}) {
     resend: async args => { calls.push(['resend', args]); return { data: {}, error: null }; },
     updateUser: async (...args) => { calls.push(['updateUser', ...args]); return { data: { user: session.user }, error: null }; },
     exchangeCodeForSession: async code => { calls.push(['exchangeCodeForSession', code]); return { data: { user: session.user, session }, error: null }; },
+    verifyOtp: async args => { calls.push(['verifyOtp', args]); return { data: { user: session.user, session }, error: null }; },
     getSession: async () => { calls.push(['getSession']); return { data: { session }, error: null }; },
     onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
     ...overrides,
@@ -26,16 +28,27 @@ function makeApi(overrides = {}) {
   return { api, calls, session };
 }
 
-test('account creation validates email and ten-character minimum before contacting Supabase', async () => {
+test('account creation accepts eight characters and rejects shorter passwords before contacting Supabase', async () => {
   const { api, calls } = makeApi();
   const service = createAuthService({ api, redirectUrl: AUTH_CALLBACK_URL });
+  assert.equal(MINIMUM_PASSWORD_LENGTH, 8);
   await assert.rejects(service.register('bad-address', '1234567890'), /valid email/);
-  await assert.rejects(service.register('learner@example.com', 'short'), new RegExp(String(MINIMUM_PASSWORD_LENGTH)));
-  assert.equal(calls.length, 0);
-  const result = await service.register(' Learner@Example.com ', 'long-enough-password', '  Reader  ');
+  await assert.rejects(service.register('learner@example.com', '1234567'), /at least 8/);
+  const result = await service.register(' Learner@Example.com ', '12345678', '  Reader  ');
   assert.deepEqual(result, { needsVerification: true, email: 'learner@example.com' });
   assert.equal(calls[0][1].options.data.display_name, 'Reader');
   assert.equal(calls[0][1].options.emailRedirectTo, AUTH_CALLBACK_URL);
+  calls.length = 0;
+  await service.register('learner@example.com', 'long-enough-password', 'Reader');
+  assert.equal(calls.length, 1);
+});
+
+test('account forms use the shared eight-character rule and the signup code entry screen', async () => {
+  const account = await readFile('app/account/page.tsx', 'utf8');
+  assert.match(account, /minLength=\{MINIMUM_PASSWORD_LENGTH\}/u);
+  assert.match(account, /Verification code/u);
+  assert.match(account, /Verify email/u);
+  assert.match(account, /Resend verification code/u);
 });
 
 test('sign-in accepts valid credentials and maps incorrect credentials to a safe message', async () => {
@@ -62,12 +75,25 @@ test('verification resend and password recovery use PKCE redirect and generic re
 test('password recovery and verified email changes require valid inputs and native redirects', async () => {
   const { api, calls } = makeApi();
   const service = createAuthService({ api, redirectUrl: AUTH_CALLBACK_URL });
-  await assert.rejects(service.updatePassword('123'), /at least 10/);
+  await assert.rejects(service.updatePassword('1234567'), /at least 8/);
+  await service.updatePassword('12345678');
   await service.updatePassword('new-long-password');
   await service.changeEmail(' Next@example.com ');
   const emailCall = calls.find(call => call[0] === 'updateUser' && call[1].email);
   assert.equal(emailCall[1].email, 'next@example.com');
   assert.deepEqual(emailCall[2], { emailRedirectTo: AUTH_CALLBACK_URL });
+});
+
+test('signup verification uses Supabase email OTP and never displays or logs the code', async () => {
+  const { api, calls } = makeApi();
+  const service = createAuthService({ api, redirectUrl: AUTH_CALLBACK_URL });
+  const session = await service.verifyEmail(' Learner@Example.com ', ' 1234 5678 ');
+  assert.equal(session.user.email_confirmed_at, '2026-01-01');
+  assert.deepEqual(calls[0], ['verifyOtp', { email: 'learner@example.com', token: '12345678', type: 'email' }]);
+
+  const invalid = makeApi({ verifyOtp: async () => ({ data: { user: null, session: null }, error: { message: 'Token has expired or is invalid' } }) });
+  await assert.rejects(createAuthService({ api: invalid.api, redirectUrl: AUTH_CALLBACK_URL }).verifyEmail('learner@example.com', '12345678'), /invalid or expired/);
+  await assert.rejects(service.verifyEmail('learner@example.com', ''), /verification code/);
 });
 
 test('session restoration returns the SDK session or safely returns to guest mode when absent', async () => {
@@ -87,14 +113,66 @@ test('network failures are actionable and do not expose server details', async (
   });
 });
 
+test('PKCE callback failures explain that the verifier must be on the same device', async () => {
+  const api = makeApi({ exchangeCodeForSession: async () => ({ data: { user: null, session: null }, error: { code: 'pkce_code_verifier_not_found', message: 'PKCE code verifier not found in storage' } }) }).api;
+  await assert.rejects(createAuthService({ api, redirectUrl: AUTH_CALLBACK_URL }).completeCallback('short-lived-code'), /same device.*same app or browser/i);
+});
+
 test('callback accepts only the configured custom scheme or callback page and only exchanges a code', () => {
   const parsed = parseAuthCallback(`${AUTH_CALLBACK_URL}?code=one-time-code&type=recovery`);
   assert.deepEqual(parsed, { ok: true, code: 'one-time-code', isPasswordRecovery: true });
   assert.deepEqual(parseAuthCallback('com.pompono.coptic://auth/callback?access_token=leak'), { ok: false, reason: 'missing-code' });
   assert.deepEqual(parseAuthCallback('com.other.app://auth/callback?code=wrong'), { ok: false, reason: 'not-callback' });
   assert.deepEqual(parseAuthCallback('com.pompono.coptic://auth/callback?error=access_denied'), { ok: false, reason: 'provider-error' });
+  assert.deepEqual(parseAuthCallback('com.pompono.coptic://auth/callback#error=access_denied&error_code=otp_expired'), { ok: false, reason: 'provider-error' });
+  assert.deepEqual(parseAuthCallback('com.pompono.coptic://auth/callback#code=fragment-code&type=recovery'), { ok: true, code: 'fragment-code', isPasswordRecovery: true });
   assert.equal(getAuthRedirectUrl(true), AUTH_CALLBACK_URL);
   assert.equal(getAuthRedirectUrl(false, 'https://example.test/'), 'https://example.test/auth/callback/');
+});
+
+test('cold-start and already-running callbacks share one exchange; failed callbacks can retry safely', async () => {
+  let exchanges = 0;
+  const completed = [];
+  const errors = [];
+  let failFirst = true;
+  const processor = createAuthCallbackProcessor({
+    complete: async code => {
+      exchanges++;
+      assert.equal(code, 'one-time-code');
+      if (failFirst) { failFirst = false; throw new Error('temporary connection failure'); }
+      return { user: { id: 'user-1', email_confirmed_at: 'verified' } };
+    },
+    onComplete: (session, recovery) => completed.push([session.user.id, recovery]),
+    onError: error => errors.push(error.message),
+  });
+  const launchUrl = `${AUTH_CALLBACK_URL}?code=one-time-code&type=signup`;
+  assert.equal(await processor(launchUrl), 'failed');
+  assert.equal(await processor(launchUrl), 'completed');
+  assert.equal(await processor(launchUrl), 'duplicate');
+  assert.equal(await processor(`${AUTH_CALLBACK_URL}?code=one-time-code&type=signup`), 'duplicate');
+  assert.equal(exchanges, 2);
+  assert.deepEqual(completed, [['user-1', false]]);
+  assert.deepEqual(errors, ['temporary connection failure']);
+});
+
+test('simultaneous cold-start and appUrlOpen delivery exchange a callback code only once', async () => {
+  let resolveExchange;
+  let exchanges = 0;
+  const processor = createAuthCallbackProcessor({
+    complete: async () => {
+      exchanges++;
+      return new Promise(resolve => { resolveExchange = () => resolve({ user: { id: 'user-1' } }); });
+    },
+    onComplete() {},
+    onError(error) { throw error; },
+  });
+  const url = `${AUTH_CALLBACK_URL}?code=single-use-code`;
+  const coldStart = processor(url);
+  const runningApp = await processor(url);
+  assert.equal(runningApp, 'duplicate');
+  assert.equal(exchanges, 1);
+  resolveExchange();
+  assert.equal(await coldStart, 'completed');
 });
 
 test('auth config stays optional so guests remain available without a publishable key', () => {
@@ -124,6 +202,20 @@ test('native session storage uses Keychain adapter while browser sessions use br
   assert.equal(calls[0][0], 'keychain.set');
   const web = createAuthStorage(false, keychain, browser);
   assert.equal(await web.getItem('auth-token'), 'browser-session');
+});
+
+test('PKCE verifier survives a native app restart in Keychain-backed storage', async () => {
+  const keychainValues = new Map();
+  const keychain = {
+    getItem: async key => keychainValues.get(key) ?? null,
+    setItem: async (key, value) => keychainValues.set(key, value),
+    removeItem: async key => keychainValues.delete(key),
+  };
+  const browser = { getItem: () => null, setItem() {}, removeItem() {} };
+  const firstApp = createAuthStorage(true, keychain, browser);
+  await firstApp.setItem('sb-project-auth-token-code-verifier', 'pkce-verifier-value');
+  const relaunchedApp = createAuthStorage(true, keychain, browser);
+  assert.equal(await relaunchedApp.getItem('sb-project-auth-token-code-verifier'), 'pkce-verifier-value');
 });
 
 test('native auth refresh starts on foreground, stops in background, and removes its listener', async () => {

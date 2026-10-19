@@ -6,8 +6,9 @@ import type { Session } from '@supabase/supabase-js';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { getAuthConfigurationError, getSupabaseClient, supabaseAuthConfigured } from '@/lib/auth/client';
-import { getAuthRedirectUrl, parseAuthCallback } from '@/lib/auth/redirect';
+import { getAuthRedirectUrl } from '@/lib/auth/redirect';
 import { bindNativeAuthLifecycle } from '@/lib/auth/lifecycle';
+import { createAuthCallbackProcessor } from '@/lib/auth/callback';
 import { createAuthService } from '@/lib/auth/service';
 
 type AuthContextValue = {
@@ -36,7 +37,6 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState('');
   const [recoveryPending, setRecoveryPending] = useState(false);
   const serviceRef = useRef<ReturnType<typeof createAuthService> | null>(null);
-  const handledCodes = useRef(new Set<string>());
 
   const clearError = useCallback(() => setError(''), []);
 
@@ -70,31 +70,27 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     let appUrlListener: { remove(): Promise<void> } | undefined;
     let removeAppStateListener: (() => Promise<void>) | undefined;
 
+    const callbackProcessor = createAuthCallbackProcessor({
+      complete: async code => {
+        const service = serviceRef.current;
+        if (!service) throw new Error(getAuthConfigurationError());
+        return service.completeCallback(code);
+      },
+      onComplete: (restored, isPasswordRecovery) => {
+        if (disposed) return;
+        setError('');
+        setSession(restored as Session);
+        if (isPasswordRecovery) setRecoveryPending(true);
+        router.replace('/account/');
+      },
+      onError: failure => { if (!disposed) setError(failure.message); },
+    });
+
     const handleCallback = async (value: string) => {
       if (window.location.pathname === '/auth/callback/' || window.location.pathname === '/auth/callback') {
         window.history.replaceState(window.history.state, '', window.location.pathname);
       }
-      const parsed = parseAuthCallback(value);
-      if (parsed.ok === false) {
-        if (parsed.reason === 'provider-error' || parsed.reason === 'missing-code') {
-          setError('This account link is invalid or has expired. Request a new email and try again.');
-        }
-        return;
-      }
-      if (handledCodes.current.has(parsed.code)) return;
-      handledCodes.current.add(parsed.code);
-      setError('');
-      try {
-        const service = serviceRef.current;
-        if (!service) throw new Error(getAuthConfigurationError());
-        const restored = await service.completeCallback(parsed.code);
-        if (disposed) return;
-        setSession(restored as Session | null);
-        if (parsed.isPasswordRecovery) setRecoveryPending(true);
-        router.replace('/account/');
-      } catch (failure) {
-        if (!disposed) setError(failure instanceof Error ? failure.message : 'This account link could not be completed. Request a new email and try again.');
-      }
+      await callbackProcessor(value);
     };
 
     void (async () => {

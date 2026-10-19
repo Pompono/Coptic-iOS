@@ -22,19 +22,22 @@ The app deliberately remains a guest app if the publishable key is missing. For 
 
 ## Supabase dashboard steps
 
-1. In **Authentication → Providers → Email**, keep email/password enabled, email confirmation enabled, and the minimum password length at 10.
-2. In **Authentication → URL Configuration → Redirect URLs**, allow `com.pompono.coptic://auth/callback`.
-3. If the static web build is hosted, also allow its exact origin with `/auth/callback/`. Set the Site URL to the current app hosting origin. Do not use a future/unreleased domain.
-4. Keep confirmation and password recovery templates enabled. The client supplies the redirect through Supabase's `emailRedirectTo`/`redirectTo` options; retain the Supabase confirmation link in the templates.
-5. Before public use, configure a production SMTP sender in **Project Settings → Authentication → SMTP Settings**. Verify the sender domain, SPF and DKIM records, DMARC policy, delivery, bounce handling, and Supabase email rate limits. Keep confirmation enabled while testing.
+1. In **Authentication → Providers → Email**, keep email/password and email confirmation enabled, and set the server-side minimum password length to **8**.
+2. In **Authentication → URL Configuration → Redirect URLs**, allow `com.pompono.coptic://auth/callback`. This remains needed for password recovery and verified email changes.
+3. Keep **Site URL** set to a valid HTTPS origin you control. Do not set it to the custom app scheme or an unreleased domain. If the static web build is hosted, also allow that exact origin with `/auth/callback/`.
+4. In **Authentication → Email Templates → Confirm signup**, switch the template from a one-click `{{ .ConfirmationURL }}` link to a one-time code using `{{ .Token }}`. Tell users to enter the code in the app. This is required for the app's scanner-resistant verification screen. Do not disable email confirmation.
+5. Keep password-recovery and email-change templates enabled. Their callback links still use PKCE and need the allowlisted custom scheme. If you use click-tracking or security link rewriting, disable it for those Supabase authentication links.
+6. Before public use, configure a production SMTP sender in **Project Settings → Authentication → SMTP Settings**. Verify sender-domain authentication, SPF and DKIM records, DMARC policy, delivery, bounce handling, and Supabase email rate limits.
+
+The live Supabase email template and URL settings could not be inspected from this workspace. Apply these dashboard changes before testing new signups. The existing physical-device failure cannot be conclusively attributed without the actual email link and project settings; the likely cause is an email security scanner consuming the single-use link, or a callback redirect that lands in a browser without the app's PKCE verifier. The Supabase docs describe both link prefetching and same-client PKCE requirements.
 
 Do not change existing learning tables or RLS policies for this phase. This implementation does not query them.
 
 ## Native email callbacks
 
-The iOS app registers `com.pompono.coptic` as a URL scheme. `AppDelegate` forwards URL opens to Capacitor; the auth provider listens for `appUrlOpen` and checks `getLaunchUrl()` for cold launches. It accepts only the exact native callback host/path, extracts a bounded PKCE `code`, and calls `exchangeCodeForSession(code)`. It does not navigate to a callback-supplied destination or log callback URLs, codes, or tokens. Password recovery switches to the new-password screen after Supabase emits `PASSWORD_RECOVERY`.
+New signup verification uses the email's one-time code and Supabase `verifyOtp`, so an email scanner cannot consume the verification action before the user. The native link callback remains in place for password recovery and email changes. The iOS app registers `com.pompono.coptic` as a URL scheme. `AppDelegate` forwards URL opens to Capacitor; the auth provider listens for `appUrlOpen` and checks `getLaunchUrl()` for cold launches. A single callback processor handles both paths, suppresses duplicate in-flight/successful exchanges, and allows retry after a transient exchange failure. It accepts only the configured callback host/path and a bounded PKCE `code`, and calls `exchangeCodeForSession(code)`. It handles Supabase error parameters in either the query or fragment. Browser callback query strings are removed from history before processing. It does not navigate to a callback-supplied destination or log callback URLs, codes, OTPs, or tokens. Password recovery switches to the new-password screen after Supabase emits `PASSWORD_RECOVERY`.
 
-This uses a custom URL scheme, not Universal Links. A custom scheme can be claimed by another installed app, so PKCE and the Keychain-held verifier are required. No Apple Developer account or website association file is needed for this scheme. Supabase dashboard redirect allowlisting is required as above.
+Supabase PKCE codes expire quickly and can be used only once; the verifier must remain available to the same app/client that started the flow. Here it is held in the iOS Keychain, not the email app's or browser's storage. If a link opens a browser callback instead of the app, that browser does not share the iOS Keychain verifier. The signup OTP avoids that cross-app dependency. This is a custom URL scheme, not Universal Links; a custom scheme can be claimed by another installed app, so PKCE remains required for callback links. No Apple Developer account or website association file is needed for this scheme. Supabase dashboard redirect allowlisting is required as above.
 
 Automated callback parser tests, simulator build checks for the URL scheme, and a native Keychain bridge round-trip are included. A real email confirmation or recovery email has not been followed through on a physical iPhone; do that before public release.
 
@@ -51,10 +54,10 @@ Automated callback parser tests, simulator build checks for the URL scheme, and 
 ## Physical iPhone checklist
 
 1. Install the unsigned IPA with Sideloadly and open Settings → Account. Verify the app still works as a guest.
-2. Create an account with a password of at least 10 characters. Confirm the email arrives and opens this app; verify the screen shows a verified email.
+2. Create an account with a password of 8 characters. Enter the code from the confirmation email in the app; verify the screen shows a verified email. Test the latest code if the email is resent.
 3. Force-quit and reopen. Confirm the signed-in state is restored. Turn on Airplane Mode, reopen, then restore connectivity and confirm session recovery without losing guest progress.
 4. Sign out and verify the account is signed out while lesson progress, XP, streaks, vocabulary due dates, and backup/recovery files remain unchanged. Sign in again.
-5. Request a password reset. Open the email on the iPhone, set a new password, then sign in with it. Also test expired/reused links and offline errors.
+5. Request a password reset. Open the email on the iPhone, set an 8-character password, then sign in with it. Also test expired/reused links, opening in the email app's browser and Safari, and offline errors.
 6. Test display-name update and email change; confirm email change only completes after verification.
 7. Export and import a progress backup before and after sign-in/sign-out. Confirm Coptic combining marks and all progress fields remain intact.
 

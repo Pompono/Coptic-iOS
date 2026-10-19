@@ -1,4 +1,4 @@
-export const MINIMUM_PASSWORD_LENGTH = 10;
+export const MINIMUM_PASSWORD_LENGTH = 8;
 
 type AuthError = { message?: string; name?: string; status?: number; code?: string };
 type AuthResult<T> = { data: T; error: AuthError | null };
@@ -23,6 +23,7 @@ export interface AuthApi {
   resend(args: { type: 'signup'; email: string; options: { emailRedirectTo: string } }): Promise<AuthResult<Record<string, never>>>;
   updateUser(args: { password?: string; email?: string; data?: Record<string, string> }, options?: { emailRedirectTo?: string }): Promise<AuthResult<{ user: AuthUser | null }>>;
   exchangeCodeForSession(code: string): Promise<AuthResult<{ user: AuthUser | null; session: AuthSession | null }>>;
+  verifyOtp(args: { email: string; token: string; type: 'email' }): Promise<AuthResult<{ user: AuthUser | null; session: AuthSession | null }>>;
   getSession(): Promise<AuthResult<{ session: AuthSession | null }>>;
   onAuthStateChange(callback: (event: string, session: AuthSession | null) => void): { data: { subscription: { unsubscribe(): void } } };
 }
@@ -46,6 +47,12 @@ function failureMessage(error: AuthError | null, operation: string): string {
   const code = (error.code ?? '').toLowerCase();
   if (/fetch|network|failed to connect|timeout|offline/u.test(message) || error.name === 'AuthRetryableFetchError') {
     return 'You appear to be offline or the service could not be reached. Check your connection and try again.';
+  }
+  if (/pkce|code verifier|flow state/u.test(message) || code.includes('code_verifier')) {
+    return 'This email link cannot be completed in this app session. Open it on the same device and in the same app or browser where you started, or request a new verification code.';
+  }
+  if (operation === 'verification' && /otp|token|expired|invalid/u.test(`${message} ${code}`)) {
+    return 'That verification code is invalid or expired. Request a new verification email and try again.';
   }
   if (code.includes('invalid_credentials') || message.includes('invalid login credentials')) {
     return 'Email or password is incorrect. If you need help, use Forgot password.';
@@ -123,6 +130,20 @@ export function createAuthService({ api, redirectUrl }: AuthServiceOptions) {
       });
       requireNoError(error, 'verification');
       return 'If that address has a pending verification, a new email will arrive shortly.';
+    },
+
+    async verifyEmail(email: string, token: string) {
+      const normalizedEmail = requireValidEmail(email);
+      const normalizedToken = token.trim().replace(/\s+/gu, '');
+      if (!normalizedToken || normalizedToken.length > 32 || !/^\d+$/u.test(normalizedToken)) {
+        throw new Error('Enter the verification code from your email.');
+      }
+      const { data, error } = await api.verifyOtp({ email: normalizedEmail, token: normalizedToken, type: 'email' });
+      requireNoError(error, 'verification');
+      if (!data.session || !data.user?.email_confirmed_at) {
+        throw new Error('Email verification could not be completed. Request a new verification email and try again.');
+      }
+      return data.session;
     },
 
     async updatePassword(password: string) {
