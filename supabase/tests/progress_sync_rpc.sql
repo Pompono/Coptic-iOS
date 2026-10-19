@@ -20,7 +20,7 @@ DECLARE
     'coptic-learning:v1', jsonb_build_object('version', 1, 'skills', jsonb_build_object(
       '["ⲙⲁ","bread"]', jsonb_build_object('word','ⲙⲁ','meaning','bread','unitId','unit-1','unitIds',jsonb_build_array('unit-1'),
         'audio','','pos','noun','explanation','','accepted',jsonb_build_array('ⲙⲁ'),'attempts',2,'correct',1,'lapses',1,
-        'dueAt',1792440000000,'lastSeen',1792353600000,'successfulDays',1,'lastSuccessfulDay',null,'needsPractice',true))::text,
+        'dueAt',1792440000000,'lastSeen',1792353600000,'successfulDays',1,'lastSuccessfulDay',null,'needsPractice',true)))::text,
     'coptic-vocabulary:v1', jsonb_build_object('version', 1, 'cards', jsonb_build_array(jsonb_build_object(
       'id','["bohairic","ⲙⲁ","noun","bread"]','word','ⲙⲁ','meaning','bread','pos','noun','dialect','bohairic',
       'context','ⲙⲁ ⲛ̀ⲟⲩⲱⲙ','source','reader','audio','','createdAt',1792353600000,'dueAt',1792440000000,
