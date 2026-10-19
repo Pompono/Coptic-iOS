@@ -143,6 +143,7 @@ class AppViewController: CAPBridgeViewController {
             if let state = result as? [String: Any], let status = state["status"] as? String {
                 if status == "passed" && self.backupShareObserved {
                     print("COPTIC_NATIVE_BACKUP_READY")
+                    print("COPTIC_NATIVE_AUTH_STORAGE_READY")
                     fflush(stdout)
                     return
                 }

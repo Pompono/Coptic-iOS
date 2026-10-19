@@ -4,10 +4,28 @@ on:
   push:
     branches:
       - feat/progress-protection-backup
+      - feat/phase-2a-secure-authentication
     paths:
       - '.github/workflows/unsigned-ipa.yml'
       - 'lib/progressFiles.ts'
       - 'tests/progressFiles.test.mjs'
+      - 'lib/auth/**'
+      - 'app/AuthProvider.tsx'
+      - 'app/auth/**'
+      - 'app/account/**'
+      - 'app/settings/AccountSection.tsx'
+      - 'app/layout.tsx'
+      - 'app/settings/page.tsx'
+      - 'plugins/secure-auth-storage/**'
+      - 'ios/App/App/Info.plist'
+      - 'ios/App/App/AppViewController.swift'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tests/auth.test.mjs'
+      - 'scripts/progress-backup-smoke.mjs'
+      - 'scripts/native-backup-smoke.js'
+      - 'scripts/native-startup-smoke.sh'
+      - 'scripts/verify-native-backup.py'
   workflow_dispatch:
 
 permissions:
@@ -17,6 +35,9 @@ jobs:
   unsigned-ipa:
     runs-on: macos-latest
     timeout-minutes: 45
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL || 'https://vprlahihwqtkmhgxytiy.supabase.co' }}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
     steps:
       - name: Check out selected branch
         uses: actions/checkout@v4
@@ -29,6 +50,13 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Require the Supabase publishable key
+        run: |
+          if [ -z "${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:-}" ]; then
+            echo "::error::Set the repository Actions variable NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY before building a configured test IPA."
+            exit 1
+          fi
 
       - name: Build web app and sync Capacitor iOS project
         run: |
@@ -53,7 +81,7 @@ jobs:
         run: |
           set -euo pipefail
           APP_PATH="/tmp/coptic-ipa-build/Build/Products/Release-iphoneos/App.app"
-          IPA_PATH="$RUNNER_TEMP/CoptLingo-PR5-unsigned.ipa"
+          IPA_PATH="$RUNNER_TEMP/CoptLingo-Phase2A-unsigned.ipa"
           test -d "$APP_PATH" || { echo "Missing built device app: $APP_PATH" >&2; exit 1; }
           mkdir -p "$RUNNER_TEMP/ipa/Payload"
           cp -R "$APP_PATH" "$RUNNER_TEMP/ipa/Payload/App.app"
@@ -91,8 +119,10 @@ jobs:
               if config_name not in names:
                   raise SystemExit("App bundle is missing capacitor.config.json")
               config = json.loads(archive.read(config_name))
-              if not {"FilesystemPlugin", "SharePlugin"} <= set(config.get("packageClassList", [])):
-                  raise SystemExit("Packaged Capacitor registry is missing Filesystem or Share")
+              if not {"FilesystemPlugin", "SharePlugin", "AppPlugin", "CopticSecureAuthStoragePlugin"} <= set(config.get("packageClassList", [])):
+                  raise SystemExit("Packaged Capacitor registry is missing backup or authentication plugins")
+              if not any("com.pompono.coptic" in item.get("CFBundleURLSchemes", []) for entry in info.get("CFBundleURLTypes", []) for item in [entry]):
+                  raise SystemExit("Packaged iOS app is missing the native auth callback URL scheme")
               app_files = [n for n in names if n.startswith(prefix)]
               if not any("/public/" in n or "/assets/" in n for n in app_files):
                   raise SystemExit("IPA is missing compiled Capacitor web assets")
@@ -115,13 +145,13 @@ jobs:
                   if phrase not in web_text:
                       raise SystemExit(f"Packaged web assets are missing progress backup UI text: {phrase}")
 
-          print(f"Verified {ipa} ({ipa.stat().st_size} bytes): valid IPA, arm64 iOS device binary, bundle ID com.pompono.coptic, app assets, backup UI, Filesystem/Share, and privacy manifest")
+          print(f"Verified {ipa} ({ipa.stat().st_size} bytes): valid IPA, arm64 iOS device binary, bundle ID com.pompono.coptic, app assets, backup UI, Filesystem/Share, App callback and Keychain plugins, and privacy manifest")
           PY
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CoptLingo-PR5-Unsigned-IPA
-          path: ${{ runner.temp }}/CoptLingo-PR5-unsigned.ipa
+          name: CoptLingo-Phase2A-Unsigned-IPA
+          path: ${{ runner.temp }}/CoptLingo-Phase2A-unsigned.ipa
           if-no-files-found: error
           retention-days: 14

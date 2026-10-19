@@ -71,11 +71,13 @@ try {
     Storage.prototype.setItem = () => { throw new Error('Storage access denied'); };
   });
   const blockedPage = await blocked.newPage();
-  blockedPage.on('pageerror', error => errors.push(error.message));
+  const blockedErrors = [];
+  blockedPage.on('pageerror', error => blockedErrors.push(error.message));
   await blockedPage.goto(`http://127.0.0.1:${server.address().port}/settings/`);
-  await blockedPage.getByRole('alert').filter({ hasText: 'Storage access denied' }).waitFor().catch(async error => { console.error('Blocked storage page:', await blockedPage.locator('body').innerText(), errors); throw error; });
+  await blockedPage.getByRole('alert').filter({ hasText: 'Storage access denied' }).waitFor().catch(async error => { console.error('Blocked storage page:', await blockedPage.locator('body').innerText(), blockedErrors); throw error; });
   await blockedPage.getByRole('button', { name: 'Export Progress', exact: true }).click();
   assert.equal(await blockedPage.getByRole('button', { name: 'Import Progress' }).isEnabled(), true);
+  assert.ok(blockedErrors.every(message => message.includes('Storage access denied')), `Unexpected blocked-storage errors: ${blockedErrors.join('; ')}`);
   await blocked.close();
   assert.deepEqual(errors, []);
   await page.screenshot({ path: '/tmp/coptic-progress-backup.png', fullPage: true });

@@ -11,6 +11,7 @@ import ThemePreference, { themeInitScript } from "./ThemePreference";
 import NavigationScrollReset from './NavigationScrollReset';
 import ProgressStorageNotice from "./ProgressStorageNotice";
 import AppViewport from './AppViewport';
+import AuthProvider from './AuthProvider';
 
 export const metadata: Metadata = {
   title: "Coptic",
@@ -30,15 +31,17 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body>
-        <div className="status-bar-backdrop" aria-hidden="true" />
-        <AudioUnlock />
-        <NativeExperience />
-        <CopticFontPreference />
-        <ThemePreference />
-        <NavigationScrollReset />
-        <AppViewport><ProgressStorageNotice />{children}</AppViewport>
-        <MobileChinDock />
-        <KeyboardInstallPrompt />
+        <AuthProvider>
+          <div className="status-bar-backdrop" aria-hidden="true" />
+          <AudioUnlock />
+          <NativeExperience />
+          <CopticFontPreference />
+          <ThemePreference />
+          <NavigationScrollReset />
+          <AppViewport><ProgressStorageNotice />{children}</AppViewport>
+          <MobileChinDock />
+          <KeyboardInstallPrompt />
+        </AuthProvider>
       </body>
     </html>
   );

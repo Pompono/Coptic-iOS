@@ -25,8 +25,9 @@ bounded 180 xcrun simctl install "$device" /tmp/coptic-derived/Build/Products/De
 # spend most of the launch timeout starting services before the app runs.
 SIMCTL_CHILD_COPTIC_NATIVE_AUDIO_SMOKE=1 SIMCTL_CHILD_COPTIC_NATIVE_BACKUP_SMOKE=1 bounded 120 xcrun simctl launch --terminate-running-process --stdout=/tmp/coptic-native-stdout.log --stderr=/tmp/coptic-native-stderr.log "$device" com.pompono.coptic
 for attempt in $(seq 1 120); do
-  if python3 -c 'from pathlib import Path; import sys; p=Path("/tmp/coptic-native-stdout.log"); sys.exit(0 if p.exists() and "COPTIC_SCROLL_BOUNDS_READY" in p.read_text() and "COPTIC_NATIVE_AUDIO_DECODE_READY" in p.read_text() and "COPTIC_NATIVE_AUDIO_BRIDGE_READY" in p.read_text() and "COPTIC_NATIVE_BACKUP_READY" in p.read_text() else 1)'; then
+  if python3 -c 'from pathlib import Path; import sys; p=Path("/tmp/coptic-native-stdout.log"); sys.exit(0 if p.exists() and "COPTIC_SCROLL_BOUNDS_READY" in p.read_text() and "COPTIC_NATIVE_AUDIO_DECODE_READY" in p.read_text() and "COPTIC_NATIVE_AUDIO_BRIDGE_READY" in p.read_text() and "COPTIC_NATIVE_BACKUP_READY" in p.read_text() and "COPTIC_NATIVE_AUTH_STORAGE_READY" in p.read_text() else 1)'; then
     echo 'PASS: native backup JSON/Unicode, real share-sheet cancellation, import preview/cancel/reject/restore and automatic reload persistence.'
+    echo 'PASS: Capacitor native Keychain storage reads, writes, and removes an auth-session-shaped value.'
     echo 'PASS: native iOS app launched, configured scrolling, and decoded and played pronunciation and feedback recordings through the actual Capacitor/AVAudioPlayer bridge.'
     exit 0
   fi
@@ -36,7 +37,7 @@ cat /tmp/coptic-native-stdout.log /tmp/coptic-native-stderr.log
 python3 - <<'PYTHON'
 from pathlib import Path
 log = Path('/tmp/coptic-native-stdout.log').read_text()
-markers = ['COPTIC_SCROLL_BOUNDS_READY', 'COPTIC_NATIVE_AUDIO_DECODE_READY', 'COPTIC_NATIVE_AUDIO_BRIDGE_READY', 'COPTIC_NATIVE_BACKUP_READY']
+markers = ['COPTIC_SCROLL_BOUNDS_READY', 'COPTIC_NATIVE_AUDIO_DECODE_READY', 'COPTIC_NATIVE_AUDIO_BRIDGE_READY', 'COPTIC_NATIVE_BACKUP_READY', 'COPTIC_NATIVE_AUTH_STORAGE_READY']
 reason = next((line for line in log.splitlines() if 'COPTIC_NATIVE_AUDIO_BRIDGE_ERROR' in line or 'COPTIC_NATIVE_BACKUP_ERROR' in line), 'Missing native startup checks: ' + ', '.join(marker for marker in markers if marker not in log))
 print('::error::' + reason.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
 PYTHON

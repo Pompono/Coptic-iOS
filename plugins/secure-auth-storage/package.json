@@ -1,0 +1,23 @@
+{
+  "name": "@coptic/secure-auth-storage",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Keychain-backed Capacitor storage for Supabase auth session data.",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "Package.swift",
+    "ios/Sources"
+  ],
+  "peerDependencies": {
+    "@capacitor/core": "^7.0.0"
+  },
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    }
+  }
+}
