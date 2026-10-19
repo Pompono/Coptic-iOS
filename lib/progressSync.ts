@@ -100,7 +100,6 @@ export async function writeProgressSnapshot(
 
 export function installCloudProgress(records: Records) {
   replaceRecords(checkedRecords(records));
-  window.dispatchEvent(new Event('coptic-progress-change'));
   window.dispatchEvent(new Event('coptic-learning-change'));
   window.dispatchEvent(new Event('coptic-vocabulary-change'));
   window.dispatchEvent(new Event('storage'));

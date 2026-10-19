@@ -210,6 +210,10 @@ function transaction(storage: Storage, records: Records, keepRecovery: boolean) 
     apply(storage, records, journal);
     assertJournal(storage, journal);
     storage.removeItem(JOURNAL_KEY);
+    if (typeof window !== 'undefined') {
+      try { if (storage === window.localStorage) window.dispatchEvent(new Event('coptic-progress-change')); }
+      catch { /* A progress notification must not turn a committed restore into a failure. */ }
+    }
   } catch {
     try { rollback(storage, journal); } catch { throw new Error('Restore failed. Recovery is pending; learning writes are blocked. Free device storage if necessary, wait 30 seconds, then reload. Your original data is retained.'); }
     throw new Error('Restore failed. Your previous progress has been restored.');
