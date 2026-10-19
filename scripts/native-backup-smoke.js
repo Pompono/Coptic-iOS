@@ -5,6 +5,8 @@
   const button = text => buttons().find(item => item.textContent.trim() === text && !item.disabled);
   const input = () => document.querySelector('input[type=file]');
   if (!button('Export Progress') || !input()) return { status: 'waiting' };
+  const settingsText = document.body.textContent || '';
+  if (!settingsText.includes('Progress syncing is coming later')) return { status: 'waiting' };
   // Static HTML can appear before React has attached the real input handler.
   if (!Object.keys(input()).some(key => key.startsWith('__reactProps'))) return { status: 'waiting' };
   const text = 'ⲡⲓⲱ\u0305ⲓⲕ\u0301';
@@ -47,6 +49,11 @@
         input().dispatchEvent(new Event('change', { bubbles: true }));
       };
       try {
+        const secureKey = `ci-auth-storage-${Date.now()}`;
+        await window.Capacitor.nativePromise('SecureAuthStorage', 'setItem', { key: secureKey, value: 'keychain-roundtrip' });
+        const stored = await window.Capacitor.nativePromise('SecureAuthStorage', 'getItem', { key: secureKey });
+        if (stored.value !== 'keychain-roundtrip') throw new Error('Native secure auth storage round-trip failed');
+        await window.Capacitor.nativePromise('SecureAuthStorage', 'removeItem', { key: secureKey });
         if (!matches(records)) throw new Error('Legacy records were rewritten during startup');
         button('Export Progress').click();
         // Swift observes the actual UIActivityViewController and cancels it.

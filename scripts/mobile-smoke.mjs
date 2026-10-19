@@ -102,6 +102,10 @@ try {
     }
     if (route === '/dictionary/') await page.locator('.dictionary-results[data-state="ready"]').waitFor();
     if (route === '/settings/') {
+      await page.getByRole('heading', { name: 'Account', exact: true }).waitFor();
+      await page.getByRole('button', { name: 'Sign In', exact: true }).waitFor();
+      await page.getByRole('button', { name: 'Create Account', exact: true }).waitFor();
+      assert.match(await page.locator('body').innerText(), /Progress syncing is coming later/u);
       await page.getByRole('combobox', { name: 'App theme', exact: true }).selectOption('dark');
       await page.waitForLoadState('networkidle');
       await page.reload();

@@ -11,7 +11,10 @@ assert any(entry['NSPrivacyAccessedAPIType'] == 'NSPrivacyAccessedAPICategoryFil
            for entry in manifest['NSPrivacyAccessedAPITypes']), 'Filesystem privacy declaration missing from built app'
 config = json.loads((app / 'capacitor.config.json').read_text())
 assert {'FilesystemPlugin', 'SharePlugin'} <= set(config['packageClassList']), 'Backup plugins not registered'
+assert {'AppPlugin', 'CopticSecureAuthStoragePlugin'} <= set(config['packageClassList']), 'Auth callback or Keychain plugin not registered'
 with (app / 'Info.plist').open('rb') as file:
     info = plistlib.load(file)
 assert info['MinimumOSVersion'] == '14.0', 'Unexpected change to iOS deployment target'
-print('PASS: built app contains privacy manifest, backup plugin registration and iOS 14 deployment target.')
+assert any('com.pompono.coptic' in item.get('CFBundleURLSchemes', [])
+           for entry in info.get('CFBundleURLTypes', []) for item in [entry]), 'Native auth callback URL scheme missing'
+print('PASS: built app contains privacy manifest, backup and auth plugin registration, native callback scheme, and iOS 14 deployment target.')

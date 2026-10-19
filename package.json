@@ -21,6 +21,7 @@
     "test:backup": "node scripts/progress-backup-smoke.mjs"
   },
   "dependencies": {
+    "@capacitor/app": "7.1.2",
     "@capacitor/camera": "^7.0.3",
     "@capacitor/cli": "7.6.9",
     "@capacitor/core": "7.6.9",
@@ -28,6 +29,7 @@
     "@capacitor/ios": "7.6.9",
     "@capacitor/keyboard": "^7.0.6",
     "@capacitor/share": "^7.0.4",
+    "@coptic/secure-auth-storage": "file:plugins/secure-auth-storage",
     "@huggingface/transformers": "3.8.1",
     "@supabase/supabase-js": "latest",
     "cheerio": "^1.2.0",
