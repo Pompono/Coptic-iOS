@@ -32,7 +32,7 @@ DECLARE
     'coptic-progress', '{"xp":33.5,"streak":2.5,"completedLessons":["lesson-1"],"lastCompletedDate":"2026-10-19"}',
     'coptic-learning:v1', jsonb_build_object('version', 1, 'skills', jsonb_build_object(
       'large-practice-record', jsonb_build_object('word','ⲙⲁ','meaning','bread','attempts',2,'correct',1,'lapses',1,
-        'dueAt',1792440000000,'lastSeen',1792353600000,'successfulDays',1,'explanation',repeat('x',1048600)))::text
+        'dueAt',1792440000000,'lastSeen',1792353600000,'successfulDays',1,'explanation',repeat('x',1048600))))::text
   );
 BEGIN
   SELECT * INTO saved FROM public.save_progress_snapshot(0, old_records);
