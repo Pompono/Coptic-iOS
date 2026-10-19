@@ -46,13 +46,18 @@ jobs:
           GRANT USAGE ON SCHEMA auth TO anon, authenticated;
           GRANT EXECUTE ON FUNCTION auth.uid() TO anon, authenticated;
           SQL
-      - name: Apply progress snapshot migrations to disposable PostgreSQL
+      - name: Apply original progress snapshot migration to disposable PostgreSQL
         env:
           PGPASSWORD: postgres
-        run: |
-          for migration in supabase/migrations/*.sql; do
-            psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f "$migration"
-          done
+        run: psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/migrations/20261019000000_progress_sync.sql
+      - name: Reproduce the original RPC validation rejections
+        env:
+          PGPASSWORD: postgres
+        run: psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/tests/progress_sync_rpc_legacy_rejections.sql
+      - name: Apply additive progress RPC compatibility migration
+        env:
+          PGPASSWORD: postgres
+        run: psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/migrations/20261020000000_progress_sync_rpc_compat.sql
       - name: Exercise authenticated snapshot RPC with realistic records
         env:
           PGPASSWORD: postgres
