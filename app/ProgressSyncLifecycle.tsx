@@ -41,7 +41,8 @@ export default function ProgressSyncLifecycle() {
       if (disposed || !navigator.onLine || document.visibilityState === 'hidden') return;
       clearTimeout(timer);
       timer = setTimeout(() => {
-        const controller = new AbortController();
+        const controller = activeController && !activeController.signal.aborted
+          ? activeController : new AbortController();
         activeController = controller;
         void coordinator.request(controller.signal).catch(() => {
           // Offline, malformed remote data, or storage failures preserve local progress and baseline.
