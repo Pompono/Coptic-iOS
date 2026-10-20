@@ -16,11 +16,12 @@ export async function checkKeyboardPrompt(browser, base) {
     assert.equal(await prompt.count(), 0, 'Permanent dismissal survives relaunch');
     await page.goto(base + '/settings/'); await page.waitForLoadState('networkidle');
     assert.equal(await page.getByText('On-screen Coptic Keyboard', {exact:true}).count(), 0);
-    // Settings now includes backup controls; scroll before checking dock clearance.
-    await page.getByLabel('Developer tools toggle').evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
-    const developer = await page.getByLabel('Developer tools toggle').boundingBox();
+    // Use the last visible Settings category to check that the dock does not cover it.
+    const lastCategory = page.getByRole('link', { name: /Keyboard/u });
+    await lastCategory.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
+    const category = await lastCategory.boundingBox();
     const dock = await page.getByRole('navigation', {name:'Mobile navigation'}).boundingBox();
-    assert.ok(developer.y + developer.height < dock.y, 'Developer controls are visible above the dock');
+    assert.ok(category.y + category.height < dock.y, 'Settings categories remain visible above the dock');
     await page.evaluate(() => {localStorage.setItem('coptic-keyboard-enabled','true');sessionStorage.setItem('coptic-keyboard-visible-session','true');});
     for (const width of [390,1024]) {
       await page.setViewportSize({width,height:844});
