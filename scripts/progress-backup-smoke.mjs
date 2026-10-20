@@ -25,6 +25,8 @@ try {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   const base = `http://127.0.0.1:${server.address().port}`;
+  await page.goto(`${base}/settings/`); await page.waitForLoadState('networkidle');
+  await page.getByRole('heading', { name: 'Settings', exact: true }).waitFor();
   await page.goto(`${base}/settings/progress/`); await page.waitForLoadState('networkidle');
   await page.getByRole('heading', { name: 'Progress', exact: true }).waitFor();
   await page.getByRole('heading', { name: 'Recovery', exact: true }).waitFor();
