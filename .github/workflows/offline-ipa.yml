@@ -74,7 +74,7 @@ jobs:
           cd /tmp/coptic-ipa
           zip -qr /tmp/Coptic-offline-unsigned.ipa Payload
       - name: Verify learning and offline assets in IPA
-        run: python3 scripts/scanner/verify-ipa.py /tmp/Coptic-offline-unsigned.ipa
+        run: python3 scripts/scanner/verify-ipa.py --require-offline-model /tmp/Coptic-offline-unsigned.ipa
       - uses: actions/upload-artifact@v4
         with:
           name: Coptic-offline-unsigned-IPA

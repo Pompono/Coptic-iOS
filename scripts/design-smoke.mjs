@@ -75,7 +75,7 @@ export async function checkDesign(browser,base){
     assert.ok(methodHeight>=44,'Translation method choices keep a 44px touch target');
     await experimental.click();
     assert.equal(await experimental.getAttribute('aria-pressed'),'true','The active method is visible before translation');
-    assert.match(await methods.innerText(),/Sends text over HTTPS to CopticLingo’s hosted AI\./);
+    assert.match(await methods.innerText(),/Sends text over HTTPS to CoptLingo’s hosted AI\./);
     await published.click();
    }
    const heights=await page.locator(selector).evaluateAll(els=>els.filter(el=>el.getBoundingClientRect().height>0).map(el=>el.getBoundingClientRect().height));

@@ -25,6 +25,22 @@ test('record comparison ignores object key ordering while retaining exact payloa
   assert.equal(syncModule.sameProgressRecords({ a: '1' }, { a: '2' }), false);
 });
 
+test('sync diagnostics keep useful codes and safe descriptions without exposing server details', () => {
+  const message = syncModule.progressSyncErrorMessage({
+    code: '42702',
+    message: 'column reference "revision" is ambiguous; passage=PRIVATE-TEXT',
+    details: 'token=PRIVATE-TOKEN email=learner@example.invalid',
+  });
+  assert.match(message, /42702/u);
+  assert.match(message, /ambiguous database column/u);
+  assert.doesNotMatch(message, /PRIVATE|learner@example|token=/u);
+
+  const unknown = syncModule.progressSyncErrorMessage({ code: 'PGRST202', message: 'sensitive payload detail' });
+  assert.match(unknown, /PGRST202/u);
+  assert.match(unknown, /schema cache/u);
+  assert.doesNotMatch(unknown, /sensitive payload/u);
+});
+
 test('manual and lifecycle sync operations are serialized by one device-wide lock', async () => {
   const release = await acquireProgressSyncLock();
   let started = false;

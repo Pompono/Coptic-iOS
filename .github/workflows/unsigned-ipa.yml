@@ -6,6 +6,7 @@ on:
       - feat/progress-protection-backup
       - feat/phase-2a-secure-authentication
       - codex/phase-2b-cloud-progress-sync
+      - codex/fix-progress-sync-rpc-settings-layout
     paths:
       - '.github/workflows/unsigned-ipa.yml'
       - 'lib/progressFiles.ts'
@@ -25,6 +26,7 @@ on:
       - 'app/settings/AccountSection.tsx'
       - 'app/layout.tsx'
       - 'app/settings/page.tsx'
+      - 'app/design-system.css'
       - 'plugins/secure-auth-storage/**'
       - 'ios/App/App/Info.plist'
       - 'ios/App/App/AppViewController.swift'

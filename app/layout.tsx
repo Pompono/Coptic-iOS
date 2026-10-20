@@ -15,8 +15,10 @@ import AuthProvider from './AuthProvider';
 import ProgressSyncLifecycle from './ProgressSyncLifecycle';
 
 export const metadata: Metadata = {
-  title: "Coptic",
-  description: "Coptic learning + dictionary",
+  title: "CoptLingo",
+  applicationName: "CoptLingo",
+  description: "Learn Coptic with guided lessons, a dictionary, reading practice, and translation tools.",
+  manifest: "/manifest.webmanifest",
 };
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover' };
