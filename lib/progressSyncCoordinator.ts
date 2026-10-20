@@ -1,5 +1,7 @@
 import type { ProgressSnapshot, SyncBase } from './progressSync';
 import { removesProgressRecords, sameProgressRecords } from './progressSync';
+import { reconcileProgressRecords } from './progressReconciliation';
+import { withProgressSyncLock } from './progressSyncLock';
 import type { Records } from './progressStorage';
 
 export type SyncCoordinatorAdapter = {
@@ -59,6 +61,14 @@ export function createProgressSyncCoordinator(adapter: SyncCoordinatorAdapter) {
     const localChanged = !sameProgressRecords(local, base.records);
     const cloudChanged = !sameProgressRecords(cloud.records, base.records);
 
+    // A concurrent device may already have uploaded this exact local snapshot.
+    // Adopt that confirmed revision instead of creating another cloud revision.
+    if (sameProgressRecords(local, cloud.records)) {
+      adapter.saveBase(userId, cloud.revision, cloud.records);
+      adapter.rememberUser(userId);
+      return;
+    }
+
     if (!localChanged && !cloudChanged) {
       if (cloud.revision !== base.revision) adapter.saveBase(userId, cloud.revision, cloud.records);
       adapter.rememberUser(userId);
@@ -73,6 +83,42 @@ export function createProgressSyncCoordinator(adapter: SyncCoordinatorAdapter) {
       adapter.saveBase(userId, uploaded.revision, local);
       adapter.rememberUser(userId);
       if (!sameProgressRecords(adapter.local(), local)) rerun = true;
+      return;
+    }
+
+    if (localChanged && cloudChanged) {
+      let confirmed = cloud;
+      let mergedLocal = local;
+      // A single retry is enough to absorb one competing CAS update; later races
+      // remain a visible conflict in Settings instead of looping indefinitely.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const result = reconcileProgressRecords(mergedLocal, confirmed.records);
+        if (!result.safe || signal.aborted || await adapter.currentUser() !== userId || !adapter.isEnabled(userId)) return;
+        const currentLocal = adapter.local();
+        if (!sameProgressRecords(currentLocal, local)) return;
+        const latest = await adapter.cloud(userId, signal);
+        if (signal.aborted || await adapter.currentUser() !== userId || !adapter.isEnabled(userId) || !latest) return;
+        if (latest.revision !== confirmed.revision) { confirmed = latest; continue; }
+        if (sameProgressRecords(result.records, latest.records)) {
+          if (sameProgressRecords(adapter.local(), local)) adapter.install(result.records);
+          adapter.saveBase(userId, latest.revision, latest.records);
+          adapter.rememberUser(userId);
+          if (!sameProgressRecords(adapter.local(), latest.records)) rerun = true;
+          return;
+        }
+        const written = await adapter.upload(confirmed.revision, result.records, signal);
+        if (signal.aborted || await adapter.currentUser() !== userId || !adapter.isEnabled(userId)) return;
+        if ('conflict' in written) {
+          if (attempt === 0 && written.snapshot) { confirmed = written.snapshot; continue; }
+          return;
+        }
+        const beforeInstall = adapter.local();
+        if (sameProgressRecords(beforeInstall, local)) adapter.install(result.records);
+        adapter.saveBase(userId, written.revision, result.records);
+        adapter.rememberUser(userId);
+        if (!sameProgressRecords(adapter.local(), result.records)) rerun = true;
+        return;
+      }
       return;
     }
 
@@ -106,7 +152,7 @@ export function createProgressSyncCoordinator(adapter: SyncCoordinatorAdapter) {
       try {
         do {
           rerun = false;
-          await pass(signal);
+          await withProgressSyncLock(() => pass(signal));
         } while (rerun && !signal.aborted);
       } finally { active = null; activeSignal = null; }
     })();

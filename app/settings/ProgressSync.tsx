@@ -10,6 +10,19 @@ import {
   type ProgressSnapshot,
 } from '@/lib/progressSync';
 import type { Records } from '@/lib/progressStorage';
+import { reconcileProgressRecords, summarizeProgress } from '@/lib/progressReconciliation';
+import { acquireProgressSyncLock } from '@/lib/progressSyncLock';
+
+function progressComparison(local: Records, cloud: Records | null) {
+  if (!cloud) return null;
+  const device = summarizeProgress(local);
+  const remote = summarizeProgress(cloud);
+  const order = (a: typeof device, b: typeof remote) => a.position - b.position || a.lessons - b.lessons || a.steps - b.steps || a.xp - b.xp;
+  const comparison = order(device, remote);
+  const recommendation = comparison > 0 ? 'The device copy is more advanced.' : comparison < 0 ? 'The cloud copy is more advanced.' : 'Neither copy is clearly more advanced.';
+  const format = (name: string, value: typeof device) => `${name}: ${value.lessons} completed lessons, through ${value.through}, ${value.steps} completed steps, ${value.xp} XP.`;
+  return { summary: `${format('This device', device)} ${format('Cloud', remote)} ${recommendation}`, recommended: comparison > 0 ? 'device' : comparison < 0 ? 'cloud' : null };
+}
 
 type PendingChoice = { kind: 'upload' | 'download' | 'conflict'; local: Records; cloud: ProgressSnapshot | null };
 const LAST_USER_KEY = 'coptic-progress-sync-last-user:v1';
@@ -25,13 +38,16 @@ export default function ProgressSync() {
   const [online, setOnline] = useState(true);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
   const requestRef = useRef<AbortController | null>(null);
+  const comparison = pending?.kind === 'conflict' ? progressComparison(pending.local, pending.cloud?.records ?? null) : null;
 
   const synchronize = useCallback(async () => {
     if (!userId || requestRef.current) return;
     const controller = new AbortController();
     requestRef.current = controller;
     setBusy(true); setError(''); setPending(null);
+    const releaseSyncLock = await acquireProgressSyncLock();
     try {
+      if (controller.signal.aborted) return;
       const client = await getSupabaseClient();
       const local = makeBackup().records;
       const [base, cloud] = await Promise.all([
@@ -67,6 +83,13 @@ export default function ProgressSync() {
         if (latestSession.data.session?.user.id !== userId) return;
         if ('conflict' in written) { setPending({ kind: 'conflict', local: makeBackup().records, cloud: written.snapshot }); setMessage('Cloud progress appeared on another device. Review both copies before continuing.'); }
         else { saveSyncBase(userId, written.revision, local); localStorage.setItem(PROGRESS_SYNC_OPT_IN_KEY, userId); localStorage.setItem(LAST_USER_KEY, userId); if (written.updatedAt) setLastSynced(written.updatedAt); setMessage(sameProgressRecords(makeBackup().records, local) ? 'Synced' : 'Waiting to upload'); }
+        return;
+      }
+
+      if (sameProgressRecords(local, cloud.records)) {
+        saveSyncBase(userId, cloud.revision, cloud.records);
+        localStorage.setItem(LAST_USER_KEY, userId);
+        setMessage('Your progress is synced.');
         return;
       }
 
@@ -139,6 +162,52 @@ export default function ProgressSync() {
           localStorage.setItem(LAST_USER_KEY, userId);
           setMessage('New cloud progress was downloaded. Your previous device copy is available in Recovery copy.');
         }
+      } else if (localChanged && cloudChanged) {
+        const reconciliation = reconcileProgressRecords(local, cloud.records);
+        if (!reconciliation.safe) {
+          setPending({ kind: 'conflict', local, cloud });
+          setMessage('Both copies changed in ways that cannot be safely combined. Review each copy before continuing.');
+          return;
+        }
+        let latest = await fetchProgressSnapshot(client, userId, controller.signal);
+        for (let attempt = 0; attempt < 2; attempt++) {
+          if (controller.signal.aborted) return;
+          const activeSession = await client.auth.getSession();
+          if (activeSession.data.session?.user.id !== userId || localStorage.getItem(PROGRESS_SYNC_OPT_IN_KEY) !== userId) return;
+          const currentLocal = makeBackup().records;
+          if (!sameProgressRecords(currentLocal, local) || !latest) {
+            setPending({ kind: 'conflict', local: currentLocal, cloud: latest });
+            setMessage('Progress changed while sync was running. Review both copies before continuing.');
+            return;
+          }
+          const result = reconcileProgressRecords(currentLocal, latest.records);
+          if (!result.safe) {
+            setPending({ kind: 'conflict', local: currentLocal, cloud: latest });
+            setMessage('Both copies changed in ways that cannot be safely combined. Review each copy before continuing.');
+            return;
+          }
+          if (sameProgressRecords(result.records, latest.records)) {
+            if (sameProgressRecords(makeBackup().records, local)) installCloudProgress(result.records);
+            saveSyncBase(userId, latest.revision, latest.records);
+            localStorage.setItem(LAST_USER_KEY, userId);
+            setMessage('Progress is already synced.');
+            return;
+          }
+          const written = await writeProgressSnapshot(client, latest.revision, result.records, controller.signal);
+          if (controller.signal.aborted) return;
+          if ('conflict' in written) {
+            if (attempt === 0 && written.snapshot) { latest = written.snapshot; continue; }
+            setPending({ kind: 'conflict', local: makeBackup().records, cloud: written.snapshot });
+            setMessage('Cloud progress changed again. Review the latest copies before continuing.');
+            return;
+          }
+          if (sameProgressRecords(makeBackup().records, local)) installCloudProgress(result.records);
+          saveSyncBase(userId, written.revision, result.records);
+          localStorage.setItem(LAST_USER_KEY, userId);
+          setMessage('Progress from both devices was safely combined and synced.');
+          if (!sameProgressRecords(makeBackup().records, result.records)) window.dispatchEvent(new Event('coptic-progress-change'));
+          return;
+        }
       } else {
         setPending({ kind: 'conflict', local, cloud });
         setMessage('Both this device and the cloud changed since the last sync. Choose which copy to keep.');
@@ -146,6 +215,7 @@ export default function ProgressSync() {
     } catch (failure) {
       if (!controller.signal.aborted) setError(progressSyncErrorMessage(failure));
     } finally {
+      releaseSyncLock();
       if (requestRef.current === controller) requestRef.current = null;
       setBusy(false);
     }
@@ -176,7 +246,9 @@ export default function ProgressSync() {
     const controller = new AbortController();
     requestRef.current = controller;
     setBusy(true); setError(''); setPending(null);
+    const releaseSyncLock = await acquireProgressSyncLock();
     try {
+      if (controller.signal.aborted) return;
       const client = await getSupabaseClient();
       const cloud = await fetchProgressSnapshot(client, userId, controller.signal);
       if (controller.signal.aborted) return;
@@ -194,6 +266,12 @@ export default function ProgressSync() {
         return;
       }
       if (kind === 'upload') {
+        if (cloud && sameProgressRecords(local, cloud.records)) {
+          saveSyncBase(userId, cloud.revision, cloud.records);
+          localStorage.setItem(LAST_USER_KEY, userId);
+          setMessage('Your progress is already synced.');
+          return;
+        }
         const written = await writeProgressSnapshot(client, cloud?.revision ?? 0, local, controller.signal);
         if (controller.signal.aborted) return;
         const afterWrite = await client.auth.getSession();
@@ -230,6 +308,7 @@ export default function ProgressSync() {
     } catch (failure) {
       if (!controller.signal.aborted) setError(progressSyncErrorMessage(failure));
     } finally {
+      releaseSyncLock();
       if (requestRef.current === controller) requestRef.current = null;
       setBusy(false);
     }
@@ -247,14 +326,15 @@ export default function ProgressSync() {
         {error && <p className="settings-cloud-progress__error" role="alert">{error}</p>}
         {pending && <div className="ui-panel settings-cloud-progress__pending" role="region" aria-label="Review cloud progress">
           <h3>{pending.kind === 'upload' ? 'Upload this device’s progress?' : pending.kind === 'download' ? 'Download cloud progress?' : 'Choose a progress copy'}</h3>
+          {pending.kind === 'conflict' && <p>{comparison?.summary} Unique learning records are preserved when a safe automatic merge is possible. This conflict needs your choice; cancelling keeps both copies where they are.</p>}
           <p>{pending.kind === 'upload'
             ? 'This sends the validated learning records on this device to your signed-in account.'
             : pending.kind === 'download'
               ? 'This replaces progress on this device with the cloud copy. A recovery copy of this device’s progress will be saved first.'
               : 'Both copies changed since the last sync. Keeping one replaces the other copy. A recovery copy is saved before a cloud download.'}</p>
           <div className="settings-action-row settings-cloud-progress__actions">
-            {pending.kind !== 'upload' && <button type="button" className="ui-primary" disabled={busy} onClick={() => void choose('download')}>Use cloud progress on this device</button>}
-            {pending.kind !== 'download' && <button type="button" className="ui-secondary" disabled={busy} onClick={() => void choose('upload')}>{pending.kind === 'conflict' ? 'Replace cloud with this device' : 'Upload this device’s progress'}</button>}
+            {pending.kind !== 'upload' && <button type="button" className={comparison?.recommended === 'cloud' ? 'ui-primary' : 'ui-secondary'} disabled={busy} onClick={() => void choose('download')}>Use cloud progress on this device{comparison?.recommended === 'cloud' ? ' (Recommended)' : ''}</button>}
+            {pending.kind !== 'download' && <button type="button" className={pending.kind !== 'conflict' || comparison?.recommended === 'device' ? 'ui-primary' : 'ui-secondary'} disabled={busy} onClick={() => void choose('upload')}>{pending.kind === 'conflict' ? `Replace cloud with this device${comparison?.recommended === 'device' ? ' (Recommended)' : ''}` : 'Upload this device’s progress'}</button>}
             <button type="button" className="ui-secondary" disabled={busy} onClick={() => { setPending(null); setMessage('No progress was changed. Sync is paused until you choose or review again.'); }}>Cancel</button>
           </div>
         </div>}
