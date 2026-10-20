@@ -25,16 +25,17 @@ try {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   const base = `http://127.0.0.1:${server.address().port}`;
-  await page.goto(`${base}/settings/progress/`);
   const original = JSON.stringify({ xp: 20, streak: 2, lastCompletedDate: null, completedLessons: ['old'] });
   const previous = JSON.stringify({ xp: 5, streak: 1, lastCompletedDate: null, completedLessons: [] });
   const beforeCloud = JSON.stringify({ xp: 10, streak: 1, lastCompletedDate: null, completedLessons: ['cloud'] });
-  await page.evaluate(({ originalRaw, previousRaw, cloudRaw }) => {
+  await page.addInitScript(({ originalRaw, previousRaw, cloudRaw }) => {
+    if (localStorage.getItem('__recovery-smoke-seeded') === 'true') return;
     localStorage.setItem('coptic-progress', originalRaw);
     localStorage.setItem('coptic-progress-recovery:v1', JSON.stringify({ version: 1, savedAt: new Date().toISOString(), records: { 'coptic-progress': previousRaw } }));
     localStorage.setItem('coptic-progress-cloud-recovery:v1', JSON.stringify({ version: 1, savedAt: new Date().toISOString(), records: { 'coptic-progress': cloudRaw } }));
+    localStorage.setItem('__recovery-smoke-seeded', 'true');
   }, { originalRaw: original, previousRaw: previous, cloudRaw: beforeCloud });
-  await page.reload(); await page.waitForLoadState('networkidle');
+  await page.goto(`${base}/settings/progress/`); await page.waitForLoadState('networkidle');
   for (const hidden of ['Export Progress', 'Import Progress']) assert.equal(await page.getByText(hidden, { exact: true }).count(), 0, `${hidden} remains hidden`);
 
   await page.getByRole('button', { name: 'Recover previous progress' }).click();
