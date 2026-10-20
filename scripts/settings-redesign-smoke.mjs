@@ -77,9 +77,16 @@ try {
       assert.equal(await page.getByRole('heading', { name: 'Account settings', exact: true }).count(), 0);
     }
     await page.screenshot({ path: path.join(screenshots, screenshot), fullPage: true });
-    await page.evaluate(() => { document.documentElement.dataset.theme = 'dark'; });
+    if (route === '/settings/preferences/') {
+      await page.getByLabel('Appearance').selectOption('dark');
+      await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark');
+    } else await page.evaluate(() => { document.documentElement.dataset.theme = 'dark'; });
     await page.screenshot({ path: path.join(screenshots, screenshot.replace('.png', '-dark.png')), fullPage: true });
-    await page.evaluate(() => { document.documentElement.dataset.theme = 'light'; });
+    if (route === '/settings/preferences/') {
+      await page.getByLabel('Appearance').selectOption('light');
+      await page.waitForFunction(() => document.documentElement.dataset.theme === 'light');
+    }
+    else await page.evaluate(() => { document.documentElement.dataset.theme = 'light'; });
   }
   assert.deepEqual(errors, []);
   console.log(`PASS: Settings home and five submenu routes at 390×844; account entry, font preference, recovery route, and removed backup/sync controls validated. Screenshots: ${screenshots}`);
