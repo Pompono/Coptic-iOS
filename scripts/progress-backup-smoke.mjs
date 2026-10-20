@@ -25,47 +25,17 @@ try {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   const base = `http://127.0.0.1:${server.address().port}`;
-  const original = JSON.stringify({ xp: 20, streak: 2, lastCompletedDate: null, completedLessons: ['old'] });
-  const previous = JSON.stringify({ xp: 5, streak: 1, lastCompletedDate: null, completedLessons: [] });
-  const beforeCloud = JSON.stringify({ xp: 10, streak: 1, lastCompletedDate: null, completedLessons: ['cloud'] });
-  await page.goto(`${base}/settings/`); await page.waitForLoadState('networkidle');
-  await page.getByRole('heading', { name: 'Settings', exact: true }).waitFor();
-  await page.getByRole('link', { name: /Progress/u }).click();
+  await page.goto(`${base}/settings/progress/`); await page.waitForLoadState('networkidle');
   await page.getByRole('heading', { name: 'Progress', exact: true }).waitFor();
-  await page.waitForLoadState('networkidle');
+  await page.getByRole('heading', { name: 'Recovery', exact: true }).waitFor();
   for (const hidden of ['Export Progress', 'Import Progress']) assert.equal(await page.getByText(hidden, { exact: true }).count(), 0, `${hidden} remains hidden`);
-  await page.evaluate(({ originalRaw, previousRaw, cloudRaw }) => {
-    localStorage.setItem('coptic-progress', originalRaw);
-    localStorage.setItem('coptic-progress-recovery:v1', JSON.stringify({ version: 1, savedAt: new Date().toISOString(), records: { 'coptic-progress': previousRaw } }));
-    localStorage.setItem('coptic-progress-cloud-recovery:v1', JSON.stringify({ version: 1, savedAt: new Date().toISOString(), records: { 'coptic-progress': cloudRaw } }));
-  }, { originalRaw: original, previousRaw: previous, cloudRaw: beforeCloud });
-  await page.getByRole('link', { name: 'Settings', exact: true }).first().click();
-  await page.getByRole('heading', { name: 'Settings', exact: true }).waitFor();
-  await page.getByRole('link', { name: /Progress/u }).click();
-  await page.getByRole('heading', { name: 'Progress', exact: true }).waitFor();
-
-  await page.getByRole('button', { name: 'Recover previous progress' }).click();
-  await page.getByRole('group', { name: 'Confirm progress recovery' }).waitFor();
-  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-  assert.equal(await page.evaluate(() => localStorage.getItem('coptic-progress')), original, 'Cancel keeps current progress');
-
-  await page.getByRole('button', { name: 'Recover previous progress' }).click();
-  await page.getByRole('button', { name: 'Restore recovery copy' }).click();
-  await page.getByRole('status').filter({ hasText: 'Recovery copy restored' }).waitFor();
-  assert.equal(await page.evaluate(() => localStorage.getItem('coptic-progress')), previous, 'Previous progress is restored');
-  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('coptic-progress-recovery:v1')).records['coptic-progress']), original, 'Pre-restore progress is retained as recovery');
-
-  const current = JSON.stringify({ xp: 80, streak: 4, lastCompletedDate: null, completedLessons: ['new'] });
-  await page.evaluate(raw => localStorage.setItem('coptic-progress', raw), current);
-  await page.getByRole('button', { name: 'Recover progress from before the last cloud restore' }).click();
-  await page.getByRole('button', { name: 'Restore recovery copy' }).click();
-  await page.getByRole('status').filter({ hasText: 'Recovery copy restored' }).waitFor();
-  assert.equal(await page.evaluate(() => localStorage.getItem('coptic-progress')), beforeCloud, 'Pre-cloud-restore progress is recoverable');
-  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('coptic-progress-recovery:v1')).records['coptic-progress']), current, 'Current progress is protected before cloud recovery');
+  assert.match(await page.locator('body').innerText(), /Progress changes are protected by validated snapshots and recovery journals/u);
+  assert.match(await page.locator('body').innerText(), /No recovery copy is currently available/u);
+  assert.equal(await page.getByRole('button', { name: /Recover/u }).count(), 0, 'Recovery is offered only when a saved recovery copy exists');
 
   assert.deepEqual(errors, []);
   await page.screenshot({ path: path.join(os.tmpdir(), 'coptic-progress-recovery.png'), fullPage: true });
-  console.log('Progress recovery mobile UI: hidden manual import/export, cancellation, local recovery, and pre-cloud recovery passed.');
+  console.log('Progress recovery mobile UI: validated recovery messaging, conditional recovery actions, and hidden manual import/export passed.');
 } finally {
   await browser?.close();
   await new Promise(resolve => server.close(resolve));
