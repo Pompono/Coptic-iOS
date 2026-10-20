@@ -8,7 +8,7 @@ import ProgressBackup from './ProgressBackup';
 import { COPTIC_KEYBOARD_APP_STORE_URL } from '../KeyboardInstallPrompt';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
-import { COPTIC_FONT_STORAGE_KEY, applyCopticFontMode, type CopticFontMode } from '../CopticFontPreference';
+import { COPTIC_FONT_OPTIONS, COPTIC_FONT_STORAGE_KEY, applyCopticFontMode, readCopticFontMode, type CopticFontMode } from '../CopticFontPreference';
 import { applyThemeMode, readThemePreference, THEME_STORAGE_KEY, type ThemeMode } from '../ThemePreference';
 import { BOHAIRIC_ONLY_STORAGE_KEY, isBohairicOnlyEnabled } from '../BohairicPreference';
 import { makeBackup, replaceRecords } from '@/lib/progressStorage';
@@ -18,14 +18,14 @@ function Shell({ title, children }: { title: string; children: ReactNode }) { re
 
 function LearningSettings() {
   const [font, setFont] = useState<CopticFontMode>('avva'); const [theme, setTheme] = useState<ThemeMode>('system'); const [bohairic, setBohairic] = useState(true);
-  useEffect(() => { try { setFont(localStorage.getItem(COPTIC_FONT_STORAGE_KEY) === 'unicode' ? 'unicode' : 'avva'); } catch {} setTheme(readThemePreference()); setBohairic(isBohairicOnlyEnabled()); }, []);
+  useEffect(() => { try { setFont(readCopticFontMode(localStorage.getItem(COPTIC_FONT_STORAGE_KEY))); } catch {} setTheme(readThemePreference()); setBohairic(isBohairicOnlyEnabled()); }, []);
   function setFontMode(value: CopticFontMode) { setFont(value); localStorage.setItem(COPTIC_FONT_STORAGE_KEY, value); applyCopticFontMode(value); }
   function setThemeMode(value: ThemeMode) { setTheme(value); localStorage.setItem(THEME_STORAGE_KEY, value); applyThemeMode(value); }
   function setDialect(value: boolean) { setBohairic(value); localStorage.setItem(BOHAIRIC_ONLY_STORAGE_KEY, String(value)); window.dispatchEvent(new Event('coptic-settings-change')); }
-  return <Shell title="Learning & Language"><section><h2 className="settings-section-title">Learning preferences</h2><div className="settings-group">
+  return <Shell title="Preferences"><section><div className="settings-group">
     <div className="settings-row"><label htmlFor="theme-choice">Appearance</label><select id="theme-choice" value={theme} onChange={event => setThemeMode(event.target.value as ThemeMode)}><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></div>
-    <div className="settings-row"><label htmlFor="font-choice">Coptic font</label><select id="font-choice" value={font} onChange={event => setFontMode(event.target.value as CopticFontMode)}><option value="unicode">Standard</option><option value="avva">Avva Shenouda</option></select></div>
-    <div className="settings-row"><span><label htmlFor="bohairic-switch">Bohairic-only mode</label><small className="settings-row-note">Use Bohairic entries and translator settings</small></span><input id="bohairic-switch" type="checkbox" className="ui-switch" role="switch" checked={bohairic} onChange={event => setDialect(event.target.checked)}/></div>
+    <div className="settings-row"><label htmlFor="font-choice">Coptic font</label><select id="font-choice" aria-label="Coptic font" value={font} onChange={event => setFontMode(event.target.value as CopticFontMode)}>{COPTIC_FONT_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>
+    <div className="settings-row"><label htmlFor="bohairic-switch">Bohairic-only mode</label><input id="bohairic-switch" type="checkbox" className="ui-switch" role="switch" checked={bohairic} onChange={event => setDialect(event.target.checked)}/></div>
   </div></section></Shell>;
 }
 
@@ -34,8 +34,9 @@ function KeyboardSettings() { return <Shell title="Keyboard"><section className=
 export default function SettingsSubpage() {
   const pathname = usePathname(); const section = pathname.split('/').filter(Boolean).at(-1) ?? '';
   if (section === 'account') return <AccountPage/>;
-  if (section === 'learning') return <LearningSettings/>;
+  if (section === 'learning' || section === 'preferences') return <LearningSettings/>;
   if (section === 'progress') return <Shell title="Progress"><ProgressSync/><ProgressBackup/></Shell>;
+  if (section === 'recovery') return <Shell title="Recover progress"><ProgressBackup focused/></Shell>;
   if (section === 'keyboard') return <KeyboardSettings/>;
   if (section === 'developer') return <DeveloperSettings/>;
   return <Shell title="Settings"><p>That settings page is unavailable.</p></Shell>;

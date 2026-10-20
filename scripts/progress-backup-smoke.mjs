@@ -30,14 +30,15 @@ try {
   await page.getByRole('heading', { name: 'Settings', exact: true }).waitFor();
   await page.goto(`${base}/settings/account/?mode=settings`); await page.waitForLoadState('networkidle');
   await page.getByRole('heading', { name: 'Account', exact: true }).waitFor();
-  await page.goto(`${base}/settings/learning/`); await page.waitForLoadState('networkidle');
-  await page.getByRole('heading', { name: 'Learning & Language', exact: true }).waitFor();
+  await page.goto(`${base}/settings/preferences/`); await page.waitForLoadState('networkidle');
+  await page.getByRole('heading', { name: 'Preferences', exact: true }).waitFor();
   await page.goto(`${base}/settings/progress/`); await page.waitForLoadState('networkidle');
   await page.getByRole('heading', { name: 'Progress', exact: true }).waitFor();
-  await page.getByRole('heading', { name: 'Recovery', exact: true }).waitFor();
+  await page.getByRole('link', { name: 'Recover progress' }).waitFor();
   for (const hidden of ['Export Progress', 'Import Progress']) assert.equal(await page.getByText(hidden, { exact: true }).count(), 0, `${hidden} remains hidden`);
-  assert.match(await page.locator('body').innerText(), /Progress changes are protected by validated snapshots and recovery journals/u);
-  assert.match(await page.locator('body').innerText(), /No recovery copy is currently available/u);
+  await page.goto(`${base}/settings/recovery/`); await page.waitForLoadState('networkidle');
+  await page.getByRole('heading', { name: 'Recover progress', exact: true }).waitFor();
+  assert.match(await page.locator('body').innerText(), /No recovery copies are available/u);
   assert.equal(await page.getByRole('button', { name: /Recover/u }).count(), 0, 'Recovery is offered only when a saved recovery copy exists');
 
   assert.deepEqual(errors, []);

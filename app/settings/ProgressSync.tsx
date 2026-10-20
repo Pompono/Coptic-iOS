@@ -314,15 +314,13 @@ export default function ProgressSync() {
     }
   }
 
-  if (!supabaseAuthConfigured) return <section className="settings-cloud-progress" aria-labelledby="progress-sync-title"><h2 id="progress-sync-title" className="settings-section-title">Cloud Progress</h2><div className="settings-group settings-group--content"><p>Cloud sync is unavailable in this build. Progress remains saved on this device.</p></div></section>;
+  if (!supabaseAuthConfigured) return <section className="settings-cloud-progress" aria-labelledby="progress-sync-title"><h2 id="progress-sync-title" className="settings-section-title">Cloud sync</h2><div className="settings-group settings-group--content"><p>Unavailable</p></div></section>;
   return <section className="settings-cloud-progress" aria-labelledby="progress-sync-title">
-    <h2 id="progress-sync-title" className="settings-section-title">Cloud Progress</h2>
+    <h2 id="progress-sync-title" className="settings-section-title">Cloud sync</h2>
     <div className="settings-group settings-group--content">
-      {!userId ? <p>Learning remains on this device while signed out. Sign in to sync progress automatically.</p> : <>
-        <p className="settings-cloud-progress__intro">Progress syncs automatically when you are signed in and online. Offline learning continues locally.</p>
-        <p className="settings-sync-state" role="status">{busy ? 'Syncing' : !online ? 'Offline — saved on this device' : error ? 'Needs your attention' : pending ? 'Waiting for your choice' : message === 'Synced' || message.includes('synced') ? 'Synced' : message || 'Waiting to upload'}{lastSynced && <small>Last cloud update: {new Date(lastSynced).toLocaleString()}</small>}</p>
-        <div className="settings-action-row settings-cloud-progress__sync-action"><button type="button" className="ui-secondary" disabled={!ready || busy || !online} onClick={() => void synchronize()}>{busy ? 'Syncing…' : error ? 'Retry sync' : 'Sync now'}</button></div>
-        {message && <p className="settings-cloud-progress__message" role="status">{message}</p>}
+      {!userId ? <p>Progress stays on this device while signed out.</p> : <>
+        <p className="settings-sync-state" role="status">{busy ? 'Syncing' : !online ? 'Offline' : error ? 'Error' : pending || /review|choice|conflict|paused/iu.test(message) ? 'Needs attention' : /pending|waiting to upload|ready to sync/iu.test(message) || !message ? 'Pending' : 'Synced'}{lastSynced && <small>Last synced: {new Date(lastSynced).toLocaleString()}</small>}</p>
+        <div className="settings-action-row settings-cloud-progress__sync-action"><button type="button" className="ui-secondary" disabled={!ready || busy || !online} onClick={() => void synchronize()}>{busy ? 'Syncing…' : 'Sync now'}</button></div>
         {error && <p className="settings-cloud-progress__error" role="alert">{error}</p>}
         {pending && <div className="ui-panel settings-cloud-progress__pending" role="region" aria-label="Review cloud progress">
           <h3>{pending.kind === 'upload' ? 'Upload this device’s progress?' : pending.kind === 'download' ? 'Download cloud progress?' : 'Choose a progress copy'}</h3>
@@ -340,6 +338,5 @@ export default function ProgressSync() {
         </div>}
       </>}
     </div>
-    <p className="settings-note settings-cloud-progress__note">Sync is tied to your signed-in account. Guest progress stays local. Recovery copies are saved before cloud progress replaces device progress.</p>
   </section>;
 }

@@ -158,7 +158,7 @@ jobs:
                   for n in app_files
                   if n.endswith((".js", ".html"))
               )
-              for phrase in ("Learning & Language", "Cloud Progress", "Recovery"):
+              for phrase in ("Preferences", "Cloud sync", "Recover progress", "Modern", "Classic"):
                   if phrase not in web_text:
                       raise SystemExit(f"Packaged web assets are missing redesigned Settings text: {phrase}")
               for phrase in ("Enable Cloud Sync", "Export Progress", "Import Progress"):

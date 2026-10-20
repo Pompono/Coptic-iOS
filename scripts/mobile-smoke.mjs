@@ -41,11 +41,11 @@ async function checkSettingsLayout(page) {
     const fixture = document.createElement('section');
     fixture.className = 'settings-group settings-group--content account-settings-card';
     fixture.setAttribute('aria-label', 'Long account identity layout fixture');
-    fixture.innerHTML = '<div class="account-summary"><div class="account-summary__identity"><span class="account-summary__label">Signed in as</span><strong>A long display name for a learner account</strong></div><div class="account-summary__email"><span class="account-summary__label">Email</span><span class="account-summary__value">learner.with.a.long.address.for.mobile.layout@example.invalid</span></div><span class="account-summary__verification">Email not verified</span></div><div class="account-actions"><button type="button">Account settings</button><button type="button">Sign Out</button></div>';
+    fixture.innerHTML = '<div class="accountInfo"><label class="field">Display name<input value="A long display name for a learner account"></label><div class="field">Email address<span class="readOnlyValue">learner.with.a.long.address.for.mobile.layout@example.invalid</span><span class="status">Email not verified</span></div></div><div class="accountActions"><button type="button">Change password</button><button type="button">Sign Out</button></div>';
     document.querySelector('.settings-page').append(fixture);
   });
   const result = await page.evaluate(() => {
-    const email = document.querySelector('[aria-label="Long account identity layout fixture"] .account-summary__value');
+    const email = document.querySelector('[aria-label="Long account identity layout fixture"] .readOnlyValue');
     const buttons = [...document.querySelectorAll('[aria-label="Long account identity layout fixture"] button')];
     return {
       viewport: document.documentElement.clientWidth,
@@ -96,7 +96,7 @@ try {
   const errors = [];
   page.on('pageerror', error => errors.push(`${page.url()}: ${error.message}`));
   const unit = '/learn/section-1-unit-01-pair-letters-and-sounds/';
-  for (const route of ['/', '/learn/', unit, unit + 'play/lesson-1-a-o-d/', '/dictionary/', '/dictionary/entry/?lemma=%E2%B2%81', '/settings/', '/settings/account/', '/settings/learning/', '/settings/progress/', '/settings/keyboard/', '/translator/']) {
+  for (const route of ['/', '/learn/', unit, unit + 'play/lesson-1-a-o-d/', '/dictionary/', '/dictionary/entry/?lemma=%E2%B2%81', '/settings/', '/settings/account/', '/settings/preferences/', '/settings/progress/', '/settings/keyboard/', '/settings/recovery/', '/translator/']) {
     const response = await page.goto(base + route);
     assert.equal(response.status(), 200, route);
     await page.waitForLoadState('networkidle');
@@ -134,22 +134,24 @@ try {
     if (route === '/dictionary/') await page.locator('.dictionary-results[data-state="ready"]').waitFor();
     if (route === '/settings/') {
       await page.getByRole('heading', { name: 'Settings', exact: true }).waitFor();
-      for (const title of ['Account', 'Learning & Language', 'Progress', 'Keyboard']) await page.getByRole('link', { name: new RegExp(title, 'u') }).waitFor();
+      for (const title of ['Preferences', 'Progress', 'Keyboard']) await page.getByRole('link', { name: new RegExp(title, 'u') }).waitFor();
+      assert.equal(await page.locator('.settings-navigation__row').count(), 3);
+      assert.equal(await page.locator('.settings-navigation__row').filter({ hasText: 'Account' }).count(), 0);
       assert.equal(await page.getByText('Enable Cloud Sync', { exact: true }).count(), 0);
       assert.equal(await page.getByText('Export Progress', { exact: true }).count(), 0);
       assert.equal(await page.getByText('Import Progress', { exact: true }).count(), 0);
       await checkSettingsLayout(page);
     }
-    if (route === '/settings/learning/') {
-      await page.getByRole('heading', { name: 'Learning & Language', exact: true }).waitFor();
+    if (route === '/settings/preferences/') {
+      await page.getByRole('heading', { name: 'Preferences', exact: true }).waitFor();
       await page.getByRole('combobox', { name: 'Appearance', exact: true }).selectOption('dark');
       await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark');
       assert.equal(await page.evaluate(() => localStorage.getItem('theme-mode')), 'dark');
       await page.getByRole('combobox', { name: 'Appearance', exact: true }).selectOption('light');
     }
     if (route === '/settings/progress/') {
-      await page.getByRole('heading', { name: 'Cloud Progress', exact: true }).waitFor();
-      assert.match(await page.locator('body').innerText(), /Learning remains on this device while signed out/u);
+      await page.getByRole('heading', { name: 'Cloud sync', exact: true }).waitFor();
+      assert.match(await page.locator('body').innerText(), /Progress stays on this device while signed out/u);
       assert.equal(await page.getByText('Enable Cloud Sync', { exact: true }).count(), 0);
       assert.equal(await page.getByText('Export Progress', { exact: true }).count(), 0);
       assert.equal(await page.getByText('Import Progress', { exact: true }).count(), 0);
