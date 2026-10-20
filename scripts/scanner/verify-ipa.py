@@ -1,11 +1,17 @@
 """Verify the uploaded unsigned device IPA contains branding and offline app assets."""
 import hashlib
+import argparse
 import json
 import plistlib
-import sys
 import zipfile
 
-with zipfile.ZipFile(sys.argv[1]) as archive:
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--require-offline-model', action='store_true',
+                    help='fail unless the optional on-device translation model is present')
+parser.add_argument('ipa', help='unsigned iOS application archive to inspect')
+args = parser.parse_args()
+
+with zipfile.ZipFile(args.ipa) as archive:
     root = 'Payload/App.app/'
     info = plistlib.loads(archive.read(root + 'Info.plist'))
     assert info['CFBundleDisplayName'] == 'CoptLingo', 'Home Screen display name must be CoptLingo'
@@ -40,9 +46,15 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
     manifest = json.loads(archive.read(assets + 'ocr/manifest.json'))
     model = archive.read(assets + 'ocr/cop.traineddata')
     assert hashlib.sha256(model).hexdigest() == manifest['sha256']
-    translation = json.loads(archive.read(assets + 'models/coptic-english/manifest.json'))
-    for name, details in translation['files'].items():
-        data = archive.read(assets + 'models/coptic-english/' + name)
-        assert len(data) == details['bytes'], name
-        assert hashlib.sha256(data).hexdigest() == details['sha256'], name
-    print('PASS: IPA contains an arm64 app, reader, vocabulary reviews, dictionary, scanner, published-text references, and verified offline models.')
+    translation_manifest = assets + 'models/coptic-english/manifest.json'
+    has_offline_model = translation_manifest in archive.namelist()
+    if args.require_offline_model:
+        assert has_offline_model, 'Offline translation model is required for this IPA'
+    if has_offline_model:
+        translation = json.loads(archive.read(translation_manifest))
+        for name, details in translation['files'].items():
+            data = archive.read(assets + 'models/coptic-english/' + name)
+            assert len(data) == details['bytes'], name
+            assert hashlib.sha256(data).hexdigest() == details['sha256'], name
+    model_status = 'and verified offline models' if has_offline_model else 'without the optional offline translation model'
+    print(f'PASS: IPA contains an arm64 CoptLingo app, reader, vocabulary reviews, dictionary, scanner, published-text references, {model_status}.')
