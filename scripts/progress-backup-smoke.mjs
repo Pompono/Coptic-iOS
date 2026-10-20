@@ -6,12 +6,13 @@ import path from 'node:path';
 import { readFile, stat } from 'node:fs/promises';
 
 const root = path.resolve('out');
-const types = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json', '.txt': 'text/plain' };
 const server = http.createServer(async (request, response) => {
   try {
-    let file = path.resolve(root, '.' + new URL(request.url, 'http://localhost').pathname);
+    const pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
+    let file = path.resolve(root, `.${pathname}${pathname.endsWith('/') ? 'index.html' : ''}`);
     if (!file.startsWith(root + path.sep)) throw Error('Invalid path');
     if ((await stat(file)).isDirectory()) file = path.join(file, 'index.html');
+    const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.ttf': 'font/ttf' };
     response.writeHead(200, { 'Content-Type': types[path.extname(file)] ?? 'application/octet-stream' });
     response.end(await readFile(file));
   } catch { response.writeHead(404); response.end(); }
