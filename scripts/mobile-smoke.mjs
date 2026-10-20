@@ -142,10 +142,10 @@ try {
     }
     if (route === '/settings/learning/') {
       await page.getByRole('heading', { name: 'Learning & Language', exact: true }).waitFor();
-      await page.getByRole('combobox', { name: 'App theme', exact: true }).selectOption('dark');
+      await page.getByRole('combobox', { name: 'Appearance', exact: true }).selectOption('dark');
       await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark');
       assert.equal(await page.evaluate(() => localStorage.getItem('theme-mode')), 'dark');
-      await page.getByRole('combobox', { name: 'App theme', exact: true }).selectOption('light');
+      await page.getByRole('combobox', { name: 'Appearance', exact: true }).selectOption('light');
     }
     if (route === '/settings/progress/') {
       await page.getByRole('heading', { name: 'Cloud Progress', exact: true }).waitFor();

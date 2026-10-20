@@ -55,9 +55,9 @@ try {
       for (const removed of ['Enable Cloud Sync', 'Export Progress', 'Import Progress']) assert.equal(await page.getByText(removed, { exact: true }).count(), 0, removed);
     }
     if (route === '/settings/learning/') {
-      await page.getByLabel('App theme').selectOption('dark');
+      await page.getByLabel('Appearance').selectOption('dark');
       await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark');
-      await page.getByLabel('App theme').selectOption('light');
+      await page.getByLabel('Appearance').selectOption('light');
     }
     await page.screenshot({ path: path.join(screenshots, screenshot), fullPage: true });
   }
