@@ -20,7 +20,11 @@ const coordinator = createProgressSyncCoordinator({
     if (error) throw error;
     return data.session?.user.id ?? null;
   },
-  isEnabled(userId) { return localStorage.getItem(PROGRESS_SYNC_OPT_IN_KEY) === userId; },
+  isEnabled(userId) {
+    // Existing users who turned sync off keep that choice until they review
+    // and explicitly resume syncing from Settings. New accounts have no base.
+    return localStorage.getItem(PROGRESS_SYNC_OPT_IN_KEY) === userId || !readSyncBase(userId);
+  },
   lastUser() { return localStorage.getItem(LAST_USER_KEY); },
   base: readSyncBase,
   local: () => makeBackup().records,
@@ -28,7 +32,10 @@ const coordinator = createProgressSyncCoordinator({
   async upload(revision, records, signal) { return writeProgressSnapshot(await getSupabaseClient(), revision, records, signal); },
   install: installCloudProgress,
   saveBase: saveSyncBase,
-  rememberUser(userId) { localStorage.setItem(LAST_USER_KEY, userId); },
+  rememberUser(userId) {
+    localStorage.setItem(LAST_USER_KEY, userId);
+    localStorage.setItem(PROGRESS_SYNC_OPT_IN_KEY, userId);
+  },
 });
 
 export default function ProgressSyncLifecycle() {
@@ -38,9 +45,10 @@ export default function ProgressSyncLifecycle() {
     let removeAppState: { remove(): Promise<void> } | undefined;
     let authSubscription: { unsubscribe(): void } | undefined;
     const schedule = () => {
-      if (disposed || !navigator.onLine || document.visibilityState === 'hidden') return;
+      if (disposed || !navigator.onLine || document.visibilityState === 'hidden' || location.pathname.startsWith('/settings/progress')) return;
       clearTimeout(timer);
       timer = setTimeout(() => {
+        if (location.pathname.startsWith('/settings/progress')) return;
         const controller = new AbortController();
         activeController = controller;
         void coordinator.request(controller.signal).catch(() => {

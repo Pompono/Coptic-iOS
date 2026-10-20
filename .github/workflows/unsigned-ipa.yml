@@ -7,6 +7,7 @@ on:
       - feat/phase-2a-secure-authentication
       - codex/phase-2b-cloud-progress-sync
       - codex/fix-progress-sync-rpc-settings-layout
+      - codex/settings-auto-sync-redesign
     paths:
       - '.github/workflows/unsigned-ipa.yml'
       - 'lib/progressFiles.ts'
@@ -26,6 +27,8 @@ on:
       - 'app/settings/AccountSection.tsx'
       - 'app/layout.tsx'
       - 'app/settings/page.tsx'
+      - 'app/settings/Subpage.tsx'
+      - 'app/settings/ProgressBackup.tsx'
       - 'app/design-system.css'
       - 'plugins/secure-auth-storage/**'
       - 'ios/App/App/Info.plist'
@@ -124,6 +127,8 @@ jobs:
                   raise SystemExit(f"Missing app executable: {executable_path}")
               if info.get("CFBundleIdentifier") != "com.pompono.coptic":
                   raise SystemExit(f"Unexpected bundle identifier: {info.get('CFBundleIdentifier')}")
+              if info.get("CFBundleDisplayName") != "CoptLingo":
+                  raise SystemExit(f"Unexpected display name: {info.get('CFBundleDisplayName')}")
               privacy = [n for n in names if n.endswith("PrivacyInfo.xcprivacy") and n.startswith(prefix)]
               if not privacy:
                   raise SystemExit("App bundle is missing PrivacyInfo.xcprivacy")
@@ -147,17 +152,20 @@ jobs:
                   platform_lower = platform.lower()
                   if "platform ios" not in platform_lower and "platform 2" not in platform_lower:
                       raise SystemExit("Mach-O build metadata does not identify an iOS device binary:\n" + platform)
-              # Require the backup UI strings in packaged web content.
+              # Require the redesigned Settings copy and ensure manual controls stay hidden.
               web_text = "\n".join(
                   archive.read(n).decode("utf-8", errors="ignore")
                   for n in app_files
                   if n.endswith((".js", ".html"))
               )
-              for phrase in ("Export Progress", "Progress backup"):
+              for phrase in ("Learning & Language", "Cloud Progress", "Recovery"):
                   if phrase not in web_text:
-                      raise SystemExit(f"Packaged web assets are missing progress backup UI text: {phrase}")
+                      raise SystemExit(f"Packaged web assets are missing redesigned Settings text: {phrase}")
+              for phrase in ("Enable Cloud Sync", "Export Progress", "Import Progress"):
+                  if phrase in web_text:
+                      raise SystemExit(f"Packaged web assets still expose a removed Settings control: {phrase}")
 
-          print(f"Verified {ipa} ({ipa.stat().st_size} bytes): valid IPA, arm64 iOS device binary, bundle ID com.pompono.coptic, app assets, backup UI, Filesystem/Share, App callback and Keychain plugins, and privacy manifest")
+          print(f"Verified {ipa} ({ipa.stat().st_size} bytes): valid IPA, arm64 iOS device binary, bundle ID com.pompono.coptic, display name CoptLingo, redesigned Settings assets, Filesystem/Share, App callback and Keychain plugins, and privacy manifest")
           PY
 
       - name: Upload IPA artifact

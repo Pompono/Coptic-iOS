@@ -135,6 +135,23 @@ input[type=checkbox] { accent-color:var(--teal); }
 .dictionary-settings section { border:0; border-radius:20px; padding:20px; box-shadow:var(--surface-shadow); }.dictionary-settings select { font-family:inherit; }
 /* Settings: inset groups, sentence-case headings and full-size preference rows. */
 .settings-page { width:100%; min-width:0; box-sizing:border-box; gap:28px!important; }.settings-page>section { min-width:0; }.settings-page .page-header { margin-bottom:0; }
+.settings-home,.settings-subpage { padding-bottom:calc(112px + env(safe-area-inset-bottom,0px)); }
+.settings-account-entry { width:100%; min-width:0; display:flex; align-items:center; gap:14px; padding:16px; border:0; border-radius:18px; background:var(--surface-1); color:var(--text-color); text-align:left; box-shadow:var(--surface-shadow); }
+.settings-avatar { flex:0 0 48px; width:48px; height:48px; display:grid; place-items:center; border-radius:50%; background:var(--teal-surface); color:var(--teal); font-size:1.25rem; font-weight:700; }
+.settings-account-entry__text,.settings-navigation__copy { flex:1; min-width:0; display:grid; gap:3px; }
+.settings-account-entry__text strong,.settings-navigation__copy strong { font-size:1rem; line-height:1.35; overflow-wrap:anywhere; }
+.settings-account-entry__text>span,.settings-account-entry__text small,.settings-navigation__copy>span { color:var(--text-muted); font-size:.84rem; line-height:1.4; overflow-wrap:anywhere; }
+.settings-account-entry__text small { color:var(--tint-color); font-weight:600; }
+.settings-chevron { flex:0 0 auto; color:var(--text-soft); font-size:1.6rem; line-height:1; }
+.settings-navigation { display:grid; overflow:hidden; border-radius:18px; background:var(--surface-1); box-shadow:var(--surface-shadow); }
+.settings-navigation__row { min-height:78px; display:flex; align-items:center; gap:14px; padding:13px 16px; color:var(--text-color); text-decoration:none; position:relative; }
+.settings-navigation__row+.settings-navigation__row:before { content:''; position:absolute; top:0; left:74px; right:0; height:1px; background:var(--separator-color); }
+.settings-navigation__icon { flex:0 0 44px; width:44px; height:44px; display:grid; place-items:center; border-radius:13px; background:var(--surface-2); color:var(--tint-color); font-size:1.15rem; font-weight:700; }
+.settings-navigation__icon.is-progress { background:var(--teal-surface); }.settings-navigation__icon.is-keyboard { background:var(--lesson-retry-bg); color:var(--gold); }.settings-navigation__icon.is-developer { background:var(--surface-2); }
+.settings-subpage { gap:20px!important; }.settings-subpage>.page-back { margin-bottom:-12px; }.settings-subpage .settings-group--content { overflow-wrap:anywhere; }
+.settings-row-note { display:block; margin-top:2px; color:var(--text-muted); font-size:.82rem; line-height:1.4; }
+.settings-sync-state { display:grid; gap:4px; margin:0; font-size:1rem; font-weight:650; }.settings-sync-state small { color:var(--text-muted); font-size:.82rem; font-weight:400; }
+.settings-navigation__row:focus-visible,.settings-account-entry:focus-visible { outline:2px solid var(--teal); outline-offset:-2px; }
 .settings-group { display:grid; gap:0; background:var(--surface-1); border:0; border-radius:16px; box-shadow:var(--surface-shadow); }
 .settings-section-title { font-size:.875rem; font-weight:500; color:var(--text-muted); margin:0 0 8px; padding-left:16px; }
 .settings-row { min-height:58px; padding:7px 16px; display:flex; align-items:center; justify-content:space-between; gap:16px; position:relative; }

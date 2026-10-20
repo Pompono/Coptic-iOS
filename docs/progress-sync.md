@@ -6,24 +6,25 @@ Apply the migrations under `supabase/migrations/` in timestamp order to the conf
 
 The migration creates one versioned snapshot per authenticated Supabase user. Row-level security allows reads only when `auth.uid()` matches the row owner. The write RPC derives the user ID from the verified session, uses a compare-and-swap revision, and rejects stale writes instead of replacing newer data. It accepts JSON objects up to 20 MiB. Deleting the account removes its snapshot through the foreign-key cascade.
 
-## Consent and behavior
+## Automatic behavior
 
-Cloud sync is off by default and requires a signed-in account. The user enables it in Settings → Cloud Progress. A first upload or download is shown for review. Download uses the existing validated, journaled local replacement and writes an independent **pre-sync recovery copy**, leaving the Phase 1 restore recovery copy untouched. Export it from Settings → Progress & Backup → Recovery copy. Turning sync off stops future network sync but leaves the account copy in place.
+Cloud sync starts automatically for a valid signed-in account; guest learning remains local and registration is optional. Existing per-user revision baselines are read as-is and never reset during upgrade. Accounts that previously disabled sync retain that choice: if either copy changed since the saved baseline, background reconciliation pauses and Settings asks the user to review both copies before resuming. After a baseline is explicitly reviewed or a new account starts syncing, the legacy per-user marker records the active sync choice. Without a baseline, matching local/cloud records establish one, an empty device restores a validated cloud snapshot after a fresh revision check and transactional recovery preparation, and local progress with an empty cloud uploads using revision zero. Different nonempty local and cloud copies remain on the Progress page for explicit review. Signing into another account never installs that account's snapshot over this device's progress without confirmation. Cloud restores keep an independent **pre-sync recovery copy** alongside the regular recovery snapshot.
 
 The snapshot contains the same allowlisted progress records as Progress & Backup: lesson completions and failed steps, XP/streaks, practice history, vocabulary and review schedules, and the saved reader passage or draft. It excludes auth tokens, preferences, search history and unrelated local storage. The records are validated before upload and again before installation from the cloud. The database accepts up to 10,000 records and a 20 MiB serialized snapshot; individual records do not have a separate 1 MiB cap.
 
-Learning remains local and usable offline. An app-level lifecycle coordinator attempts sync after progress changes, when the network returns, when the app becomes visible/focused, and when a native iOS app returns to the foreground. Work is debounced and single-flight. The background coordinator only reconciles changes against an established per-user base; first sync and conflicts remain explicit choices in Settings. It checks the active Supabase user and local opt-in before committing a baseline or changing local records. Failed requests leave local progress untouched and can be retried with Sync now.
+Learning remains local and usable offline. An app-level lifecycle coordinator attempts sync after progress changes, when the network returns, when the app becomes visible/focused, and when a native iOS app returns to the foreground. Work is debounced and single-flight. The background coordinator automatically performs only safe first-sync operations; ambiguous differences and conflicts remain explicit choices on the Progress page. It checks the active Supabase user before committing a baseline or changing local records. Failed requests leave local progress untouched and can be retried with Sync now.
 
 ## Reconciliation and conflicts
 
 Each device keeps a local base snapshot and its cloud revision. A local-only change is uploaded only if the cloud still matches that base. A cloud-only change is installed only if a fresh cloud read still matches and the device still matches the base immediately before the synchronous transaction. The baseline advances only after the transaction commits. A local deletion or reduction of existing learning progress is never auto-uploaded. If both copies changed, or there is no base to compare, automatic writes stop and the user chooses whether to keep this device or use the cloud copy. A compare-and-swap race is handled the same way. An account switch on the same device requires an explicit choice in Settings before further background sync.
 
-The database stores the latest snapshot, not an operation log or multi-device merge. Choosing one side during a conflict intentionally replaces the other side; the UI states this before the user confirms. Use Progress & Backup exports as an additional portable archive. Simultaneous changes are not merged field-by-field because XP, streaks, practice counters and spaced-review schedules do not have safe generic merge semantics.
+The database stores the latest snapshot, not an operation log or multi-device merge. Choosing one side during a conflict intentionally replaces the other side; the UI states this before the user confirms. Manual import/export controls are hidden from Settings; validated backup serialization and transactional recovery remain internal. Simultaneous changes are not merged field-by-field because XP, streaks, practice counters and spaced-review schedules do not have safe generic merge semantics.
 
 ## Device acceptance checks
 
-- Sign in on a device with local progress and enable sync. Confirm no upload occurs until the upload choice is confirmed.
-- Sign in on a clean second device. Confirm the cloud copy is offered and is installed only after confirmation; verify the prior device copy is available in Recovery copy.
+- Sign in on a device with local progress and an empty cloud account. Confirm the validated local snapshot uploads at revision zero.
+- Sign in on a clean second device. Confirm the validated cloud copy is restored after a recovery copy is saved.
+- Sign in where both nonempty copies differ and no baseline exists. Confirm neither side changes until an explicit choice.
 - With sync enabled on both devices, make progress on one device and then open/focus the other. Confirm the cloud-only change is received.
 - Make separate changes on both devices before either syncs. Confirm stale writes are rejected and a conflict choice appears; cancel and verify both local copies remain.
 - Choose each conflict resolution path with disposable accounts and verify the warning, revision, and recovery behavior.
@@ -75,13 +76,13 @@ The authorization SQL wraps writes in a transaction and rolls them back. It veri
 
 ## Rollback
 
-Turn off Cloud Sync in the app or disable the release flag/build first. To stop writes while retaining user snapshots, revoke authenticated RPC execution and keep the table and rows in place:
+Disable the automatic sync lifecycle in a reviewed release build first. To stop writes while retaining user snapshots, revoke authenticated RPC execution and keep the table and rows in place:
 
 ```sql
 revoke execute on function public.save_progress_snapshot(bigint, jsonb) from authenticated;
 ```
 
-Do not drop the table or cascade-delete rows as a routine rollback. If the RPC is restored, reapply the matching migration after reviewing the schema and grants. Keep device-local progress and both recovery files; use normal Progress & Backup export before any separately approved data-retention cleanup.
+Do not drop the table or cascade-delete rows as a routine rollback. If the RPC is restored, reapply the matching migration after reviewing the schema and grants. Keep device-local progress and both recovery files; validated internal backup/restore support remains available for cloud conflict and failure recovery.
 
 ## RPC rejection diagnostics and follow-up deployment
 
@@ -93,8 +94,9 @@ After reviewing the complete additive SQL file and verifying the selected projec
 
 ## Physical iPhone retest
 
-1. Install the new unsigned IPA on a test iPhone and sign in to the same account that reproduced the failure. Keep the current local progress and export a normal Progress & Backup archive first.
-2. In Settings → Cloud Progress, enable sync and choose **Upload this device’s progress**. Confirm the status reports success and no SQLSTATE error appears.
-3. Sign in to the same account on a second test device, enable sync, and choose the reviewed cloud download. Compare lesson completion, practice, saved words/schedules, and saved reader content on both devices.
-4. Make one new practice change on each device before either syncs. Confirm the stale revision is reported as a conflict and canceling leaves each local copy intact.
-5. Retry an upload while offline, reconnect, and use **Sync now**. Confirm local learning remains available and the upload can be retried.
+1. Install the new unsigned IPA over the existing test install and sign in. Verify a known upgrade account's existing baseline and progress remain intact.
+2. On a clean device, sign in to an account with cloud progress. Confirm the validated snapshot is restored after a local recovery copy is prepared.
+3. On a device with distinct nonempty local and cloud progress and no baseline, verify both copies remain unchanged until the user confirms a choice in Settings → Progress.
+4. Sign in to an empty cloud account from a device with local progress. Confirm revision-zero upload succeeds automatically. Make another change and verify it syncs after reconnecting from offline mode.
+5. Make one new practice change on each of two devices before either syncs. Confirm the stale revision is reported as a conflict and canceling leaves each local copy intact.
+6. Sign out, switch accounts, and verify no cloud snapshot from the previous account is installed into the new account's local progress.

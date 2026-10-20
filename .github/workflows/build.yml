@@ -79,11 +79,18 @@ jobs:
       - run: npm run test:translation-assets
       - run: npx playwright install --with-deps chromium
       - run: npm run test:mobile
+      - run: node scripts/settings-redesign-smoke.mjs
       - run: npm run test:backup
       - uses: actions/upload-artifact@v4
         with:
           name: bundled-web-app
           path: out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: settings-redesign-screenshots
+          path: docs/settings-screenshots
+          if-no-files-found: error
+          retention-days: 30
   ios:
     # A simulator compile verifies the native project without signing secrets.
     runs-on: macos-latest

@@ -28,11 +28,34 @@ export function createProgressSyncCoordinator(adapter: SyncCoordinatorAdapter) {
     const lastUser = adapter.lastUser();
     if (lastUser && lastUser !== userId) return;
     const base = adapter.base(userId);
-    if (!base) return; // Settings presents the first upload/download decision.
-
     const local = adapter.local();
     const cloud = await adapter.cloud(userId, signal);
-    if (signal.aborted || await adapter.currentUser() !== userId || !adapter.isEnabled(userId) || !cloud) return;
+    if (signal.aborted || await adapter.currentUser() !== userId || !adapter.isEnabled(userId)) return;
+    if (!base) {
+      // First sync is automatic only when there is exactly one known copy. A
+      // nonempty local/cloud mismatch remains for Settings to confirm.
+      if (!cloud && Object.keys(local).length) {
+        const uploaded = await adapter.upload(0, local, signal);
+        if (!signal.aborted && await adapter.currentUser() === userId && adapter.isEnabled(userId) && !('conflict' in uploaded)) {
+          adapter.saveBase(userId, uploaded.revision, local);
+          adapter.rememberUser(userId);
+          if (!sameProgressRecords(adapter.local(), local)) rerun = true;
+        }
+      } else if (cloud && !Object.keys(local).length) {
+        const latest = await adapter.cloud(userId, signal);
+        if (!signal.aborted && latest?.revision === cloud.revision && await adapter.currentUser() === userId
+          && adapter.isEnabled(userId) && !Object.keys(adapter.local()).length) {
+          adapter.install(latest.records);
+          adapter.saveBase(userId, latest.revision, latest.records);
+          adapter.rememberUser(userId);
+        }
+      } else if (cloud && sameProgressRecords(local, cloud.records)) {
+        adapter.saveBase(userId, cloud.revision, cloud.records);
+        adapter.rememberUser(userId);
+      }
+      return;
+    }
+    if (!cloud) return;
     const localChanged = !sameProgressRecords(local, base.records);
     const cloudChanged = !sameProgressRecords(cloud.records, base.records);
 

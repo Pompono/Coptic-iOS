@@ -96,7 +96,7 @@ try {
   const errors = [];
   page.on('pageerror', error => errors.push(`${page.url()}: ${error.message}`));
   const unit = '/learn/section-1-unit-01-pair-letters-and-sounds/';
-  for (const route of ['/', '/learn/', unit, unit + 'play/lesson-1-a-o-d/', '/dictionary/', '/dictionary/entry/?lemma=%E2%B2%81', '/settings/', '/translator/']) {
+  for (const route of ['/', '/learn/', unit, unit + 'play/lesson-1-a-o-d/', '/dictionary/', '/dictionary/entry/?lemma=%E2%B2%81', '/settings/', '/settings/account/', '/settings/learning/', '/settings/progress/', '/settings/keyboard/', '/translator/']) {
     const response = await page.goto(base + route);
     assert.equal(response.status(), 200, route);
     await page.waitForLoadState('networkidle');
@@ -133,19 +133,29 @@ try {
     }
     if (route === '/dictionary/') await page.locator('.dictionary-results[data-state="ready"]').waitFor();
     if (route === '/settings/') {
-      await page.getByRole('heading', { name: 'Account', exact: true }).waitFor();
-      await page.getByRole('button', { name: 'Sign In', exact: true }).waitFor();
-      await page.getByRole('button', { name: 'Create Account', exact: true }).waitFor();
-      assert.match(await page.locator('body').innerText(), /Cloud sync is optional and stays off until you enable it under Cloud Progress\./u);
-      await page.getByRole('combobox', { name: 'App theme', exact: true }).selectOption('dark');
-      await page.waitForLoadState('networkidle');
+      await page.getByRole('heading', { name: 'Settings', exact: true }).waitFor();
+      for (const title of ['Account', 'Learning & Language', 'Progress', 'Keyboard']) await page.getByRole('link', { name: new RegExp(title, 'u') }).waitFor();
+      assert.equal(await page.getByText('Enable Cloud Sync', { exact: true }).count(), 0);
+      assert.equal(await page.getByText('Export Progress', { exact: true }).count(), 0);
+      assert.equal(await page.getByText('Import Progress', { exact: true }).count(), 0);
       await checkSettingsLayout(page);
-      await page.reload();
-      await page.waitForLoadState('networkidle');
+    }
+    if (route === '/settings/learning/') {
+      await page.getByRole('heading', { name: 'Learning & Language', exact: true }).waitFor();
+      await page.getByRole('combobox', { name: 'App theme', exact: true }).selectOption('dark');
       await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark');
       assert.equal(await page.evaluate(() => localStorage.getItem('theme-mode')), 'dark');
       await page.getByRole('combobox', { name: 'App theme', exact: true }).selectOption('light');
-      await checkSettingsLayout(page);
+    }
+    if (route === '/settings/progress/') {
+      await page.getByRole('heading', { name: 'Cloud Progress', exact: true }).waitFor();
+      assert.match(await page.locator('body').innerText(), /Learning remains on this device while signed out/u);
+      assert.equal(await page.getByText('Enable Cloud Sync', { exact: true }).count(), 0);
+      assert.equal(await page.getByText('Export Progress', { exact: true }).count(), 0);
+      assert.equal(await page.getByText('Import Progress', { exact: true }).count(), 0);
+    }
+    if (route === '/settings/keyboard/') {
+      assert.ok(await page.getByRole('link', { name: /Download the Coptic Keyboard app on the App Store/u }).count());
     }
     // WebKit reports aborted speculative fetches as page errors if a test
     // tears down the document while Next's link prefetches are still running.

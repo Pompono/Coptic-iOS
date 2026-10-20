@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import PageHeader from '../PageHeader';
+import PageHeader, { PageBackLink } from '../PageHeader';
 import { useAuth } from '../AuthProvider';
 import { MINIMUM_PASSWORD_LENGTH } from '@/lib/auth/service';
 import styles from './account.module.css';
@@ -28,7 +28,7 @@ export default function AccountPage() {
     const requested = new URLSearchParams(window.location.search).get('mode');
     if (recoveryPending) setMode('reset');
     else if (requested === 'create' || requested === 'forgot') setMode(requested);
-    else if (requested === 'settings' && session) {
+    else if (session && requested !== 'sign-in') {
       setDisplayName(String(session.user.user_metadata?.display_name ?? ''));
       setMode('settings');
     }
@@ -145,12 +145,13 @@ export default function AccountPage() {
       : mode === 'reset' ? 'Choose a new password' : 'Account settings';
 
   return <main className={`app-page ${styles.page}`}>
+    <PageBackLink href="/settings/">Settings</PageBackLink>
     <PageHeader title="Account" icon="settings" />
     <section className={styles.card} aria-labelledby="account-heading">
       <h1 id="account-heading" className={styles.sectionTitle}>{formHeading}</h1>
       {!configured ? <>
         <p className={styles.copy}>Optional accounts use email and password. Account access is not configured in this build; you can continue using all learning features as a guest.</p>
-        <p className={styles.copy}>Your progress stays on this device. Cloud progress syncing is coming later and does not happen when you sign in or out.</p>
+        <p className={styles.copy}>Learning stays available locally as a guest. Signing in safely checks whether this device and your account have progress to reconcile.</p>
       </> : loading ? <p className={styles.status} role="status">Checking account…</p> : session && mode !== 'reset' ? <>
         <p className={styles.copy}>Signed in as <span className={styles.email}>{session.user.email}</span></p>
         <p className={styles.status} role="status">{session.user.email_confirmed_at ? 'Email verified' : 'Email verification is pending'}</p>
@@ -204,7 +205,7 @@ export default function AccountPage() {
           ? 'Create an optional account. You can keep learning as a guest; account sign-in does not sync or change your progress.'
           : mode === 'forgot' ? 'Enter your email and we will send password-reset instructions if the address can receive them.'
           : mode === 'verification' ? 'Enter the verification code from your email. We will not change local learning progress.'
-              : 'Sign in to your account. Your learning progress stays on this device.'}</p>
+          : 'Sign in to sync learning progress across your devices. Local progress is checked before any cloud copy is installed.'}</p>
         <form className={styles.form} onSubmit={submit}>
           {mode === 'create' && <label className={styles.field}>Display name (optional)
             <input value={displayName} onChange={event => setDisplayName(event.target.value)} maxLength={60} autoComplete="nickname" />
@@ -228,8 +229,7 @@ export default function AccountPage() {
       {error && <p className={styles.alert} role="alert">{error}</p>}
       {message && <p className={styles.alert} role="status">{message}</p>}
       {configured && error && /offline|connection|service could not be reached/iu.test(error) && <button className={styles.linkButton} type="button" disabled={loading} onClick={() => void retrySession()}>Retry session check</button>}
-      <p className={styles.copy}>Accounts do not include cloud progress syncing yet. Sign in and sign out leave your local learning progress and backup files unchanged.</p>
+      {session && <button className={styles.linkButton} type="button" onClick={() => changeMode('forgot')}>Change password</button>}
     </section>
-    <button className="ui-secondary" type="button" onClick={() => router.push('/settings/')}>Back to Settings</button>
   </main>;
 }
