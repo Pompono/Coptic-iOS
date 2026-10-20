@@ -5,6 +5,9 @@ import { loadTsModule } from './tsModule.mjs';
 const storageModule = await loadTsModule('lib/progressStorage.ts');
 const syncModule = await loadTsModule('lib/progressSync.ts');
 const { createProgressSyncCoordinator } = await loadTsModule('lib/progressSyncCoordinator.ts');
+const { reconcileProgressRecords, summarizeProgress } = await loadTsModule('lib/progressReconciliation.ts');
+const { acquireProgressSyncLock, withProgressSyncLock } = await loadTsModule('lib/progressSyncLock.ts');
+const { lessons } = await loadTsModule('lib/lesson.ts');
 
 class MemoryStorage {
   values = new Map();
@@ -20,6 +23,67 @@ const raw = (xp = 0) => JSON.stringify({ xp, streak: 0, completedLessons: [], la
 test('record comparison ignores object key ordering while retaining exact payload equality', () => {
   assert.equal(syncModule.sameProgressRecords({ a: '1', b: '2' }, { b: '2', a: '1' }), true);
   assert.equal(syncModule.sameProgressRecords({ a: '1' }, { a: '2' }), false);
+});
+
+test('manual and lifecycle sync operations are serialized by one device-wide lock', async () => {
+  const release = await acquireProgressSyncLock();
+  let started = false;
+  const queued = withProgressSyncLock(async () => { started = true; });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(started, false);
+  release();
+  await queued;
+  assert.equal(started, true);
+});
+
+test('safe reconciliation keeps curriculum completion, valid step, and unique vocabulary unions without adding XP', () => {
+  const first = lessons[0];
+  const second = lessons[1];
+  const firstStep = first.progressionGroups[0].lessons[0];
+  const secondStep = first.progressionGroups[0].lessons[1];
+  const base = { 'coptic-progress': JSON.stringify({ xp: 2, streak: 1, completedLessons: [], lastCompletedDate: '2026-10-01' }) };
+  const local = {
+    ...base,
+    'coptic-progress': JSON.stringify({ xp: 12, streak: 1, completedLessons: [first.id], lastCompletedDate: '2026-10-01' }),
+    [`coptic-unit-progress:${first.id}`]: JSON.stringify([firstStep.id]),
+    'coptic-vocabulary:v1': JSON.stringify({ version: 1, cards: [{ id: 'local', word: 'ⲁ', meaning: 'a', createdAt: 1, dueAt: 2, intervalDays: 1, reviews: 0, lapses: 0, streak: 0, lastReviewedAt: null }] }),
+  };
+  const cloud = {
+    'coptic-progress': JSON.stringify({ xp: 20, streak: 1, completedLessons: [first.id, second.id], lastCompletedDate: '2026-10-01' }),
+    [`coptic-unit-progress:${first.id}`]: JSON.stringify([secondStep.id]),
+    'coptic-vocabulary:v1': JSON.stringify({ version: 1, cards: [{ id: 'cloud', word: 'ⲃ', meaning: 'b', createdAt: 1, dueAt: 2, intervalDays: 1, reviews: 0, lapses: 0, streak: 0, lastReviewedAt: null }] }),
+  };
+  const result = reconcileProgressRecords(local, cloud);
+  assert.equal(result.safe, true);
+  assert.equal(JSON.parse(result.records['coptic-progress']).xp, 20);
+  assert.deepEqual(JSON.parse(result.records['coptic-progress']).completedLessons, [first.id, second.id]);
+  assert.deepEqual(JSON.parse(result.records[`coptic-unit-progress:${first.id}`]), [firstStep.id, secondStep.id]);
+  assert.deepEqual(JSON.parse(result.records['coptic-vocabulary:v1']).cards.map(card => card.id), ['local', 'cloud']);
+});
+
+test('reconciliation refuses skipped curriculum prerequisites, divergent streaks, and changed practice histories', () => {
+  const first = lessons[0];
+  const later = lessons[2];
+  const progress = (completedLessons, xp = 1, streak = 1, date = '2026-10-01') => JSON.stringify({ xp, streak, completedLessons, lastCompletedDate: date });
+  assert.equal(reconcileProgressRecords({ 'coptic-progress': progress([later.id]) }, { 'coptic-progress': progress([first.id]) }).safe, false);
+  assert.equal(reconcileProgressRecords({ 'coptic-progress': progress([], 1, 2) }, { 'coptic-progress': progress([], 1, 1) }).safe, false);
+  const skill = { word: 'word', meaning: 'meaning', attempts: 1, correct: 1, lapses: 0, dueAt: 1, lastSeen: 1, successfulDays: 1 };
+  assert.equal(reconcileProgressRecords({ 'coptic-learning:v1': JSON.stringify({ version: 1, skills: { id: skill } }) }, { 'coptic-learning:v1': JSON.stringify({ version: 1, skills: { id: { ...skill, attempts: 2 } } }) }).safe, false);
+});
+
+test('progress comparison follows nested curriculum order before counts and XP', () => {
+  const [first, second] = lessons;
+  const laterStep = second.progressionGroups[0].lessons[0];
+  const early = summarizeProgress({
+    'coptic-progress': JSON.stringify({ xp: 500, streak: 1, completedLessons: [], lastCompletedDate: '2026-10-01' }),
+    [`coptic-unit-progress:${first.id}`]: JSON.stringify(first.progressionGroups[0].lessons.map(step => step.id)),
+  });
+  const advanced = summarizeProgress({
+    'coptic-progress': JSON.stringify({ xp: 1, streak: 1, completedLessons: [], lastCompletedDate: '2026-10-01' }),
+    [`coptic-unit-progress:${second.id}`]: JSON.stringify([laterStep.id]),
+  });
+  assert.ok(advanced.position > early.position);
+  assert.equal(advanced.through, second.title);
 });
 
 test('removing prior learning progress is treated as a destructive change', () => {
@@ -181,6 +245,60 @@ test('local-only progress uploads by compare-and-swap and retains exact Unicode/
   assert.equal(fixture.state.base.revision, 2);
 });
 
+test('repeated unchanged triggers and a cloud snapshot already equal to local do not create revisions', async () => {
+  const fixture = coordinatorFixture({ local: { 'coptic-progress': raw(2) } });
+  await fixture.coordinator.request();
+  await fixture.coordinator.request();
+  await fixture.coordinator.request();
+  assert.equal(fixture.state.calls.upload, 1);
+  assert.equal(fixture.state.cloud.revision, 2);
+
+  const same = coordinatorFixture({
+    base: { revision: 1, records: { 'coptic-progress': raw(1) } },
+    local: { 'coptic-progress': raw(9) },
+    cloud: { revision: 7, records: { 'coptic-progress': raw(9) }, updatedAt: null },
+  });
+  await same.coordinator.request();
+  await same.coordinator.request();
+  assert.equal(same.state.calls.upload, 0);
+  assert.equal(same.state.base.revision, 7);
+});
+
+test('two-sided safe changes reconcile once against latest cloud and commit a new baseline', async () => {
+  const fixture = coordinatorFixture({
+    local: { 'coptic-progress': raw(9) },
+    cloud: { revision: 2, records: { 'coptic-progress': raw(7) }, updatedAt: null },
+  });
+  await fixture.coordinator.request();
+  assert.equal(fixture.state.calls.upload, 1);
+  assert.equal(fixture.state.cloud.revision, 3);
+  assert.equal(JSON.parse(fixture.state.cloud.records['coptic-progress']).xp, 9);
+  assert.deepEqual(fixture.state.base.records, fixture.state.cloud.records);
+});
+
+test('two-sided reconciliation retries only once using the latest confirmed cloud revision', async () => {
+  const card = id => ({ id, word: id, meaning: id, createdAt: 1, dueAt: 2, intervalDays: 1, reviews: 0, lapses: 0, streak: 0, lastReviewedAt: null });
+  const fixture = coordinatorFixture({
+    local: { 'coptic-progress': raw(9), 'coptic-vocabulary:v1': JSON.stringify({ version: 1, cards: [card('local')] }) },
+    cloud: { revision: 2, records: { 'coptic-progress': raw(7), 'coptic-vocabulary:v1': JSON.stringify({ version: 1, cards: [card('cloud')] }) }, updatedAt: null },
+  });
+  const upload = fixture.adapter.upload;
+  let attempts = 0;
+  fixture.adapter.upload = async (revision, records, signal) => {
+    attempts++;
+    if (attempts === 1) {
+      fixture.state.cloud = { revision: 3, records: { ...fixture.state.cloud.records, 'coptic-progress': raw(11) }, updatedAt: null };
+      return { conflict: true, snapshot: fixture.state.cloud };
+    }
+    return upload(revision, records, signal);
+  };
+  await fixture.coordinator.request();
+  assert.equal(attempts, 2);
+  assert.equal(fixture.state.cloud.revision, 4);
+  assert.deepEqual(JSON.parse(fixture.state.cloud.records['coptic-vocabulary:v1']).cards.map(value => value.id), ['local', 'cloud']);
+  assert.equal(JSON.parse(fixture.state.cloud.records['coptic-progress']).xp, 11);
+});
+
 test('cloud-only changes install only after the fresh read and local comparison', async () => {
   const next = { 'coptic-progress': raw(25), 'coptic-unit-progress:lesson-1': JSON.stringify(['ⲁ']) };
   const fixture = coordinatorFixture({ cloud: { revision: 2, records: next, updatedAt: null } });
@@ -192,14 +310,15 @@ test('cloud-only changes install only after the fresh read and local comparison'
   assert.equal(fixture.state.base.revision, 2);
 });
 
-test('two-sided edits and concurrent cloud revisions are not overwritten', async () => {
+test('safe two-sided edits reconcile while concurrent cloud revisions remain compare-and-swap protected', async () => {
   const fixture = coordinatorFixture({
     local: { 'coptic-progress': raw(4) },
     cloud: { revision: 2, records: { 'coptic-progress': raw(7) }, updatedAt: null },
   });
   await fixture.coordinator.request();
-  assert.equal(fixture.state.calls.upload, 0);
-  assert.equal(fixture.state.calls.install, 0);
+  assert.equal(fixture.state.calls.upload, 0); // max XP already matches cloud; adopt its revision without rewriting it
+  assert.equal(fixture.state.calls.install, 1);
+  assert.equal(fixture.state.local['coptic-progress'], raw(7));
 
   const raced = coordinatorFixture({ local: { 'coptic-progress': raw(5) } });
   raced.adapter.upload = async () => ({ conflict: true, snapshot: { revision: 9, records: { 'coptic-progress': raw(50) }, updatedAt: null } });
