@@ -34,9 +34,11 @@ try {
   await page.getByRole('heading', { name: 'Preferences', exact: true }).waitFor();
   await page.goto(`${base}/settings/progress/`); await page.waitForLoadState('networkidle');
   await page.getByRole('heading', { name: 'Progress', exact: true }).waitFor();
-  await page.getByRole('link', { name: 'Recover progress' }).waitFor();
+  const recoveryEntry = page.getByRole('button', { name: 'Recover progress', exact: true });
+  await recoveryEntry.waitFor();
   for (const hidden of ['Export Progress', 'Import Progress']) assert.equal(await page.getByText(hidden, { exact: true }).count(), 0, `${hidden} remains hidden`);
-  await page.goto(`${base}/settings/recovery/`); await page.waitForLoadState('networkidle');
+  await recoveryEntry.click();
+  await page.waitForURL('**/settings/recovery/'); await page.waitForLoadState('networkidle');
   await page.getByRole('heading', { name: 'Recover progress', exact: true }).waitFor();
   assert.match(await page.locator('body').innerText(), /No recovery copies are available/u);
   assert.equal(await page.getByRole('button', { name: /Recover/u }).count(), 0, 'Recovery is offered only when a saved recovery copy exists');
