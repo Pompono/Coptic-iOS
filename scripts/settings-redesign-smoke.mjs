@@ -64,10 +64,14 @@ try {
       await page.getByLabel('Appearance').selectOption('light');
       const fonts = page.getByLabel('Coptic font');
       assert.deepEqual(await fonts.locator('option').allTextContents(), ['Modern', 'Classic']);
+      assert.equal(await fonts.inputValue(), 'avva', 'Modern is the default when no font preference has been saved');
       await fonts.selectOption('unicode');
       assert.equal(await page.evaluate(() => localStorage.getItem('coptic-font-mode')), 'unicode');
       await page.reload();
       assert.equal(await page.getByLabel('Coptic font').inputValue(), 'unicode', 'saved font selection remains selected');
+      await page.getByLabel('Coptic font').selectOption('avva');
+      await page.reload();
+      assert.equal(await page.getByLabel('Coptic font').inputValue(), 'avva', 'screenshot shows the Modern default after persistence coverage');
     }
     if (route === '/settings/account/?mode=settings') {
       assert.equal(await page.getByRole('heading', { name: 'Account settings', exact: true }).count(), 0);
