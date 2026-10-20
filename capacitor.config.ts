@@ -3,7 +3,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.pompono.coptic',
-  appName: 'Coptic',
+  appName: 'CoptLingo',
   webDir: 'out',
   // Capacitor's bridge can log plugin results, including translated text.
   loggingBehavior: 'none',

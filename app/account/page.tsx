@@ -64,7 +64,7 @@ export default function AccountPage() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!service) { setError('Account sign-in is not configured in this build. You can keep using Coptic as a guest.'); return; }
+    if (!service) { setError('Account sign-in is not configured in this build. You can keep using CoptLingo as a guest.'); return; }
     setBusy(true); setError(''); setMessage(''); clearError();
     try {
       if (mode === 'create') {
@@ -107,7 +107,7 @@ export default function AccountPage() {
   }
 
   async function resendVerification() {
-    if (!service) { setError('Account sign-in is not configured in this build. You can keep using Coptic as a guest.'); return; }
+    if (!service) { setError('Account sign-in is not configured in this build. You can keep using CoptLingo as a guest.'); return; }
     setBusy(true); setError(''); setMessage(''); clearError();
     try {
       setMessage(await service.resendVerification(email));

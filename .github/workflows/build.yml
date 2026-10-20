@@ -101,6 +101,18 @@ jobs:
       - run: bash scripts/native-startup-smoke.sh 2>&1 | tee /tmp/coptic-native-startup.log
         id: native_startup
         timeout-minutes: 18
+      - run: xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphoneos -destination 'generic/platform=iOS' -configuration Release -derivedDataPath /tmp/coptic-iphone-derived CODE_SIGNING_ALLOWED=NO build
+      - run: |
+          mkdir -p /tmp/coptic-ipa/Payload
+          cp -R /tmp/coptic-iphone-derived/Build/Products/Release-iphoneos/App.app /tmp/coptic-ipa/Payload/App.app
+          (cd /tmp/coptic-ipa && /usr/bin/zip -qr /tmp/CoptLingo-unsigned.ipa Payload)
+      - run: python3 scripts/scanner/verify-ipa.py /tmp/CoptLingo-unsigned.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CoptLingo-unsigned-iphone-ipa
+          path: /tmp/CoptLingo-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 30
       - uses: actions/upload-artifact@v4
         if: failure() && steps.native_startup.outcome == 'failure'
         with:

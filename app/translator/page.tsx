@@ -498,9 +498,9 @@ export default function TranslatorPage() {
               </div>
               <p className="translation-method-description">{translationMethod === 'published'
                 ? 'Finds translations in supported published Coptic passages offline. Bohairic only; not all text can be matched.'
-                : 'Sends text over HTTPS to CopticLingo’s hosted AI. Internet required; up to 1,200 characters. Results may be inaccurate.'}</p>
+                : 'Sends text over HTTPS to CoptLingo’s hosted AI. Internet required; up to 1,200 characters. Results may be inaccurate.'}</p>
             </div> : null}
-            {!isCopticToEnglish && <p className="translation-method-description">AI translation sends text over HTTPS to CopticLingo. Internet required · maximum 1,200 characters · results may be inaccurate.</p>}
+            {!isCopticToEnglish && <p className="translation-method-description">AI translation sends text over HTTPS to CoptLingo. Internet required · maximum 1,200 characters · results may be inaccurate.</p>}
             <button type="submit" className="ui-primary" disabled={currentState==='loading'}>{currentState==='loading'?'Translating…':'Translate'}{currentState!=='loading'&&<AppIcon name="arrow" size={18}/>}</button>
           </form>
           {isCopticToEnglish&&currentState==='loading'&&<p role="status" className="mt-3 text-sm">{translationProgress}</p>}
@@ -516,7 +516,7 @@ export default function TranslatorPage() {
           {isCopticToEnglish&&currentOutput&&outputMethod==='experimental'&&draftSegments.length>1&&<details className="translation-help"><summary className="disclosure-summary">Review each draft passage<span className="disclosure-chevron"><AppIcon name="chevron" size={16}/></span></summary>{draftSegments.map((segment,index)=><div key={index}><p className="coptic-text">{segment.text}</p><p>{segment.translation}</p></div>)}</details>}
           {currentConfidence!==null&&<p className="translation-help">Confidence: {(currentConfidence*100).toFixed(1)}%</p>}
         </section>
-        <details className="translation-help"><summary className="disclosure-summary">About translation & offline use<span className="disclosure-chevron"><AppIcon name="chevron" size={16}/></span></summary><p>Published text returns an existing translation when the letters match a supported passage. It does not guess missing text. Experimental AI drafts can contain wrong meanings.</p><p>AI in both directions runs on CopticLingo’s hosted server, not on this device. Submitted text is sent over HTTPS; no photos are sent. AI requires internet and accepts up to 1,200 characters. Published-text lookup stays on-device and works offline. Scanner translation remains a separate on-device feature in offline-model builds. Bohairic-only mode follows Settings.</p></details>
+        <details className="translation-help"><summary className="disclosure-summary">About translation & offline use<span className="disclosure-chevron"><AppIcon name="chevron" size={16}/></span></summary><p>Published text returns an existing translation when the letters match a supported passage. It does not guess missing text. Experimental AI drafts can contain wrong meanings.</p><p>AI in both directions runs on CoptLingo’s hosted server, not on this device. Submitted text is sent over HTTPS; no photos are sent. AI requires internet and accepts up to 1,200 characters. Published-text lookup stays on-device and works offline. Scanner translation remains a separate on-device feature in offline-model builds. Bohairic-only mode follows Settings.</p></details>
         <details className="translation-advanced">
           <summary className="disclosure-summary">Translation options<span className="disclosure-chevron"><AppIcon name="chevron" size={16}/></span></summary>
           <div className="translation-options">
