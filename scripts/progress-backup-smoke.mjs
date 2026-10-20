@@ -35,14 +35,12 @@ try {
     localStorage.setItem('coptic-progress-cloud-recovery:v1', JSON.stringify({ version: 1, savedAt: new Date().toISOString(), records: { 'coptic-progress': cloudRaw } }));
     localStorage.setItem('__recovery-smoke-seeded', 'true');
   }, { originalRaw: original, previousRaw: previous, cloudRaw: beforeCloud });
-  await page.goto(`${base}/settings/progress/`); await page.waitForLoadState('networkidle');
+  await page.goto(`${base}/settings/`); await page.waitForLoadState('networkidle');
+  await page.getByRole('heading', { name: 'Settings', exact: true }).waitFor();
+  await page.getByRole('link', { name: /Progress/u }).click();
+  await page.getByRole('heading', { name: 'Progress', exact: true }).waitFor();
+  await page.waitForLoadState('networkidle');
   for (const hidden of ['Export Progress', 'Import Progress']) assert.equal(await page.getByText(hidden, { exact: true }).count(), 0, `${hidden} remains hidden`);
-  console.log('Recovery fixture:', await page.evaluate(() => ({
-    seeded: localStorage.getItem('__recovery-smoke-seeded'),
-    local: localStorage.getItem('coptic-progress-recovery:v1'),
-    cloud: localStorage.getItem('coptic-progress-cloud-recovery:v1'),
-  })));
-  console.log('Recovery screen:', (await page.locator('body').innerText()).slice(-1800));
 
   await page.getByRole('button', { name: 'Recover previous progress' }).click();
   await page.getByRole('group', { name: 'Confirm progress recovery' }).waitFor();
