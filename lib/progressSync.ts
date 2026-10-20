@@ -3,14 +3,44 @@ import { parseBackup, replaceRecordsForCloudSync, type Records } from './progres
 
 export const PROGRESS_SYNC_OPT_IN_KEY = 'coptic-progress-sync-enabled:v1';
 const SYNC_BASE_PREFIX = 'coptic-progress-sync-base:v1:';
+const MAX_CLOUD_SNAPSHOT_BYTES = 20 * 1024 * 1024;
+const MAX_CLOUD_RECORDS = 10_000;
 
 export type ProgressSnapshot = { revision: number; records: Records; updatedAt: string | null };
 export type SyncBase = { revision: number; records: Records };
+
+const SAFE_SYNC_ERROR_DESCRIPTIONS: Record<string, string> = {
+  '22003': 'The cloud progress revision reached its supported limit.',
+  '22023': 'The cloud rejected a progress record as unsupported or outside its allowed limits.',
+  '23505': 'A concurrent save conflicted with this upload. Sync again to review the latest copy.',
+  '28000': 'The sign-in session was not accepted. Sign in again before syncing.',
+  '40001': 'Cloud progress changed on another device. Sync again to review the latest copy.',
+  '42501': 'The cloud permission check rejected this request.',
+  '42702': 'The cloud sync function has an ambiguous database column reference.',
+  '42883': 'The cloud sync function is missing or has an incompatible signature.',
+  PGRST202: 'The cloud sync function is unavailable in the API schema cache.',
+  PGRST301: 'The sign-in session was not accepted. Sign in again before syncing.',
+};
+
+/** Report a stable code and allowlisted description; never expose raw server details or record values. */
+export function progressSyncErrorMessage(error: unknown) {
+  const candidate = error && typeof error === 'object' ? error as { code?: unknown } : {};
+  const rawCode = typeof candidate.code === 'string' ? candidate.code : '';
+  const code = /^[0-9A-Z]{5}$/.test(rawCode) || /^PGRST\d{3}$/.test(rawCode) ? rawCode : 'unknown';
+  const description = SAFE_SYNC_ERROR_DESCRIPTIONS[code] ?? 'The cloud service rejected the request. Contact support with this code.';
+  return `Cloud sync failed (${code}): ${description} Your local progress is unchanged.`;
+}
 
 function checkedRecords(value: unknown): Records {
   const backup = parseBackup(JSON.stringify({
     format: 'coptic-progress-backup', version: 1, exportedAt: new Date().toISOString(), records: value,
   }));
+  if (Object.keys(backup.records).length > MAX_CLOUD_RECORDS) {
+    throw new Error('This progress snapshot has too many records to sync. Your saved progress is unchanged.');
+  }
+  if (new TextEncoder().encode(JSON.stringify(backup.records)).byteLength > MAX_CLOUD_SNAPSHOT_BYTES) {
+    throw new Error('This progress snapshot is larger than the cloud sync limit. Your saved progress is unchanged.');
+  }
   return backup.records;
 }
 
