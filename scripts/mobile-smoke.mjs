@@ -38,23 +38,44 @@ async function checkSettingsLayout(page) {
   await page.evaluate(() => {
     document.documentElement.dataset.largeText = 'true';
     document.documentElement.style.fontSize = '180%';
+  });
+  const result = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, document: document.documentElement.scrollWidth }));
+  assert.ok(result.document <= result.viewport + 1, 'Settings has no horizontal overflow at a narrow, large-text viewport');
+  await page.evaluate(() => {
+    delete document.documentElement.dataset.largeText;
+    document.documentElement.style.removeProperty('font-size');
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+}
+async function checkAccountLayout(page) {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.evaluate(() => {
+    document.documentElement.dataset.largeText = 'true';
+    document.documentElement.style.fontSize = '180%';
+    const moduleClass = name => {
+      for (const sheet of document.styleSheets) {
+        let rules;
+        try { rules = sheet.cssRules; } catch { continue; }
+        for (const rule of rules) {
+          if (!rule.selectorText) continue;
+          const match = rule.selectorText.match(new RegExp(`\\.([\\w-]*${name}_[\\w-]+)`));
+          if (match) return match[1];
+        }
+      }
+      throw new Error(`Account layout style not found: ${name}`);
+    };
     const fixture = document.createElement('section');
-    fixture.className = 'settings-group settings-group--content account-settings-card';
+    fixture.className = 'settings-group settings-group--content';
     fixture.setAttribute('aria-label', 'Long account identity layout fixture');
-    fixture.innerHTML = '<div class="accountInfo"><label class="field">Display name<input value="A long display name for a learner account"></label><div class="field">Email address<span class="readOnlyValue">learner.with.a.long.address.for.mobile.layout@example.invalid</span><span class="status">Email not verified</span></div></div><div class="accountActions"><button type="button">Change password</button><button type="button">Sign Out</button></div>';
+    fixture.innerHTML = `<div class="${moduleClass('accountInfo')}"><label class="${moduleClass('field')}">Display name<input value="A long display name for a learner account"></label><div class="${moduleClass('field')}">Email address<span class="${moduleClass('readOnlyValue')}">learner.with.a.long.address.for.mobile.layout@example.invalid</span><span class="${moduleClass('status')}">Email not verified</span></div></div><div class="${moduleClass('accountActions')}"><button class="${moduleClass('linkButton')}" type="button">Change password</button><button class="${moduleClass('linkButton')}" type="button">Sign Out</button></div>`;
     document.querySelector('.settings-page').append(fixture);
   });
   const result = await page.evaluate(() => {
-    const email = document.querySelector('[aria-label="Long account identity layout fixture"] .readOnlyValue');
+    const email = document.querySelector('[aria-label="Long account identity layout fixture"] span[class*="readOnlyValue"]');
     const buttons = [...document.querySelectorAll('[aria-label="Long account identity layout fixture"] button')];
-    return {
-      viewport: document.documentElement.clientWidth,
-      document: document.documentElement.scrollWidth,
-      emailFits: email.scrollWidth <= email.clientWidth + 1,
-      buttonHeights: buttons.map(button => button.getBoundingClientRect().height),
-    };
+    return { viewport: document.documentElement.clientWidth, document: document.documentElement.scrollWidth, emailFits: email.scrollWidth <= email.clientWidth + 1, buttonHeights: buttons.map(button => button.getBoundingClientRect().height) };
   });
-  assert.ok(result.document <= result.viewport + 1, 'Settings has no horizontal overflow at a narrow, large-text viewport');
+  assert.ok(result.document <= result.viewport + 1, 'Account has no horizontal overflow at a narrow, large-text viewport');
   assert.equal(result.emailFits, true, 'Long account emails wrap within their content column');
   assert.ok(result.buttonHeights.every(height => height >= 44), 'Account actions remain large enough to tap with large text');
   await page.evaluate(() => {
@@ -142,6 +163,7 @@ try {
       assert.equal(await page.getByText('Import Progress', { exact: true }).count(), 0);
       await checkSettingsLayout(page);
     }
+    if (route === '/settings/account/') await checkAccountLayout(page);
     if (route === '/settings/preferences/') {
       await page.getByRole('heading', { name: 'Preferences', exact: true }).waitFor();
       await page.getByRole('combobox', { name: 'Appearance', exact: true }).selectOption('dark');
