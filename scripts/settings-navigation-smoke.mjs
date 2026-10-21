@@ -114,7 +114,7 @@ try {
   await back(); await idle('/settings', 'Settings');
   await page.getByRole('link', { name: /Preferences/ }).click(); await idle('/settings/preferences', 'Preferences');
   const cdp = browserType === chromium ? await context.newCDPSession(page) : null;
-  const touch = async (type, x = 8, y = 220) => {
+  const touch = async (type, x = 8, y = 100) => {
     if (cdp) await cdp.send('Input.dispatchTouchEvent', { type, touchPoints: /End|Cancel/.test(type) ? [] : [{ x, y }] });
     // Playwright WebKit has no touch-drag API. Exercise its real mouse pointer
     // path; Chromium above supplies trusted touch injection, not DOM dispatch.
@@ -139,9 +139,10 @@ try {
   assert.ok(await page.evaluate(() => window.__current === document.querySelector('[data-settings-layer]')), 'Cancellation preserves current React surface');
   await touch('touchStart'); await touch('touchMove', 200); await touch('touchCancel'); await idle('/settings/preferences', 'Preferences');
   assert.equal(clean(new URL(page.url()).pathname), '/settings/preferences', 'System touch cancellation cannot commit');
-  await touch('touchStart'); await touch('touchMove', 12, 270); await touch('touchEnd');
+  await touch('touchStart'); await touch('touchMove', 12, 150); await touch('touchEnd');
   await idle('/settings/preferences', 'Preferences');
   assert.equal(await page.locator('[data-settings-layer]').count(), 1, 'Vertical drag does not mount a preview');
+  await page.evaluate(() => window.getSelection()?.removeAllRanges());
   await touch('touchStart', 70); await touch('touchMove', 280); await touch('touchEnd');
   await idle('/settings/preferences', 'Preferences');
   // Rejected desktop drags may select text; clear it as a user would before
@@ -218,3 +219,5 @@ try {
   await context.close(); await browser.close();
   if (server) await new Promise(resolve => server.close(resolve));
 }
+
+

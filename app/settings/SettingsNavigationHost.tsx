@@ -1,6 +1,8 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
+import { App } from '@capacitor/app';
+import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
 import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { registerSettingsNavigation } from '@/lib/settingsNavigation';
 import { isSettingsRoute, normalizeSettingsPath, readSettingsHistory, SETTINGS_HISTORY_KEY, settingsTransforms, settingsParent, settingsDragIntent, settingsDragCompletes, type SettingsHistory } from '@/lib/settingsStack';
@@ -26,7 +28,7 @@ export default function SettingsNavigationHost() {
   const [scene, setScene] = useState<Scene | null>(null);
   const [, refresh] = useState(0);
   const live = useRef({ current, scene, pending: null as Pending | null, history: null as SettingsHistory | null,
-    animations: [] as Animation[], disabled: false, leaving: false, disposed: false, scroll: 0, restore: null as number | null, timer: 0, drag: null as Drag | null });
+    animations: [] as Animation[], disabled: false, leaving: false, disposed: false, scroll: 0, restore: null as number | null, timer: 0, drag: null as Drag | null, focus: false });
   const state = live.current;
 
   function motionAvailable() {
@@ -44,16 +46,13 @@ export default function SettingsNavigationHost() {
   function show(page: Page, focus = false) {
     cancelAnimations();
     state.current = page; state.scene = null; state.restore = page.y; state.drag = null;
+    state.focus = focus;
     setCurrent(page); setScene(null);
-    if (focus) queueMicrotask(() => {
-      if (state.disposed || state.scene || state.leaving) return;
-      const heading = host.current?.querySelector<HTMLElement>('h1');
-      heading?.setAttribute('tabindex', '-1'); heading?.focus({ preventScroll: true });
-    });
   }
   function saveHistory(history: SettingsHistory) {
     state.history = history;
-    window.history.replaceState({ ...window.history.state, [SETTINGS_HISTORY_KEY]: history }, '');
+    try { window.history.replaceState({ ...window.history.state, [SETTINGS_HISTORY_KEY]: history }, ''); }
+    catch { state.disabled = true; }
   }
   function finish(value: Scene) {
     if (state.scene !== value || state.disposed) return;
@@ -146,7 +145,7 @@ export default function SettingsNavigationHost() {
     const priorRestoration = window.history.scrollRestoration;
     window.history.scrollRestoration = 'manual';
     const history = readSettingsHistory(window.history.state?.[SETTINGS_HISTORY_KEY], path)
-      ?? { path, y: Math.max(0, window.scrollY), trail: [], session: crypto.randomUUID(), index: 0 };
+      ?? { path, y: Math.max(0, window.scrollY), trail: [], session: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`, index: 0 };
     saveHistory(history); state.scroll = history.y;
     show({ path, y: history.y });
     const unregister = registerSettingsNavigation({ navigate, leave: () => {
@@ -161,6 +160,13 @@ export default function SettingsNavigationHost() {
     const interrupt = () => { state.drag = null; if (state.scene) finish(state.scene); };
     const visibility = () => { if (document.hidden) interrupt(); };
     const media = matchMedia('(prefers-reduced-motion: reduce)');
+    let nativeListener: PluginListenerHandle | undefined;
+    let disposed = false;
+    if (Capacitor.isNativePlatform()) {
+      void App.addListener('appStateChange', interrupt).then(listener => {
+        if (disposed) void listener.remove(); else nativeListener = listener;
+      }).catch(() => { state.disabled = true; interrupt(); });
+    }
     window.addEventListener('scroll', scroll, { passive: true });
     window.addEventListener('resize', interrupt);
     window.addEventListener('pagehide', interrupt);
@@ -192,6 +198,7 @@ export default function SettingsNavigationHost() {
     element.addEventListener('pointerup', pointerUp); element.addEventListener('pointercancel', pointerCancel);
     return () => {
       state.disposed = true; unregister(); cancelAnimations(); clearTimeout(state.timer);
+      disposed = true; void nativeListener?.remove();
       window.history.scrollRestoration = priorRestoration;
       window.removeEventListener('scroll', scroll); window.removeEventListener('resize', interrupt);
       window.removeEventListener('pagehide', interrupt); document.removeEventListener('visibilitychange', visibility);
@@ -239,6 +246,11 @@ export default function SettingsNavigationHost() {
     if (state.restore !== null) {
       window.scrollTo({ top: state.restore, behavior: 'instant' });
       state.scroll = window.scrollY; state.restore = null;
+    }
+    if (state.focus && !scene && !state.leaving) {
+      state.focus = false;
+      const heading = host.current?.querySelector<HTMLElement>('h1');
+      heading?.setAttribute('tabindex', '-1'); heading?.focus({ preventScroll: true });
     }
     if (!scene || scene.kind !== 'settling') return;
     const from = host.current?.querySelector<HTMLElement>('[data-layer-role="from"]');
