@@ -73,13 +73,13 @@ try {
       });
       assert.ok(submenuSpacing >= 24, 'Preferences heading has a shared 24px gap before its first card');
       assert.equal(await page.locator('.mobile-chin-dock').evaluate(node => node.getBoundingClientRect().top), dockTop, 'Bottom navigation stays fixed during the Settings transition');
+      await page.goBack();
+      await waitForPath('/settings');
+      await page.goForward();
+      await waitForPath('/settings/preferences');
       await page.getByRole('main').getByRole('link', { name: 'Settings', exact: true }).click();
       await waitForPath('/settings');
       assert.equal(await page.locator('.settings-home > .page-header h1').textContent(), 'Settings', 'The Settings back row returns to the previous history entry');
-      await page.goBack();
-      await waitForPath('/settings/preferences');
-      await page.goForward();
-      await waitForPath('/settings');
       await page.getByRole('link', { name: /Progress/u }).click();
       await waitForPath('/settings/progress');
       await page.waitForFunction(() => document.querySelector('.settings-subpage') && document.querySelector('[data-settings-snapshot]'));
