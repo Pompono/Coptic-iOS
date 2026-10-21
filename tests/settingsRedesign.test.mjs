@@ -42,7 +42,9 @@ test('Settings exposes one profile entry, two primary categories, and the keyboa
 });
 
 test('Settings subpages share their back navigation and omit a sync toggle', () => {
-  assert.match(subpage, /<PageBackLink href="\/settings\/">Settings<\/PageBackLink>/u);
+  assert.match(subpage, /PageBackLink href=\{backHref\}>\{backLabel\}<\/PageBackLink>/u);
+  assert.match(subpage, /backHref = '\/settings\/', backLabel = 'Settings'/u);
+  assert.match(subpage, /title="Recover progress" backHref="\/settings\/progress\/" backLabel="Progress"/u);
   assert.match(subpage, /section === 'preferences'/u);
   assert.match(subpage, /<Shell title="Preferences"/u);
   assert.doesNotMatch(progress, /Enable Cloud Sync|settings-cloud-progress__toggle/u);

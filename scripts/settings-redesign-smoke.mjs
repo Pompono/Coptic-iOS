@@ -85,7 +85,7 @@ try {
       assert.equal(await page.locator('.settings-subpage > .page-header h1').textContent(), 'Progress');
       await page.getByRole('button', { name: /Recover progress/u }).click();
       await waitForPath('/settings/recovery');
-      await page.getByRole('main').getByRole('link', { name: 'Settings', exact: true }).click();
+      await page.getByRole('main').getByRole('link', { name: 'Progress', exact: true }).click();
       await waitForPath('/settings/progress');
       await page.getByRole('main').getByRole('link', { name: 'Settings', exact: true }).click();
       await waitForPath('/settings');
@@ -111,7 +111,8 @@ try {
     }
     if (route.startsWith('/settings/') && route !== '/settings/') {
       assert.equal(await page.locator('.mobile-chin-dock__item[aria-current="page"][aria-label="Settings"]').count(), 1, 'Settings stays selected in a submenu');
-      await page.getByRole('link', { name: 'Settings', exact: true }).first().waitFor();
+      const backLabel = route === '/settings/recovery/' ? 'Progress' : 'Settings';
+      await page.getByRole('main').getByRole('link', { name: backLabel, exact: true }).waitFor();
     }
     if (route === '/settings/progress/') {
       assert.match(await page.locator('body').innerText(), /Progress stays on this device|Synced|Syncing|Offline|Pending|Needs attention|Error|Unavailable/u);

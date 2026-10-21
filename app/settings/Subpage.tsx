@@ -12,7 +12,7 @@ import { BOHAIRIC_ONLY_STORAGE_KEY, isBohairicOnlyEnabled } from '../BohairicPre
 import { makeBackup, replaceRecords } from '@/lib/progressStorage';
 import AccountPage from '../account/page';
 
-function Shell({ title, children }: { title: string; children: ReactNode }) { return <main className="app-page settings-page settings-subpage"><PageBackLink href="/settings/">Settings</PageBackLink><PageHeader title={title} icon="settings"/>{children}</main>; }
+function Shell({ title, children, backHref = '/settings/', backLabel = 'Settings' }: { title: string; children: ReactNode; backHref?: string; backLabel?: string }) { return <main className="app-page settings-page settings-subpage"><PageBackLink href={backHref}>{backLabel}</PageBackLink><PageHeader title={title} icon="settings"/>{children}</main>; }
 
 function LearningSettings() {
   const [font, setFont] = useState<CopticFontMode>('avva'); const [theme, setTheme] = useState<ThemeMode>('system'); const [bohairic, setBohairic] = useState(true);
@@ -32,7 +32,7 @@ export default function SettingsSubpage() {
   if (section === 'account') return <AccountPage/>;
   if (section === 'learning' || section === 'preferences') return <LearningSettings/>;
   if (section === 'progress') return <Shell title="Progress"><ProgressSync/><ProgressBackup/></Shell>;
-  if (section === 'recovery') return <Shell title="Recover progress"><ProgressBackup focused/></Shell>;
+  if (section === 'recovery') return <Shell title="Recover progress" backHref="/settings/progress/" backLabel="Progress"><ProgressBackup focused/></Shell>;
   if (section === 'developer') return <DeveloperSettings/>;
   return <Shell title="Settings"><p>That settings page is unavailable.</p></Shell>;
 }
