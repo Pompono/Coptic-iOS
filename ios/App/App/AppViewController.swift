@@ -9,9 +9,11 @@ class AppViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(AppIconPlugin())
         bridge?.registerPluginInstance(AppExperiencePlugin())
         bridge?.registerPluginInstance(LessonAudioPlugin())
-        // Keep normal content scrolling, but never rubber-band past its bounds.
-        webView?.scrollView.bounces = false
-        webView?.scrollView.alwaysBounceVertical = false
+        // Let WKWebView provide native momentum and rubber-band behavior for
+        // the document scroll. Lesson exercises lock this scroll view only
+        // while their dedicated inner panes are active.
+        webView?.scrollView.bounces = true
+        webView?.scrollView.alwaysBounceVertical = true
         webView?.scrollView.alwaysBounceHorizontal = false
         #if DEBUG
         if let audioURL = Bundle.main.resourceURL?.appendingPathComponent("public/audio/learn/shared/a.wav") {

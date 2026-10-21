@@ -148,7 +148,28 @@ input[type=checkbox] { accent-color:var(--teal); }
 .settings-navigation__row { min-height:64px; display:flex; align-items:center; gap:14px; padding:10px 16px; border-radius:18px; background:var(--surface-1); box-shadow:var(--surface-shadow); color:var(--text-color); text-decoration:none; position:relative; }
 .settings-navigation__icon { flex:0 0 44px; width:44px; height:44px; display:grid; place-items:center; border-radius:13px; background:var(--surface-2); color:var(--tint-color); font-size:1.15rem; font-weight:700; }
 .settings-navigation__icon.is-progress { background:var(--teal-surface); }.settings-navigation__icon.is-keyboard { background:var(--lesson-retry-bg); color:var(--gold); }.settings-navigation__icon.is-developer { background:var(--surface-2); }
-.settings-subpage { gap:16px!important; }.settings-subpage>.page-back { margin-bottom:-8px; }.settings-subpage .settings-group--content { overflow-wrap:anywhere; }.settings-subpage .page-header__identity { display:none; }
+.settings-subpage { display:grid; align-content:start; gap:0!important; --settings-subpage-title-card-gap:24px; }
+.settings-subpage>.page-back { margin:0 0 4px -5px; }
+.settings-subpage>.page-header { margin:0 0 var(--settings-subpage-title-card-gap); }
+.settings-subpage .settings-group--content { overflow-wrap:anywhere; }.settings-subpage .page-header__identity { display:none; }
+/* Native View Transitions animate only the Settings page; the dock and shell stay fixed. */
+html[data-settings-navigation] .settings-page { view-transition-name:settings-content; }
+html[data-settings-navigation]::view-transition-old(root),
+html[data-settings-navigation]::view-transition-new(root) { animation:none; }
+html[data-settings-navigation]::view-transition-group(settings-content) { animation-duration:280ms; animation-timing-function:cubic-bezier(.2,.75,.25,1); }
+html[data-settings-navigation="forward"]::view-transition-old(settings-content) { animation:settings-forward-old 280ms cubic-bezier(.2,.75,.25,1) both; }
+html[data-settings-navigation="forward"]::view-transition-new(settings-content) { animation:settings-forward-new 280ms cubic-bezier(.2,.75,.25,1) both; }
+html[data-settings-navigation="back"]::view-transition-old(settings-content) { animation:settings-back-old 280ms cubic-bezier(.2,.75,.25,1) both; }
+html[data-settings-navigation="back"]::view-transition-new(settings-content) { animation:settings-back-new 280ms cubic-bezier(.2,.75,.25,1) both; }
+@keyframes settings-forward-old { to { transform:translateX(-14%); } }
+@keyframes settings-forward-new { from { transform:translateX(100%); } to { transform:translateX(0); } }
+@keyframes settings-back-old { to { transform:translateX(100%); } }
+@keyframes settings-back-new { from { transform:translateX(-14%); } to { transform:translateX(0); } }
+@media (prefers-reduced-motion:reduce) {
+  html[data-settings-navigation]::view-transition-group(settings-content),
+  html[data-settings-navigation]::view-transition-old(settings-content),
+  html[data-settings-navigation]::view-transition-new(settings-content) { animation:none!important; }
+}
 .settings-row-note { display:block; margin-top:2px; color:var(--text-muted); font-size:.82rem; line-height:1.4; }
 .settings-sync-state { display:grid; gap:4px; margin:0; font-size:1rem; font-weight:650; }.settings-sync-state small { color:var(--text-muted); font-size:.82rem; font-weight:400; }
 .settings-navigation__row:focus-visible,.settings-account-entry:focus-visible { outline:2px solid var(--teal); outline-offset:-2px; }

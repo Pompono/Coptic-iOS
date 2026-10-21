@@ -62,6 +62,23 @@ try {
       assert.ok(topSpacing.headerToProfile >= 20, 'Settings heading has breathing room before the profile card');
       assert.ok(topSpacing.profileToCategory >= 20, 'Profile card has breathing room before Preferences');
       assert.ok(await page.locator('.settings-navigation__icon.is-learning svg').count(), 'Preferences uses the adjustment controls icon');
+      const dockTop = await page.locator('.mobile-chin-dock').evaluate(node => node.getBoundingClientRect().top);
+      await page.getByRole('link', { name: /Preferences/u }).click();
+      await page.waitForURL('**/settings/preferences/');
+      const submenuSpacing = await page.evaluate(() => {
+        const title = document.querySelector('.settings-subpage > .page-header').getBoundingClientRect();
+        const firstCard = document.querySelector('.settings-subpage > section').getBoundingClientRect();
+        return firstCard.top - title.bottom;
+      });
+      assert.ok(submenuSpacing >= 24, 'Preferences heading has a shared 24px gap before its first card');
+      assert.equal(await page.locator('.mobile-chin-dock').evaluate(node => node.getBoundingClientRect().top), dockTop, 'Bottom navigation stays fixed during the Settings transition');
+      await page.getByRole('link', { name: 'Settings', exact: true }).click();
+      await page.waitForURL('**/settings/');
+      assert.equal(await page.locator('.settings-home > .page-header h1').textContent(), 'Settings', 'The Settings back row returns to the previous history entry');
+      await page.goBack();
+      await page.waitForURL('**/settings/preferences/');
+      await page.goForward();
+      await page.waitForURL('**/settings/');
       await page.setViewportSize({ width: 320, height: 740 });
       const narrowLayout = await page.evaluate(() => {
         const card = document.querySelector('.settings-keyboard-install__card');
