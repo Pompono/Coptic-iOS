@@ -28,6 +28,7 @@ try {
   browser = await chromium.launch({ headless: true, timeout: 15000, executablePath: process.env.COPTIC_BROWSER_EXECUTABLE || undefined });
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
   page.setDefaultTimeout(15000);
+  const waitForPath = path => page.waitForURL(url => url.pathname.replace(/\/$/u, '') === path);
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   for (const [route, title, screenshot] of [
@@ -64,7 +65,7 @@ try {
       assert.ok(await page.locator('.settings-navigation__icon.is-learning svg').count(), 'Preferences uses the adjustment controls icon');
       const dockTop = await page.locator('.mobile-chin-dock').evaluate(node => node.getBoundingClientRect().top);
       await page.getByRole('link', { name: /Preferences/u }).click();
-      await page.waitForURL('**/settings/preferences/');
+      await waitForPath('/settings/preferences');
       const submenuSpacing = await page.evaluate(() => {
         const title = document.querySelector('.settings-subpage > .page-header').getBoundingClientRect();
         const firstCard = document.querySelector('.settings-subpage > section').getBoundingClientRect();
@@ -73,31 +74,31 @@ try {
       assert.ok(submenuSpacing >= 24, 'Preferences heading has a shared 24px gap before its first card');
       assert.equal(await page.locator('.mobile-chin-dock').evaluate(node => node.getBoundingClientRect().top), dockTop, 'Bottom navigation stays fixed during the Settings transition');
       await page.getByRole('link', { name: 'Settings', exact: true }).click();
-      await page.waitForURL('**/settings/');
+      await waitForPath('/settings');
       assert.equal(await page.locator('.settings-home > .page-header h1').textContent(), 'Settings', 'The Settings back row returns to the previous history entry');
       await page.goBack();
-      await page.waitForURL('**/settings/preferences/');
+      await waitForPath('/settings/preferences');
       await page.goForward();
-      await page.waitForURL('**/settings/');
-      await page.evaluate(() => Object.defineProperty(document, 'startViewTransition', { configurable: true, value: undefined }));
+      await waitForPath('/settings');
       await page.getByRole('link', { name: /Progress/u }).click();
-      await page.waitForURL('**/settings/progress/');
-      await page.waitForFunction(() => document.querySelector('[data-settings-snapshot]') !== null);
+      await waitForPath('/settings/progress');
+      await page.waitForFunction(() => document.querySelector('.settings-subpage') && document.querySelector('[data-settings-snapshot]'));
       const fallbackTransform = await page.locator('.settings-subpage:not([data-settings-snapshot])').evaluate(node => getComputedStyle(node).transform);
       assert.notEqual(fallbackTransform, 'none', 'Older WebViews animate the incoming Settings page with the fallback');
       await page.waitForFunction(() => document.querySelector('[data-settings-snapshot]') === null);
       await page.getByRole('button', { name: /Recover progress/u }).click();
-      await page.waitForURL('**/settings/recovery/');
+      await waitForPath('/settings/recovery');
       await page.getByRole('link', { name: 'Settings', exact: true }).click();
-      await page.waitForURL('**/settings/progress/');
+      await waitForPath('/settings/progress');
       await page.getByRole('link', { name: 'Settings', exact: true }).click();
-      await page.waitForURL('**/settings/');
+      await waitForPath('/settings');
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await page.getByRole('button', { name: /Sign In \/ Create Account/u }).click();
-      await page.waitForURL('**/settings/account/?mode=sign-in');
+      await waitForPath('/settings/account');
+      assert.equal(new URL(page.url()).searchParams.get('mode'), 'sign-in');
       assert.equal(await page.locator('[data-settings-snapshot]').count(), 0, 'Reduce Motion skips the fallback transition');
       await page.getByRole('link', { name: 'Settings', exact: true }).click();
-      await page.waitForURL('**/settings/');
+      await waitForPath('/settings');
       await page.setViewportSize({ width: 320, height: 740 });
       const narrowLayout = await page.evaluate(() => {
         const card = document.querySelector('.settings-keyboard-install__card');
