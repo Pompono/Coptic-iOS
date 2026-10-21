@@ -4,7 +4,7 @@ import path from 'node:path';
 import { mkdir, readFile, stat } from 'node:fs/promises';
 import { chromium } from 'playwright';
 
-const screenshots = path.resolve('docs/settings-screenshots');
+const screenshots = path.resolve(process.env.SETTINGS_SMOKE_SCREENSHOTS || 'docs/settings-screenshots');
 await mkdir(screenshots, { recursive: true });
 const root = path.resolve('out');
 const server = process.env.SETTINGS_SMOKE_BASE_URL ? null : http.createServer(async (request, response) => {
@@ -66,6 +66,9 @@ try {
       const dockTop = await page.locator('.mobile-chin-dock').evaluate(node => node.getBoundingClientRect().top);
       await page.getByRole('link', { name: /Preferences/u }).click();
       await waitForPath('/settings/preferences');
+      await page.waitForTimeout(350);
+      assert.equal(await page.locator('[data-settings-snapshot]').count(), 0, 'Completed push transitions remove both temporary snapshots');
+      assert.equal(await page.locator('.settings-page:not([data-settings-snapshot])').evaluate(node => getComputedStyle(node).transform), 'none', 'The real page has no lingering transition transform');
       const submenuSpacing = await page.evaluate(() => {
         const title = document.querySelector('.settings-subpage > .page-header').getBoundingClientRect();
         const firstCard = document.querySelector('.settings-subpage > section').getBoundingClientRect();
@@ -75,6 +78,8 @@ try {
       assert.equal(await page.locator('.mobile-chin-dock').evaluate(node => node.getBoundingClientRect().top), dockTop, 'Bottom navigation stays fixed during the Settings transition');
       await page.goBack();
       await waitForPath('/settings');
+      await page.waitForTimeout(350);
+      assert.equal(await page.locator('[data-settings-snapshot]').count(), 0, 'Completed pop transitions remove both temporary snapshots');
       await page.goForward();
       await waitForPath('/settings/preferences');
       await page.getByRole('main').getByRole('link', { name: 'Settings', exact: true }).click();
@@ -88,6 +93,25 @@ try {
       await page.getByRole('main').getByRole('link', { name: 'Progress', exact: true }).click();
       await waitForPath('/settings/progress');
       await page.getByRole('main').getByRole('link', { name: 'Settings', exact: true }).click();
+      await waitForPath('/settings');
+      await page.getByRole('link', { name: /Preferences/u }).click();
+      await waitForPath('/settings/preferences');
+      await page.getByRole('main').getByRole('link', { name: 'Settings', exact: true }).click();
+      await waitForPath('/settings');
+      await page.getByRole('link', { name: /Progress/u }).click();
+      await waitForPath('/settings/progress');
+      await page.getByRole('main').getByRole('link', { name: 'Settings', exact: true }).click();
+      await waitForPath('/settings');
+      await page.waitForTimeout(350);
+      assert.equal(await page.locator('[data-settings-snapshot]').count(), 0, 'Rapid repeated navigation cancels older overlays and leaves no snapshots behind');
+      assert.equal(await page.evaluate(() => scrollY), 0, 'Rapid Settings transitions do not change the document scroll position');
+      await page.getByRole('link', { name: /Preferences/u }).click();
+      await waitForPath('/settings/preferences');
+      await page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: 'Home', exact: true }).click();
+      await waitForPath('/');
+      await page.waitForTimeout(350);
+      assert.equal(await page.locator('[data-settings-snapshot]').count(), 0, 'Leaving Settings during a transition removes its snapshots');
+      await page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: 'Settings', exact: true }).click();
       await waitForPath('/settings');
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await page.getByRole('button', { name: /Sign In \/ Create Account/u }).click();
@@ -117,6 +141,11 @@ try {
     if (route === '/settings/progress/') {
       assert.match(await page.locator('body').innerText(), /Progress stays on this device|Synced|Syncing|Offline|Pending|Needs attention|Error|Unavailable/u);
       for (const removed of ['Enable Cloud Sync', 'Export Progress', 'Import Progress']) assert.equal(await page.getByText(removed, { exact: true }).count(), 0, removed);
+    }
+    if (route === '/translator/') {
+      assert.equal(await page.getByText('Bohairic-only mode', { exact: true }).count(), 0, 'Translator header omits the removed Bohairic-only label');
+      assert.equal(await page.getByRole('link', { name: 'Scan a photo', exact: true }).count(), 0, 'Translator header omits the removed scanner shortcut');
+      assert.ok(await page.getByRole('group', { name: 'Translation method' }).count(), 'Translation controls remain available');
     }
     if (route === '/settings/preferences/') {
       await page.getByLabel('Appearance').selectOption('dark');

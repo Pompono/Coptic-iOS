@@ -32,6 +32,7 @@ button.coptic-text {
 html,
 body {
   min-height: 100%;
+  background-color: var(--bg-color);
   /* Leave boundary motion to the browser / native scroll view. */
   overscroll-behavior-y: auto;
 }

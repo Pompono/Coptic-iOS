@@ -97,11 +97,15 @@ try {
       const layout = await page.evaluate(() => ({
         width: innerWidth,
         documentWidth: document.documentElement.scrollWidth,
+        rootBackground: getComputedStyle(document.documentElement).backgroundColor,
         bodyBackground: getComputedStyle(document.body).backgroundColor,
+        canvasBackground: getComputedStyle(document.documentElement).getPropertyValue('--bg-color').trim(),
         pageTitle: document.querySelector("h1")?.textContent?.trim() ?? "missing heading",
       }));
       assert.ok(layout.pageTitle.length > 0, `${name} renders a page heading`);
       assert.ok(layout.documentWidth <= layout.width + 1, `${name} has no horizontal overflow at desktop width: ${JSON.stringify(layout)}`);
+      assert.equal(layout.rootBackground, layout.bodyBackground, `${name} root and body backgrounds match in ${mode} theme`);
+      assert.equal(layout.rootBackground, layout.canvasBackground, `${name} overscroll canvas matches the app background in ${mode} theme`);
       if (name === "exercise") await startExercise(page);
       await page.screenshot({ path: path.join(screenshots, `${mode}-${name}-desktop.png`) });
       if (name === "learning-settings") {

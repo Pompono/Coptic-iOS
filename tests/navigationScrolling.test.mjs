@@ -23,7 +23,11 @@ test('Settings navigation animates page snapshots and respects reduced motion', 
   assert.match(navigation, /animateSettingsFallback\(update, direction, destination\)/u);
   assert.match(navigation, /source\.cloneNode\(true\)/u);
   assert.match(navigation, /snapshot\.animate\(/u);
-  assert.match(navigation, /nextPage\.animate\(/u);
+  assert.match(navigation, /destinationSnapshot\.animate\(/u);
+  assert.match(navigation, /destinationSnapshot\?\.remove\(\)/u);
+  assert.match(navigation, /pageAnimations\.forEach\(animation => animation\.cancel\(\)\)/u);
+  assert.match(navigation, /cancelSettingsTransition\(\)/u);
+  assert.match(navigation, /if \(!isSettingsPath\(pathname\(window\.location\.pathname\)\)\) \{ cleanup\(\); return; \}/u);
   assert.match(navigation, /nextPage\.querySelector\("h1"\)\?\.textContent !== sourceTitle/u);
   assert.match(navigation, /prefers-reduced-motion: reduce/u);
   assert.match(appLink, /navigateSettings\(\(\) => router\.push/u);
@@ -35,6 +39,15 @@ test('Settings navigation animates page snapshots and respects reduced motion', 
   assert.match(navigation, /duration: 280/u);
   assert.match(navigation, /frames >= 300/u);
   assert.match(navigation, /transitionSettingsHistoryPop/u);
+});
+
+test('The document canvas matches the native scrolling surfaces in both app themes', () => {
+  assert.match(globalStyles, /html,\s*body\s*\{\s*min-height:\s*100%;\s*background-color:\s*var\(--bg-color\)/u);
+  assert.match(nativeController, /setWebViewBackground/gu);
+  assert.match(nativeController, /webView\.backgroundColor = color/u);
+  assert.match(nativeController, /webView\.scrollView\.backgroundColor = color/u);
+  assert.match(nativeController, /244 \/ 255/u);
+  assert.match(nativeController, /8 \/ 255/u);
 });
 
 test('Normal document scrolling leaves overscroll and momentum to the platform', () => {

@@ -229,8 +229,6 @@ input[type=checkbox] { accent-color:var(--teal); }
 .disclosure-summary:focus-visible { outline:2px solid var(--teal); outline-offset:3px; border-radius:6px; }
 .disclosure-chevron { display:inline-flex; flex:0 0 auto; align-items:center; justify-content:center; width:20px; height:20px; color:var(--text-muted); }
 details[open] > .disclosure-summary .disclosure-chevron { transform:rotate(90deg); }
-.translator-quick-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:-12px 0 16px; color:var(--text-muted); font-size:.8125rem; }
-.translator-quick-actions .ui-text-action { margin-left:auto; }
 .translation-advanced { margin-top:16px; padding:0 16px; border:1px solid var(--border-color); border-radius:16px; background:var(--surface-1); }
 .translation-advanced>summary { min-height:48px; display:flex; align-items:center; cursor:pointer; color:var(--tint-color); font-size:.875rem; font-weight:600; }
 .translation-advanced[open] { padding-bottom:4px; }

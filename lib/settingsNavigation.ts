@@ -2,6 +2,7 @@
 
 const settingsHistory: string[] = [];
 let activeSettingsPath: string | undefined;
+let cancelActiveSettingsTransition: (() => void) | undefined;
 const pathname = (href: string) => new URL(href, window.location.href).pathname.replace(/\/$/, '') || '/';
 const isSettingsPath = (path: string) => path === '/settings' || path.startsWith('/settings/');
 
@@ -22,6 +23,7 @@ export function consumeSettingsBack(href: string) {
 
 /** Animate browser or system history changes that bypass the Settings link handler. */
 export function transitionSettingsHistoryPop() {
+  cancelActiveSettingsTransition?.();
   const destination = pathname(window.location.pathname);
   const sourcePath = activeSettingsPath ?? destination;
   if (sourcePath === destination || !isSettingsPath(sourcePath) || !isSettingsPath(destination)) {
@@ -41,6 +43,7 @@ export function transitionSettingsHistoryPop() {
 }
 
 function animateSettingsFallback(update: () => void, direction: "forward" | "back", destination?: string) {
+  cancelActiveSettingsTransition?.();
   const source = document.querySelector<HTMLElement>(".settings-page:not([data-settings-snapshot])");
   if (!source || !destination) { update(); return; }
 
@@ -60,50 +63,75 @@ function animateSettingsFallback(update: () => void, direction: "forward" | "bac
 
   const sourceControls = source.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>("input, textarea, select");
   const snapshotControls = snapshot.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>("input, textarea, select");
-  sourceControls.forEach((control, index) => {
-    const copy = snapshotControls[index];
-    if (control instanceof HTMLInputElement && copy instanceof HTMLInputElement) {
-      copy.value = control.value;
-      copy.checked = control.checked;
-    } else if (control instanceof HTMLTextAreaElement && copy instanceof HTMLTextAreaElement) copy.value = control.value;
-    else if (control instanceof HTMLSelectElement && copy instanceof HTMLSelectElement) copy.selectedIndex = control.selectedIndex;
-  });
+  const copyControlValues = (controls: NodeListOf<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>, copies: NodeListOf<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    controls.forEach((control, index) => {
+      const copy = copies[index];
+      if (control instanceof HTMLInputElement && copy instanceof HTMLInputElement) {
+        copy.value = control.value;
+        copy.checked = control.checked;
+      } else if (control instanceof HTMLTextAreaElement && copy instanceof HTMLTextAreaElement) copy.value = control.value;
+      else if (control instanceof HTMLSelectElement && copy instanceof HTMLSelectElement) copy.selectedIndex = control.selectedIndex;
+    });
+  };
+  copyControlValues(sourceControls, snapshotControls);
 
   document.body.append(snapshot);
   const destinationPath = pathname(destination);
   let frame = 0;
   let frames = 0;
   let finished = false;
-  let observedPage: HTMLElement | undefined;
+  let destinationSnapshot: HTMLElement | undefined;
   let observer: MutationObserver | undefined;
+  let pageAnimations: Animation[] = [];
   const cleanup = () => {
     if (finished) return;
     finished = true;
     cancelAnimationFrame(frame);
     observer?.disconnect();
+    pageAnimations.forEach(animation => animation.cancel());
     snapshot.remove();
-    if (observedPage) {
-      observedPage.style.position = "";
-      observedPage.style.zIndex = "";
-    }
+    destinationSnapshot?.remove();
+    if (cancelActiveSettingsTransition === cleanup) cancelActiveSettingsTransition = undefined;
   };
+  cancelActiveSettingsTransition = cleanup;
   const inspectRoute = () => {
     if (finished) return;
+    if (!isSettingsPath(pathname(window.location.pathname))) { cleanup(); return; }
     const nextPage = document.querySelector<HTMLElement>(".settings-page:not([data-settings-snapshot])");
     const pageContentChanged = nextPage && (
       nextPage !== source || nextPage.querySelector("h1")?.textContent !== sourceTitle
     );
     if (nextPage && pageContentChanged && pathname(window.location.pathname) === destinationPath) {
-      observedPage = nextPage;
       observer?.disconnect();
-      nextPage.style.position = "relative";
-      nextPage.style.zIndex = "21";
+      const destinationBounds = nextPage.getBoundingClientRect();
+      destinationSnapshot = nextPage.cloneNode(true) as HTMLElement;
+      destinationSnapshot.dataset.settingsSnapshot = "true";
+      destinationSnapshot.setAttribute("aria-hidden", "true");
+      destinationSnapshot.inert = true;
+      destinationSnapshot.style.position = "fixed";
+      destinationSnapshot.style.top = `${destinationBounds.top}px`;
+      destinationSnapshot.style.left = `${destinationBounds.left}px`;
+      destinationSnapshot.style.width = `${destinationBounds.width}px`;
+      destinationSnapshot.style.margin = "0";
+      destinationSnapshot.style.zIndex = "21";
+      destinationSnapshot.style.pointerEvents = "none";
+      copyControlValues(
+        nextPage.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>("input, textarea, select"),
+        destinationSnapshot.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>("input, textarea, select"),
+      );
+      document.body.append(destinationSnapshot);
       const outgoing = direction === "forward" ? "-14%" : "100%";
       const incoming = direction === "forward" ? "100%" : "-14%";
       const timing: KeyframeAnimationOptions = { duration: 280, easing: "cubic-bezier(.2,.75,.25,1)", fill: "both" };
-      const oldAnimation = snapshot.animate([{ transform: "translateX(0)" }, { transform: `translateX(${outgoing})` }], timing);
-      const newAnimation = nextPage.animate([{ transform: `translateX(${incoming})` }, { transform: "translateX(0)" }], timing);
-      void Promise.all([oldAnimation.finished, newAnimation.finished]).then(cleanup, cleanup);
+      try {
+        const oldAnimation = snapshot.animate([{ transform: "translateX(0)" }, { transform: `translateX(${outgoing})` }], timing);
+        pageAnimations.push(oldAnimation);
+        const newAnimation = destinationSnapshot.animate([{ transform: `translateX(${incoming})` }, { transform: "translateX(0)" }], timing);
+        pageAnimations.push(newAnimation);
+        void Promise.all([oldAnimation.finished, newAnimation.finished]).then(cleanup, cleanup);
+      } catch {
+        cleanup();
+      }
       return;
     }
     // Keep the outgoing page visible while Next.js loads a route chunk. Slow
@@ -124,9 +152,15 @@ export function navigateSettings(
   direction: "forward" | "back" = "forward",
   destination?: string,
 ) {
+  cancelActiveSettingsTransition?.();
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
     update();
     return;
   }
   animateSettingsFallback(update, direction, destination);
+}
+
+/** Remove transition overlays immediately if another route or gesture takes over. */
+export function cancelSettingsTransition() {
+  cancelActiveSettingsTransition?.();
 }

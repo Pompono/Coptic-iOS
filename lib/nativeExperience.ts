@@ -1,6 +1,7 @@
 import {Capacitor,registerPlugin,type PluginListenerHandle} from '@capacitor/core';
 export const nativeExperience=registerPlugin<{
  exerciseMode(options:{active:boolean}):Promise<{pinned:boolean;offsetY:number}>;
+ setWebViewBackground(options:{red:number;green:number;blue:number}):Promise<{red:number;green:number;blue:number}>;
  preferences():Promise<{textScale:number}>;
  copy(options:{text:string}):Promise<void>;
  feedback(options:{correct:boolean}):Promise<void>;
@@ -20,4 +21,9 @@ export async function copyText(text:string){
 export async function setNativeExerciseMode(active:boolean){
  if(!Capacitor.isNativePlatform())return;
  try{await nativeExperience.exerciseMode({active});}catch{/* Browser viewport protection remains available. */}
+}
+
+export async function setNativeWebViewBackground(red:number,green:number,blue:number){
+ if(!Capacitor.isNativePlatform())return;
+ try{await nativeExperience.setWebViewBackground({red,green,blue});}catch{/* CSS backgrounds remain correct when the native bridge is unavailable. */}
 }
