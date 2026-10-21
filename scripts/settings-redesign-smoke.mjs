@@ -30,9 +30,9 @@ try {
   page.setDefaultTimeout(15000);
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.addInitScript(() => {
-    const nativeAnimate = Element.prototype.animate;
+    const nativeAnimate = HTMLElement.prototype.animate;
     window.__settingsSmokeAnimations = [];
-    Element.prototype.animate = function (keyframes, options) {
+    HTMLElement.prototype.animate = function (keyframes, options) {
       window.__settingsSmokeAnimations.push({ snapshot: this.hasAttribute('data-settings-snapshot'), keyframes });
       return nativeAnimate.call(this, keyframes, options);
     };
