@@ -12,7 +12,7 @@ const server = http.createServer(async (request, response) => {
     let file = path.resolve(root, `.${pathname}${pathname.endsWith('/') ? 'index.html' : ''}`);
     if (!file.startsWith(root + path.sep)) throw Error('Invalid path');
     if ((await stat(file)).isDirectory()) file = path.join(file, 'index.html');
-    const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.ttf': 'font/ttf' };
+    const types = { '.txt': 'text/plain', '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.ttf': 'font/ttf' };
     response.writeHead(200, { 'Content-Type': types[path.extname(file)] ?? 'application/octet-stream' });
     response.end(await readFile(file));
   } catch { response.writeHead(404); response.end(); }
@@ -50,3 +50,4 @@ try {
   await browser?.close();
   await new Promise(resolve => server.close(resolve));
 }
+

@@ -11,9 +11,9 @@ const server = process.env.SETTINGS_SMOKE_BASE_URL ? null : http.createServer(as
   try {
     const url = new URL(request.url, 'http://localhost');
     let file = path.resolve(root, `.${decodeURIComponent(url.pathname)}`);
-    if (!file.startsWith(root + path.sep)) throw new Error('Invalid path');
+    if (file !== root && !file.startsWith(root + path.sep)) throw new Error('Invalid path');
     if ((await stat(file)).isDirectory()) file = path.join(file, 'index.html');
-    const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml' };
+    const types = { '.txt': 'text/plain', '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml' };
     response.writeHead(200, { 'Content-Type': types[path.extname(file)] || 'application/octet-stream' });
     response.end(await readFile(file));
   } catch { response.writeHead(404); response.end('Not found'); }
@@ -63,7 +63,17 @@ try {
   assert.ok(mid.every(frame => frame[0].x < 0 && frame.every(layer => layer.inert)), 'Outgoing parallax and inert layers');
   assert.ok(await page.evaluate(() => window.__host === document.querySelector('.settings-navigation-host') && window.__dock === document.querySelector('.mobile-chin-dock')), 'Host and dock DOM identities persist');
   await page.screenshot({ path: path.join(output, 'preferences-settled.png') });
+  await page.evaluate(() => {
+    window.__frames = [];
+    const sample = () => {
+      window.__frames.push([...document.querySelectorAll('[data-settings-layer]')].map(node => ({ path: node.dataset.settingsLayer, x: node.getBoundingClientRect().x })));
+      window.__sampling = requestAnimationFrame(sample);
+    };
+    sample();
+  });
   await back(); await idle('/settings', 'Settings');
+  const popFrames = await page.evaluate(() => { cancelAnimationFrame(window.__sampling); return window.__frames; });
+  assert.ok(popFrames.some(frame => frame.length === 2 && frame[0].x > 1 && frame[0].x < 389 && frame[1].x < 0), 'Pop moves current surface right while revealing the parent underneath');
   await page.getByRole('link', { name: /Preferences/ }).click();
   await page.locator('[data-settings-phase="settling"]').waitFor();
   await page.goBack(); await idle('/settings', 'Settings');
@@ -176,6 +186,15 @@ try {
   await page.setViewportSize({ width: 400, height: 844 });
   await touch('touchCancel'); await idle('/settings/progress', 'Progress');
   assert.equal(await page.evaluate(() => document.getAnimations().length), 0, 'Resize deterministically cancels drag');
+  await touch('touchStart'); await touch('touchMove', 95);
+  await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
+  await touch('touchCancel'); await idle('/settings/progress', 'Progress');
+  await touch('touchStart'); await touch('touchMove', 100);
+  await page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: 'Home', exact: true }).evaluate(node => node.click());
+  await touch('touchCancel'); await page.waitForURL(base + '/');
+  assert.equal(await page.locator('[data-settings-layer]').count(), 0, 'Tab departure during a drag leaves no Settings surfaces');
+  await page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: 'Settings', exact: true }).click();
+  await idle('/settings', 'Settings');
   await open('/settings/account/?mode=sign-in'); await idle('/settings/account', 'Account');
   const email = page.getByRole('textbox', { name: 'Email', exact: true });
   if (await email.count()) {
@@ -219,5 +238,6 @@ try {
   await context.close(); await browser.close();
   if (server) await new Promise(resolve => server.close(resolve));
 }
+
 
 

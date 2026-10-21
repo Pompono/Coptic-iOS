@@ -15,7 +15,7 @@ const server = process.env.SETTINGS_SMOKE_BASE_URL ? null : http.createServer(as
     if ((await stat(file)).isDirectory()) file = path.join(file, 'index.html');
     const content = await readFile(file);
     const extension = path.extname(file);
-    const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.ttf': 'font/ttf' };
+    const types = { '.txt': 'text/plain', '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.ttf': 'font/ttf' };
     response.writeHead(200, { 'Content-Type': types[extension] ?? 'application/octet-stream' });
     response.end(content);
   } catch { response.writeHead(404); response.end('Not found'); }
@@ -224,3 +224,4 @@ try {
   await browser?.close();
   if (server) await new Promise(resolve => server.close(resolve));
 }
+
