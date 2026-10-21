@@ -45,6 +45,7 @@ function animateSettingsFallback(update: () => void, direction: "forward" | "bac
   if (!source || !destination) { update(); return; }
 
   const bounds = source.getBoundingClientRect();
+  const sourceTitle = source.querySelector("h1")?.textContent;
   const snapshot = source.cloneNode(true) as HTMLElement;
   snapshot.dataset.settingsSnapshot = "true";
   snapshot.setAttribute("aria-hidden", "true");
@@ -89,7 +90,10 @@ function animateSettingsFallback(update: () => void, direction: "forward" | "bac
   const inspectRoute = () => {
     if (finished) return;
     const nextPage = document.querySelector<HTMLElement>(".settings-page:not([data-settings-snapshot])");
-    if (nextPage && nextPage !== source && pathname(window.location.pathname) === destinationPath) {
+    const pageContentChanged = nextPage && (
+      nextPage !== source || nextPage.querySelector("h1")?.textContent !== sourceTitle
+    );
+    if (nextPage && pageContentChanged && pathname(window.location.pathname) === destinationPath) {
       observedPage = nextPage;
       observer?.disconnect();
       nextPage.style.position = "relative";

@@ -22,6 +22,7 @@ test('Settings detail headers use shared spacing and one title-to-card gap', () 
 test('Settings navigation animates page snapshots and respects reduced motion', () => {
   assert.match(navigation, /animateSettingsFallback\(update, direction, destination\)/u);
   assert.match(navigation, /source\.cloneNode\(true\)/u);
+  assert.match(navigation, /nextPage\.querySelector\("h1"\)\?\.textContent !== sourceTitle/u);
   assert.match(navigation, /prefers-reduced-motion: reduce/u);
   assert.match(appLink, /navigateSettings\(\(\) => router\.push/u);
   assert.match(appLink, /consumeSettingsBack\(href\)/u);
