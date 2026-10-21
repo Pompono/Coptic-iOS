@@ -68,6 +68,40 @@ Run full Node, TypeScript, lint, export, mobile/auth/progress regression suites
 and Capacitor sync. macOS CI supplies simulator startup and unsigned device IPA.
 Browser automation and simulator startup do not verify physical iPhone motion.
 
+## Recorded local validation
+
+- Stage A: TypeScript, Settings unit tests and existing rendered mobile Settings
+  smoke passed before enabling animations (commit `fd85278`).
+- Stage B: rendered intermediate push frames, persistent host/dock identity,
+  history, scroll restoration, repeated taps, deep links, recovery, tab changes,
+  Reduced Motion and fallback passed before adding gestures (`64b9383`).
+- Stage C: 177 Node tests pass, including auth/progress/cloud-sync regressions;
+  TypeScript passes; ESLint reports zero errors and eight pre-existing warnings.
+- Production Next export completed (1,294 static pages); Capacitor sync copied
+  assets and updated plugins successfully. Windows-generated pnpm/Swift paths
+  were discarded, retaining the repository's portable native project paths.
+- Production navigation suite passed in Chromium (CDP touch injection) and
+  WebKit (real mouse pointer drags; Playwright WebKit has no touch-drag API).
+  Actual account form values/mode survived cancellation; no form was submitted.
+- Tests assert intermediate push/pop and drag transforms, cancelled and committed
+  history, deep links, rapid input, delayed routes, runtime animation failure,
+  light/dark opaque layers, scroll restoration, interrupted transitions and
+  removal of inactive pages. They wait for initial React server-stream hydration
+  to drain before asserting the single host; no document reload may substitute
+  for a push (host and dock node identity are checked).
+- The static smoke servers serve Next's `.txt` route payloads as `text/plain`.
+  An incorrect MIME type silently forces document reloads and cannot validate
+  persistent navigation. Both development and production exports were exercised.
+
+Screenshots below are browser frames, not physical-device evidence. CI uploads
+full browser recordings and frames as `settings-navigation-video-and-frames`.
+The existing macOS validation job uploads `CoptLingo-unsigned-iphone-ipa` after
+simulator startup and unsigned device compilation. See the PR for final run links.
+
+![Light-mode interactive swipe](settings-navigation-screenshots/swipe-tracking-light.png)
+![Dark-mode interactive swipe](settings-navigation-screenshots/swipe-tracking-dark.png)
+![Settled Preferences page](settings-navigation-screenshots/preferences-settled.png)
+
 ## Implementation and fallback
 
 The host mounts at most two unique route surfaces. It uses 300 ms transform

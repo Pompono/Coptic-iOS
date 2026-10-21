@@ -29,6 +29,9 @@ page.on('pageerror', error => errors.push(error.message));
 const clean = value => value.replace(/\/$/, '');
 const idle = async (route, title) => {
   await page.waitForURL(url => clean(url.pathname) === clean(route));
+  // Static export hydration drains React's server-stream staging boundary.
+  // Assert one actual host after that lifecycle, not during HTML handoff.
+  await page.waitForFunction(() => document.querySelectorAll('.settings-navigation-host').length === 1);
   await page.locator('.settings-navigation-host[data-settings-phase="idle"]').waitFor();
   await page.getByRole('heading', { name: title, exact: true }).waitFor();
   assert.equal(await page.locator('[data-settings-layer]').count(), 1);
@@ -234,6 +237,10 @@ try {
   console.log('PASS Stage B: rendered push frames, persistent host/dock, Back/Forward, rapid taps, recovery, deep links, refresh, scroll, tab interruption, reduced motion and fallback.');
   console.log('PASS Stage C: finger-following transforms, cancellation, preserved surface/history, vertical/edge rejection, distance/velocity commits, exactly-once history, root guard, deep recovery, dark surfaces, Reduced Motion and resize.');
   console.log('PASS: delayed route rendering and runtime animation failure fallback.');
+} catch (error) {
+  console.error('Browser errors:', errors);
+  await page.screenshot({ path: path.join(output, 'failure.png'), fullPage: true }).catch(() => {});
+  throw error;
 } finally {
   await context.close(); await browser.close();
   if (server) await new Promise(resolve => server.close(resolve));

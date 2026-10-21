@@ -54,6 +54,7 @@ try {
     assert.equal(response.status(), 200, route);
     await page.getByRole('heading', { name: title, exact: true }).first().waitFor();
     await page.waitForLoadState('networkidle');
+    if (route.startsWith('/settings')) await page.waitForFunction(() => document.querySelectorAll('.settings-navigation-host').length === 1);
     assert.equal(await page.locator('h1').count(), 1, `${route} has one page title`);
     if (route === '/settings/') {
       for (const category of ['Preferences', 'Progress']) await page.getByRole('link', { name: new RegExp(category, 'u') }).waitFor();

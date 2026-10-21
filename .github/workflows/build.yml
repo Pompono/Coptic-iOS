@@ -83,10 +83,12 @@ jobs:
       - run: npm run test:settings-navigation
         env:
           SETTINGS_NAV_ARTIFACTS: .codex-temp/settings-navigation/chromium
+          SETTINGS_EXPECT_AUTH: '1'
       - run: npm run test:settings-navigation
         env:
           SETTINGS_BROWSER: webkit
           SETTINGS_NAV_ARTIFACTS: .codex-temp/settings-navigation/webkit
+          SETTINGS_EXPECT_AUTH: '1'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
