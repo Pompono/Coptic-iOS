@@ -73,7 +73,7 @@ try {
       });
       assert.ok(submenuSpacing >= 24, 'Preferences heading has a shared 24px gap before its first card');
       assert.equal(await page.locator('.mobile-chin-dock').evaluate(node => node.getBoundingClientRect().top), dockTop, 'Bottom navigation stays fixed during the Settings transition');
-      await page.getByRole('link', { name: 'Settings', exact: true }).click();
+      await page.getByRole('main').getByRole('link', { name: 'Settings', exact: true }).click();
       await waitForPath('/settings');
       assert.equal(await page.locator('.settings-home > .page-header h1').textContent(), 'Settings', 'The Settings back row returns to the previous history entry');
       await page.goBack();
@@ -88,16 +88,16 @@ try {
       await page.waitForFunction(() => document.querySelector('[data-settings-snapshot]') === null);
       await page.getByRole('button', { name: /Recover progress/u }).click();
       await waitForPath('/settings/recovery');
-      await page.getByRole('link', { name: 'Settings', exact: true }).click();
+      await page.getByRole('main').getByRole('link', { name: 'Settings', exact: true }).click();
       await waitForPath('/settings/progress');
-      await page.getByRole('link', { name: 'Settings', exact: true }).click();
+      await page.getByRole('main').getByRole('link', { name: 'Settings', exact: true }).click();
       await waitForPath('/settings');
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await page.getByRole('button', { name: /Sign In \/ Create Account/u }).click();
       await waitForPath('/settings/account');
       assert.equal(new URL(page.url()).searchParams.get('mode'), 'sign-in');
       assert.equal(await page.locator('[data-settings-snapshot]').count(), 0, 'Reduce Motion skips the fallback transition');
-      await page.getByRole('link', { name: 'Settings', exact: true }).click();
+      await page.getByRole('main').getByRole('link', { name: 'Settings', exact: true }).click();
       await waitForPath('/settings');
       await page.setViewportSize({ width: 320, height: 740 });
       const narrowLayout = await page.evaluate(() => {
