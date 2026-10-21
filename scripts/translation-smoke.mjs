@@ -58,8 +58,8 @@ export async function checkHostedTranslation(page, context) {
     status = 200;
     delayed = true;
     await submit.click();
-    await page.getByRole('link', { name: 'Scan a photo', exact: true }).click();
-    await page.getByRole('heading', { name: 'Scan Coptic', exact: true }).waitFor();
+    await page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: 'Dictionary', exact: true }).click();
+    await page.getByRole('heading', { name: 'Dictionary', exact: true }).waitFor();
     console.log('PASS: offline published lookup, explicit hosted AI in both directions, limits, 429/503 errors, and navigation during a request.');
   } finally {
     await context.unroute('https://coptlingo.com/api/translate**');
