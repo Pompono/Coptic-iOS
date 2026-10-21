@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { navigateSettings, rememberSettingsPush } from '@/lib/settingsNavigation';
 import { CLOUD_SYNC_RECOVERY_KEY, RECOVERY_KEY, recoveryFile, undoCloudSync, undoRestore } from '@/lib/progressStorage';
 
 export default function ProgressBackup({ focused = false }: { focused?: boolean }) {
@@ -24,7 +25,7 @@ export default function ProgressBackup({ focused = false }: { focused?: boolean 
       setHasLocal(Boolean(localStorage.getItem(RECOVERY_KEY))); setHasCloud(Boolean(localStorage.getItem(CLOUD_SYNC_RECOVERY_KEY)));
     } catch (failure) { setError(failure instanceof Error ? failure.message : 'Recovery could not be completed.'); }
   }
-  return <section aria-labelledby="recovery-title">{!focused && <><h2 id="recovery-title" className="settings-section-title">Recovery</h2><div className="settings-group"><button className="settings-row settings-row--link" type="button" onClick={() => router.push('/settings/recovery')}><span>Recover progress</span><span className="settings-chevron" aria-hidden="true">›</span></button></div></>}
+  return <section aria-labelledby="recovery-title">{!focused && <><h2 id="recovery-title" className="settings-section-title">Recovery</h2><div className="settings-group"><button className="settings-row settings-row--link" type="button" onClick={() => { rememberSettingsPush('/settings/recovery'); navigateSettings(() => router.push('/settings/recovery'), 'forward', '/settings/recovery'); }}><span>Recover progress</span><span className="settings-chevron" aria-hidden="true">›</span></button></div></>}
     {focused && <div className="settings-group settings-group--content">
     {!hasCloud && !hasLocal && !error && <p>No recovery copies are available.</p>}
     {hasCloud && <div className="recovery-option"><strong>Before last cloud restore</strong><button className="ui-secondary" type="button" onClick={() => setRecover('cloud')}>Recover</button></div>}

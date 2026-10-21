@@ -2,13 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [globalStyles, designStyles, nativeController, navigation, appLink, header] = await Promise.all([
+const [globalStyles, designStyles, nativeController, navigation, appLink, header, recoveryPage] = await Promise.all([
   readFile('app/globals.css', 'utf8'),
   readFile('app/design-system.css', 'utf8'),
   readFile('ios/App/App/AppViewController.swift', 'utf8'),
   readFile('lib/settingsNavigation.ts', 'utf8'),
   readFile('lib/AppLink.tsx', 'utf8'),
   readFile('app/PageHeader.tsx', 'utf8'),
+  readFile('app/settings/ProgressBackup.tsx', 'utf8'),
 ]);
 
 test('Settings detail headers use shared spacing and one title-to-card gap', () => {
@@ -25,6 +26,7 @@ test('Settings navigation uses native View Transition snapshots and respects red
   assert.match(appLink, /consumeSettingsBack\(href\)/u);
   assert.match(appLink, /canReturn \? router\.back\(\) : router\.replace\(href\)/u);
   assert.match(navigation, /rememberSettingsPush/u);
+  assert.match(recoveryPage, /navigateSettings\(\(\) => router\.push\('\/settings\/recovery'\)/u);
   assert.match(designStyles, /settings-forward-old/u);
   assert.match(designStyles, /settings-back-old/u);
   assert.match(designStyles, /prefers-reduced-motion:reduce/u);

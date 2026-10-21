@@ -79,6 +79,18 @@ try {
       await page.waitForURL('**/settings/preferences/');
       await page.goForward();
       await page.waitForURL('**/settings/');
+      await page.getByRole('link', { name: /Progress/u }).click();
+      await page.waitForURL('**/settings/progress/');
+      await page.getByRole('button', { name: /Recover progress/u }).click();
+      await page.waitForURL('**/settings/recovery/');
+      await page.getByRole('link', { name: 'Settings', exact: true }).click();
+      await page.waitForURL('**/settings/progress/');
+      await page.getByRole('link', { name: 'Settings', exact: true }).click();
+      await page.waitForURL('**/settings/');
+      await page.getByRole('button', { name: /Sign In \/ Create Account/u }).click();
+      await page.waitForURL('**/settings/account/?mode=sign-in');
+      await page.getByRole('link', { name: 'Settings', exact: true }).click();
+      await page.waitForURL('**/settings/');
       await page.setViewportSize({ width: 320, height: 740 });
       const narrowLayout = await page.evaluate(() => {
         const card = document.querySelector('.settings-keyboard-install__card');
