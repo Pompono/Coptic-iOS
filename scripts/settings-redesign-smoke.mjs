@@ -90,8 +90,10 @@ try {
       await page.getByRole('main').getByRole('link', { name: 'Settings', exact: true }).click();
       await waitForPath('/settings');
       await page.evaluate(() => {
-        document.querySelector('a[href="/settings/preferences"]').click();
-        document.querySelector('a[href="/settings/progress"]').click();
+        const [preferences, progress] = document.querySelectorAll('.settings-navigation__row');
+        if (!preferences || !progress) throw new Error('Settings categories were not both available for the rapid-tap check');
+        preferences.click();
+        progress.click();
       });
       await waitForPath('/settings/progress');
       await assertSingleSettingsSurface('Progress');
