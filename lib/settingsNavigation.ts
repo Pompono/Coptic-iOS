@@ -7,16 +7,73 @@ type TransitionDocument = Document & {
 
 let activeTransition: ViewTransitionHandle | undefined;
 const settingsHistory: string[] = [];
+let activeSettingsPath: string | undefined;
 const pathname = (href: string) => new URL(href, window.location.href).pathname.replace(/\/$/, '') || '/';
+const isSettingsPath = (path: string) => path === '/settings' || path.startsWith('/settings/');
 
 export function rememberSettingsPush(href: string) {
-  if (pathname(href) !== pathname(window.location.pathname)) settingsHistory.push(pathname(window.location.pathname));
+  activeSettingsPath ??= pathname(window.location.pathname);
+  const destination = pathname(href);
+  if (destination !== activeSettingsPath) settingsHistory.push(activeSettingsPath);
+  activeSettingsPath = destination;
 }
 
 export function consumeSettingsBack(href: string) {
-  if (settingsHistory.at(-1) !== pathname(href)) return false;
+  const destination = pathname(href);
+  if (settingsHistory.at(-1) !== destination) return false;
   settingsHistory.pop();
+  activeSettingsPath = destination;
   return true;
+}
+
+/** Animate browser or system history changes that bypass the Settings link handler. */
+export function transitionSettingsHistoryPop() {
+  const destination = pathname(window.location.pathname);
+  const sourcePath = activeSettingsPath ?? destination;
+  if (sourcePath === destination || !isSettingsPath(sourcePath) || !isSettingsPath(destination)) {
+    activeSettingsPath = destination;
+    return;
+  }
+
+  const direction = destination === '/settings' ? 'back' : 'forward';
+  if (direction === 'back' && settingsHistory.at(-1) === destination) settingsHistory.pop();
+  else if (direction === 'forward') settingsHistory.push(sourcePath);
+  activeSettingsPath = destination;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const source = document.querySelector<HTMLElement>('.settings-page:not([data-settings-snapshot])');
+  if (!source) return;
+  const view = document as TransitionDocument;
+  if (!view.startViewTransition) {
+    animateSettingsFallback(() => undefined, direction, destination);
+    return;
+  }
+
+  const root = document.documentElement;
+  root.dataset.settingsNavigation = direction;
+  try {
+    const transition = view.startViewTransition(() => new Promise<void>(resolve => {
+      let frames = 0;
+      const waitForPage = () => {
+        const page = document.querySelector<HTMLElement>('.settings-page:not([data-settings-snapshot])');
+        if (page && page !== source && pathname(window.location.pathname) === destination) {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        } else if (++frames >= 60) resolve();
+        else requestAnimationFrame(waitForPage);
+      };
+      requestAnimationFrame(waitForPage);
+    }));
+    activeTransition = transition;
+    void transition.finished.catch(() => undefined).finally(() => {
+      if (activeTransition === transition) {
+        activeTransition = undefined;
+        delete root.dataset.settingsNavigation;
+      }
+    });
+  } catch {
+    delete root.dataset.settingsNavigation;
+    animateSettingsFallback(() => undefined, direction, destination);
+  }
 }
 
 function animateSettingsFallback(update: () => void, direction: "forward" | "back", destination?: string) {

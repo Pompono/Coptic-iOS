@@ -28,6 +28,7 @@ test('Settings navigation uses native View Transition snapshots and respects red
   assert.match(appLink, /consumeSettingsBack\(href\)/u);
   assert.match(appLink, /canReturn \? router\.back\(\) : router\.replace\(href\)/u);
   assert.match(navigation, /rememberSettingsPush/u);
+  assert.match(navigation, /transitionSettingsHistoryPop/u);
   assert.match(recoveryPage, /navigateSettings\(\(\) => router\.push\('\/settings\/recovery'\)/u);
   assert.match(designStyles, /settings-forward-old/u);
   assert.match(designStyles, /settings-back-old/u);
