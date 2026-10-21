@@ -19,8 +19,7 @@ test('Settings detail headers use shared spacing and one title-to-card gap', () 
   assert.match(header, /data-settings-direction="back"/u);
 });
 
-test('Settings navigation uses native View Transition snapshots and respects reduced motion', () => {
-  assert.match(navigation, /startViewTransition\(\(\) =>/u);
+test('Settings navigation animates page snapshots and respects reduced motion', () => {
   assert.match(navigation, /animateSettingsFallback\(update, direction, destination\)/u);
   assert.match(navigation, /source\.cloneNode\(true\)/u);
   assert.match(navigation, /prefers-reduced-motion: reduce/u);
@@ -30,10 +29,8 @@ test('Settings navigation uses native View Transition snapshots and respects red
   assert.match(navigation, /rememberSettingsPush/u);
   assert.match(navigation, /transitionSettingsHistoryPop/u);
   assert.match(recoveryPage, /navigateSettings\(\(\) => router\.push\('\/settings\/recovery'\)/u);
-  assert.match(designStyles, /settings-forward-old/u);
-  assert.match(designStyles, /settings-back-old/u);
-  assert.match(designStyles, /prefers-reduced-motion:reduce/u);
-  assert.match(designStyles, /view-transition-name:settings-content/u);
+  assert.match(navigation, /duration: 280/u);
+  assert.match(navigation, /transitionSettingsHistoryPop/u);
 });
 
 test('Normal document scrolling leaves overscroll and momentum to the platform', () => {

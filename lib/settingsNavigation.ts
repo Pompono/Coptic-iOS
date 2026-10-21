@@ -1,11 +1,5 @@
 "use client";
 
-type ViewTransitionHandle = { finished: Promise<void>; skipTransition?: () => void };
-type TransitionDocument = Document & {
-  startViewTransition?: (update: () => void) => ViewTransitionHandle;
-};
-
-let activeTransition: ViewTransitionHandle | undefined;
 const settingsHistory: string[] = [];
 let activeSettingsPath: string | undefined;
 const pathname = (href: string) => new URL(href, window.location.href).pathname.replace(/\/$/, '') || '/';
@@ -43,37 +37,7 @@ export function transitionSettingsHistoryPop() {
 
   const source = document.querySelector<HTMLElement>('.settings-page:not([data-settings-snapshot])');
   if (!source) return;
-  const view = document as TransitionDocument;
-  if (!view.startViewTransition) {
-    animateSettingsFallback(() => undefined, direction, destination);
-    return;
-  }
-
-  const root = document.documentElement;
-  root.dataset.settingsNavigation = direction;
-  try {
-    const transition = view.startViewTransition(() => new Promise<void>(resolve => {
-      let frames = 0;
-      const waitForPage = () => {
-        const page = document.querySelector<HTMLElement>('.settings-page:not([data-settings-snapshot])');
-        if (page && page !== source && pathname(window.location.pathname) === destination) {
-          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-        } else if (++frames >= 60) resolve();
-        else requestAnimationFrame(waitForPage);
-      };
-      requestAnimationFrame(waitForPage);
-    }));
-    activeTransition = transition;
-    void transition.finished.catch(() => undefined).finally(() => {
-      if (activeTransition === transition) {
-        activeTransition = undefined;
-        delete root.dataset.settingsNavigation;
-      }
-    });
-  } catch {
-    delete root.dataset.settingsNavigation;
-    animateSettingsFallback(() => undefined, direction, destination);
-  }
+  animateSettingsFallback(() => undefined, direction, destination);
 }
 
 function animateSettingsFallback(update: () => void, direction: "forward" | "back", destination?: string) {
@@ -148,49 +112,15 @@ function animateSettingsFallback(update: () => void, direction: "forward" | "bac
   frame = requestAnimationFrame(inspectRoute);
 }
 
-/** Animate a Settings route change when the browser supports native snapshots. */
+/** Animate a Settings route change without delaying the router update. */
 export function navigateSettings(
   update: () => void,
   direction: "forward" | "back" = "forward",
   destination?: string,
 ) {
-  const root = document.documentElement;
-  const view = document as TransitionDocument;
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
     update();
     return;
   }
-  if (!view.startViewTransition) {
-    animateSettingsFallback(update, direction, destination);
-    return;
-  }
-
-  activeTransition?.skipTransition?.();
-  root.dataset.settingsNavigation = direction;
-  try {
-    const transition = view.startViewTransition(() => {
-      update();
-      if (!destination || pathname(destination) === pathname(window.location.pathname)) return;
-      return new Promise<void>(resolve => {
-        let frames = 0;
-        const waitForRoute = () => {
-          if (pathname(destination) === pathname(window.location.pathname)) {
-            requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-          } else if (++frames >= 60) resolve();
-          else requestAnimationFrame(waitForRoute);
-        };
-        waitForRoute();
-      });
-    });
-    activeTransition = transition;
-    void transition.finished.catch(() => undefined).finally(() => {
-      if (activeTransition === transition) {
-        activeTransition = undefined;
-        delete root.dataset.settingsNavigation;
-      }
-    });
-  } catch {
-    delete root.dataset.settingsNavigation;
-    animateSettingsFallback(update, direction, destination);
-  }
+  animateSettingsFallback(update, direction, destination);
 }

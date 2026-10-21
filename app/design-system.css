@@ -152,24 +152,6 @@ input[type=checkbox] { accent-color:var(--teal); }
 .settings-subpage>.page-back { margin:0 0 4px -5px; }
 .settings-subpage>.page-header { margin:0 0 var(--settings-subpage-title-card-gap); }
 .settings-subpage .settings-group--content { overflow-wrap:anywhere; }.settings-subpage .page-header__identity { display:none; }
-/* Native View Transitions animate only the Settings page; the dock and shell stay fixed. */
-html[data-settings-navigation] .settings-page { view-transition-name:settings-content; }
-html[data-settings-navigation]::view-transition-old(root),
-html[data-settings-navigation]::view-transition-new(root) { animation:none; }
-html[data-settings-navigation]::view-transition-group(settings-content) { animation-duration:280ms; animation-timing-function:cubic-bezier(.2,.75,.25,1); }
-html[data-settings-navigation="forward"]::view-transition-old(settings-content) { animation:settings-forward-old 280ms cubic-bezier(.2,.75,.25,1) both; }
-html[data-settings-navigation="forward"]::view-transition-new(settings-content) { animation:settings-forward-new 280ms cubic-bezier(.2,.75,.25,1) both; }
-html[data-settings-navigation="back"]::view-transition-old(settings-content) { animation:settings-back-old 280ms cubic-bezier(.2,.75,.25,1) both; }
-html[data-settings-navigation="back"]::view-transition-new(settings-content) { animation:settings-back-new 280ms cubic-bezier(.2,.75,.25,1) both; }
-@keyframes settings-forward-old { to { transform:translateX(-14%); } }
-@keyframes settings-forward-new { from { transform:translateX(100%); } to { transform:translateX(0); } }
-@keyframes settings-back-old { to { transform:translateX(100%); } }
-@keyframes settings-back-new { from { transform:translateX(-14%); } to { transform:translateX(0); } }
-@media (prefers-reduced-motion:reduce) {
-  html[data-settings-navigation]::view-transition-group(settings-content),
-  html[data-settings-navigation]::view-transition-old(settings-content),
-  html[data-settings-navigation]::view-transition-new(settings-content) { animation:none!important; }
-}
 .settings-row-note { display:block; margin-top:2px; color:var(--text-muted); font-size:.82rem; line-height:1.4; }
 .settings-sync-state { display:grid; gap:4px; margin:0; font-size:1rem; font-weight:650; }.settings-sync-state small { color:var(--text-muted); font-size:.82rem; font-weight:400; }
 .settings-navigation__row:focus-visible,.settings-account-entry:focus-visible { outline:2px solid var(--teal); outline-offset:-2px; }
