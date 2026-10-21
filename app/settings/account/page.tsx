@@ -1,1 +1,1 @@
-export { default } from '../../account/page';
+export default function SettingsAccountPage() { return null; }

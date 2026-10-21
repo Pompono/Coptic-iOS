@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const font = await import('../lib/copticFontPreference.mjs');
 const [settingsHome, subpage, account, progress, recovery, progressStorage, learningPath] = await Promise.all([
-  readFile('app/settings/page.tsx', 'utf8'),
+  readFile('app/settings/SettingsHome.tsx', 'utf8'),
   readFile('app/settings/Subpage.tsx', 'utf8'),
   readFile('app/account/page.tsx', 'utf8'),
   readFile('app/settings/ProgressSync.tsx', 'utf8'),
@@ -72,3 +72,4 @@ test('Recovery keeps distinct validated sources and asks before replacing progre
   assert.match(progressStorage, /transaction\(storage, data\.records, null\)/u);
   assert.match(progressStorage, /replaceRecords\(data\.records, storage\)/u);
 });
+

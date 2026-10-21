@@ -176,9 +176,11 @@ try {
       await fonts.selectOption('unicode');
       assert.equal(await page.evaluate(() => localStorage.getItem('coptic-font-mode')), 'unicode');
       await page.reload();
+      await page.waitForFunction(() => document.querySelector('#font-choice')?.value === 'unicode');
       assert.equal(await page.getByLabel('Coptic font').inputValue(), 'unicode', 'saved font selection remains selected');
       await page.getByLabel('Coptic font').selectOption('avva');
       await page.reload();
+      await page.waitForFunction(() => document.querySelector('#font-choice')?.value === 'avva');
       assert.equal(await page.getByLabel('Coptic font').inputValue(), 'avva', 'screenshot shows the Modern default after persistence coverage');
     }
     if (route === '/settings/account/?mode=settings') {
