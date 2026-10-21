@@ -19,26 +19,18 @@ test('Settings detail headers use shared spacing and one title-to-card gap', () 
   assert.match(header, /data-settings-direction="back"/u);
 });
 
-test('Settings navigation animates page snapshots and respects reduced motion', () => {
-  assert.match(navigation, /animateSettingsFallback\(update, direction, destination\)/u);
-  assert.match(navigation, /source\.cloneNode\(true\)/u);
-  assert.match(navigation, /snapshot\.animate\(/u);
-  assert.match(navigation, /destinationSnapshot\.animate\(/u);
-  assert.match(navigation, /destinationSnapshot\?\.remove\(\)/u);
-  assert.match(navigation, /pageAnimations\.forEach\(animation => animation\.cancel\(\)\)/u);
-  assert.match(navigation, /cancelSettingsTransition\(\)/u);
-  assert.match(navigation, /if \(!isSettingsPath\(pathname\(window\.location\.pathname\)\)\) \{ cleanup\(\); return; \}/u);
-  assert.match(navigation, /nextPage\.querySelector\("h1"\)\?\.textContent !== sourceTitle/u);
-  assert.match(navigation, /prefers-reduced-motion: reduce/u);
+test('Settings uses direct route updates without snapshots, observers, or transition overlays', () => {
+  assert.doesNotMatch(navigation, /cloneNode|MutationObserver|\.animate\(|requestAnimationFrame|data-settings-snapshot/u);
+  assert.match(navigation, /export function navigateSettings\(update: \(\) => void\)\s*\{\s*update\(\);\s*\}/u);
+  assert.match(navigation, /export function leaveSettingsNavigation/u);
   assert.match(appLink, /navigateSettings\(\(\) => router\.push/u);
   assert.match(appLink, /consumeSettingsBack\(href\)/u);
   assert.match(appLink, /canReturn \? router\.back\(\) : router\.replace\(href\)/u);
+  assert.match(appLink, /leaveSettingsNavigation\(\)/u);
   assert.match(navigation, /rememberSettingsPush/u);
-  assert.match(navigation, /transitionSettingsHistoryPop/u);
-  assert.match(recoveryPage, /navigateSettings\(\(\) => router\.push\('\/settings\/recovery'\)/u);
-  assert.match(navigation, /duration: 280/u);
-  assert.match(navigation, /frames >= 300/u);
-  assert.match(navigation, /transitionSettingsHistoryPop/u);
+  assert.match(navigation, /recordSettingsHistoryPop/u);
+  assert.match(recoveryPage, /navigateSettings\(\(\) => router\.push\('\/settings\/recovery'\)\)/u);
+  assert.match(navigation, /recordSettingsHistoryPop/u);
 });
 
 test('The document canvas matches the native scrolling surfaces in both app themes', () => {
