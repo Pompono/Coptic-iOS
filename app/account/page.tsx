@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import PageHeader from '../PageHeader';
+import PageHeader, { PageBackLink } from '../PageHeader';
 import { useAuth } from '../AuthProvider';
 import { MINIMUM_PASSWORD_LENGTH } from '@/lib/auth/service';
 import styles from './account.module.css';
@@ -28,7 +28,7 @@ export default function AccountPage() {
     const requested = new URLSearchParams(window.location.search).get('mode');
     if (recoveryPending) setMode('reset');
     else if (requested === 'create' || requested === 'forgot') setMode(requested);
-    else if (requested === 'settings' && session) {
+    else if (session && requested !== 'sign-in') {
       setDisplayName(String(session.user.user_metadata?.display_name ?? ''));
       setMode('settings');
     }
@@ -140,36 +140,39 @@ export default function AccountPage() {
     } finally { setBusy(false); }
   }
 
-  const formHeading = mode === 'sign-in' ? 'Sign in' : mode === 'create' ? 'Create account'
-    : mode === 'forgot' ? 'Reset password' : mode === 'verification' ? 'Verify your email'
-      : mode === 'reset' ? 'Choose a new password' : 'Account settings';
+  const savedDisplayName = String(session?.user.user_metadata?.display_name ?? '');
+  const hasAccountChanges = displayName.trim() !== savedDisplayName || Boolean(newEmail.trim());
 
-  return <main className={`app-page ${styles.page}`}>
+  return <main className={`app-page settings-page settings-subpage ${styles.page}`}>
+    <PageBackLink href="/settings/">Settings</PageBackLink>
     <PageHeader title="Account" icon="settings" />
-    <section className={styles.card} aria-labelledby="account-heading">
-      <h1 id="account-heading" className={styles.sectionTitle}>{formHeading}</h1>
+    <section className={styles.card}>
       {!configured ? <>
-        <p className={styles.copy}>Optional accounts use email and password. Account access is not configured in this build; you can continue using all learning features as a guest.</p>
-        <p className={styles.copy}>Your progress stays on this device. Cloud progress syncing is coming later and does not happen when you sign in or out.</p>
-      </> : loading ? <p className={styles.status} role="status">Checking account…</p> : session && mode !== 'reset' ? <>
-        <p className={styles.copy}>Signed in as <span className={styles.email}>{session.user.email}</span></p>
-        <p className={styles.status} role="status">{session.user.email_confirmed_at ? 'Email verified' : 'Email verification is pending'}</p>
+        <p className={styles.copy}>Account access is unavailable in this build.</p>
+      </> : loading ? <p className={styles.status} role="status">Checking account…</p> : session && mode !== 'reset' && mode !== 'forgot' ? <>
+        <div className={styles.accountInfo}>
+          <label className={styles.field}>Display name
+            <input value={displayName} onChange={event => setDisplayName(event.target.value)} maxLength={60} autoComplete="nickname" />
+          </label>
+          <div className={styles.field}>Email address
+            <span className={styles.readOnlyValue}>{session.user.email}</span>
+            <span className={styles.status} role="status">{session.user.email_confirmed_at ? 'Email verified' : 'Email not verified'}</span>
+          </div>
+        </div>
         {!session.user.email_confirmed_at && <button className={styles.linkButton} type="button" disabled={busy || resendSeconds > 0} onClick={() => { setEmail(session.user.email ?? ''); changeMode('verification'); }}>
           {resendSeconds ? `Try again in ${resendSeconds}s` : 'Resend verification email'}
         </button>}
         {mode === 'settings' && <form className={styles.form} onSubmit={submit}>
-          <label className={styles.field}>Display name (optional)
-            <input value={displayName} onChange={event => setDisplayName(event.target.value)} maxLength={60} autoComplete="nickname" />
-          </label>
-          <label className={styles.field}>Change email (optional)
+          <label className={styles.field}>Change email
             <input type="email" value={newEmail} onChange={event => setNewEmail(event.target.value)} autoComplete="email" inputMode="email" />
           </label>
-          <p className={styles.copy}>A verified email change requires confirmation from the inboxes Supabase requests.</p>
-          <button className={styles.button} type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save account settings'}</button>
+          {newEmail.trim() && <p className={styles.copy}>Confirm the email change from your inbox.</p>}
+          <button className={styles.button} type="submit" disabled={busy || !hasAccountChanges}>{busy ? 'Saving…' : 'Save Changes'}</button>
         </form>}
-        <div className={styles.row}>
-          {mode !== 'settings' && <button className={styles.linkButton} type="button" onClick={() => { setDisplayName(String(session.user.user_metadata?.display_name ?? '')); changeMode('settings'); }}>Account settings</button>}
-          <button className={styles.linkButton} type="button" disabled={busy} onClick={() => void signOut()}>{busy ? 'Signing out…' : 'Sign Out'}</button>
+        <div className={styles.accountActions}>
+          {mode !== 'settings' && <button className={styles.linkButton} type="button" onClick={() => { setDisplayName(String(session.user.user_metadata?.display_name ?? '')); changeMode('settings'); }}>Back to account</button>}
+          <button className={styles.linkButton} type="button" onClick={() => { setEmail(session.user.email ?? ''); changeMode('forgot'); }}>Change password</button>
+          <button className={`${styles.linkButton} ${styles.signOut}`} type="button" disabled={busy} onClick={() => void signOut()}>{busy ? 'Signing out…' : 'Sign Out'}</button>
         </div>
       </> : configured && !session && mode === 'verification' ? <>
         <p className={styles.copy}>We sent a verification code to <span className={styles.email}>{email}</span>. Enter the code here. Email security checks can consume one-time links before you open them, so verification uses a code instead.</p>
@@ -200,13 +203,9 @@ export default function AccountPage() {
           <button className={styles.linkButton} type="button" disabled={busy} onClick={() => void cancelRecovery('forgot')}>Request another reset email</button>
         </> : <button className={styles.linkButton} type="button" onClick={() => changeMode('forgot')}>Request a new reset email</button>}
       </> : configured ? <>
-        <p className={styles.copy}>{mode === 'create'
-          ? 'Create an optional account. You can keep learning as a guest; account sign-in does not sync or change your progress.'
-          : mode === 'forgot' ? 'Enter your email and we will send password-reset instructions if the address can receive them.'
-          : mode === 'verification' ? 'Enter the verification code from your email. We will not change local learning progress.'
-              : 'Sign in to your account. Your learning progress stays on this device.'}</p>
+        {mode === 'forgot' && <p className={styles.copy}>Enter your email to receive password reset instructions.</p>}
         <form className={styles.form} onSubmit={submit}>
-          {mode === 'create' && <label className={styles.field}>Display name (optional)
+          {mode === 'create' && <label className={styles.field}>Display name
             <input value={displayName} onChange={event => setDisplayName(event.target.value)} maxLength={60} autoComplete="nickname" />
           </label>}
           <label className={styles.field}>Email
@@ -228,8 +227,6 @@ export default function AccountPage() {
       {error && <p className={styles.alert} role="alert">{error}</p>}
       {message && <p className={styles.alert} role="status">{message}</p>}
       {configured && error && /offline|connection|service could not be reached/iu.test(error) && <button className={styles.linkButton} type="button" disabled={loading} onClick={() => void retrySession()}>Retry session check</button>}
-      <p className={styles.copy}>Accounts do not include cloud progress syncing yet. Sign in and sign out leave your local learning progress and backup files unchanged.</p>
     </section>
-    <button className="ui-secondary" type="button" onClick={() => router.push('/settings/')}>Back to Settings</button>
   </main>;
 }

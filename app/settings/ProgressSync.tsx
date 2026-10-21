@@ -30,12 +30,13 @@ const LAST_USER_KEY = 'coptic-progress-sync-last-user:v1';
 export default function ProgressSync() {
   const { session } = useAuth();
   const userId = session?.user.id ?? '';
-  const [enabled, setEnabled] = useState(false);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [pending, setPending] = useState<PendingChoice | null>(null);
+  const [online, setOnline] = useState(true);
+  const [lastSynced, setLastSynced] = useState<string | null>(null);
   const requestRef = useRef<AbortController | null>(null);
   const comparison = pending?.kind === 'conflict' ? progressComparison(pending.local, pending.cloud?.records ?? null) : null;
 
@@ -47,16 +48,16 @@ export default function ProgressSync() {
     const releaseSyncLock = await acquireProgressSyncLock();
     try {
       if (controller.signal.aborted) return;
-      if (localStorage.getItem(PROGRESS_SYNC_OPT_IN_KEY) !== userId) return;
       const client = await getSupabaseClient();
       const local = makeBackup().records;
       const [base, cloud] = await Promise.all([
         Promise.resolve(readSyncBase(userId)),
         fetchProgressSnapshot(client, userId, controller.signal),
       ]);
+      if (cloud?.updatedAt) setLastSynced(cloud.updatedAt);
       if (controller.signal.aborted) return;
       const active = await client.auth.getSession();
-      if (active.data.session?.user.id !== userId || localStorage.getItem(PROGRESS_SYNC_OPT_IN_KEY) !== userId) return;
+      if (active.data.session?.user.id !== userId) return;
       const previousUser = localStorage.getItem(LAST_USER_KEY);
       if (previousUser && previousUser !== userId) {
         setPending({ kind: 'conflict', local, cloud });
@@ -64,10 +65,24 @@ export default function ProgressSync() {
         return;
       }
 
+      // A removed legacy opt-in marker means this account previously had sync
+      // disabled. If either copy moved since its saved baseline, require an
+      // explicit choice before uploading or replacing device progress.
+      if (base && localStorage.getItem(PROGRESS_SYNC_OPT_IN_KEY) !== userId
+        && (!sameProgressRecords(local, base.records) || !sameProgressRecords(cloud?.records ?? {}, base.records))) {
+        setPending({ kind: 'conflict', local, cloud });
+        setMessage('Cloud sync was previously off for this account. Review both copies before resuming.');
+        return;
+      }
+
       if (!cloud) {
-        if (!Object.keys(local).length) { setMessage('Cloud sync is on. Progress will sync after you start learning.'); return; }
-        setPending({ kind: 'upload', local, cloud: null });
-        setMessage('Choose whether to upload the progress already on this device.');
+        if (!Object.keys(local).length) { setMessage('Ready to sync when you start learning.'); return; }
+        const written = await writeProgressSnapshot(client, 0, local, controller.signal);
+        if (controller.signal.aborted) return;
+        const latestSession = await client.auth.getSession();
+        if (latestSession.data.session?.user.id !== userId) return;
+        if ('conflict' in written) { setPending({ kind: 'conflict', local: makeBackup().records, cloud: written.snapshot }); setMessage('Cloud progress appeared on another device. Review both copies before continuing.'); }
+        else { saveSyncBase(userId, written.revision, local); localStorage.setItem(PROGRESS_SYNC_OPT_IN_KEY, userId); localStorage.setItem(LAST_USER_KEY, userId); if (written.updatedAt) setLastSynced(written.updatedAt); setMessage(sameProgressRecords(makeBackup().records, local) ? 'Synced' : 'Waiting to upload'); }
         return;
       }
 
@@ -81,11 +96,19 @@ export default function ProgressSync() {
       if (!base) {
         if (sameProgressRecords(local, cloud.records)) {
           saveSyncBase(userId, cloud.revision, cloud.records);
+          localStorage.setItem(PROGRESS_SYNC_OPT_IN_KEY, userId);
           localStorage.setItem(LAST_USER_KEY, userId);
           setMessage('Your progress is synced.');
         } else if (!Object.keys(local).length) {
-          setPending({ kind: 'download', local, cloud });
-          setMessage('Progress is available in your cloud account. Review before downloading it to this device.');
+          const latestCloud = await fetchProgressSnapshot(client, userId, controller.signal);
+          if (controller.signal.aborted) return;
+          const latestSession = await client.auth.getSession();
+          if (latestSession.data.session?.user.id !== userId || latestCloud?.revision !== cloud.revision || Object.keys(makeBackup().records).length) return;
+          installCloudProgress(latestCloud.records);
+          saveSyncBase(userId, latestCloud.revision, latestCloud.records);
+          localStorage.setItem(PROGRESS_SYNC_OPT_IN_KEY, userId);
+          localStorage.setItem(LAST_USER_KEY, userId);
+          setMessage('Cloud progress restored to this device. A recovery copy was saved first.');
         } else {
           setPending({ kind: 'conflict', local, cloud });
           setMessage('This device and your cloud account have different progress. Choose which copy to keep.');
@@ -105,13 +128,15 @@ export default function ProgressSync() {
         const written = await writeProgressSnapshot(client, cloud.revision, local, controller.signal);
         if (controller.signal.aborted) return;
         const afterWrite = await client.auth.getSession();
-        if (afterWrite.data.session?.user.id !== userId || localStorage.getItem(PROGRESS_SYNC_OPT_IN_KEY) !== userId) return;
+        if (afterWrite.data.session?.user.id !== userId) return;
         if ('conflict' in written) {
           setPending({ kind: 'conflict', local: makeBackup().records, cloud: written.snapshot });
           setMessage('Cloud progress changed on another device. Choose which copy to keep.');
         } else {
           saveSyncBase(userId, written.revision, local);
+          localStorage.setItem(PROGRESS_SYNC_OPT_IN_KEY, userId);
           localStorage.setItem(LAST_USER_KEY, userId);
+          if (written.updatedAt) setLastSynced(written.updatedAt);
           if (sameProgressRecords(makeBackup().records, local)) setMessage('Your progress is synced.');
           else {
             setMessage('More progress changed during upload. The uploaded copy is safe; the newer local progress is still pending sync.');
@@ -125,7 +150,7 @@ export default function ProgressSync() {
         const latestCloud = await fetchProgressSnapshot(client, userId, controller.signal);
         if (controller.signal.aborted) return;
         const currentSession = await client.auth.getSession();
-        if (currentSession.data.session?.user.id !== userId || localStorage.getItem(PROGRESS_SYNC_OPT_IN_KEY) !== userId) return;
+        if (currentSession.data.session?.user.id !== userId) return;
         const latestLocal = makeBackup().records;
         if (latestCloud?.revision !== cloud.revision || !sameProgressRecords(latestLocal, base.records)) {
           setPending({ kind: 'conflict', local: latestLocal, cloud: latestCloud });
@@ -133,6 +158,7 @@ export default function ProgressSync() {
         } else {
           installCloudProgress(latestCloud.records);
           saveSyncBase(userId, latestCloud.revision, latestCloud.records);
+          localStorage.setItem(PROGRESS_SYNC_OPT_IN_KEY, userId);
           localStorage.setItem(LAST_USER_KEY, userId);
           setMessage('New cloud progress was downloaded. Your previous device copy is available in Recovery copy.');
         }
@@ -197,13 +223,21 @@ export default function ProgressSync() {
 
   useEffect(() => {
     setReady(false); setPending(null); setMessage(''); setError('');
-    if (!userId) { setEnabled(false); setReady(true); return; }
-    let optedIn = false;
-    try { optedIn = localStorage.getItem(PROGRESS_SYNC_OPT_IN_KEY) === userId; }
-    catch { setError('Device storage is unavailable. Cloud sync cannot be enabled safely.'); }
-    setEnabled(optedIn); setReady(true);
-    if (optedIn) void synchronize();
+    if (!userId) { setReady(true); return; }
+    setReady(true);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const schedule = () => { clearTimeout(timer); timer = setTimeout(() => { if (navigator.onLine) void synchronize(); }, 500); };
+    if (navigator.onLine) schedule();
+    window.addEventListener('coptic-progress-change', schedule);
+    window.addEventListener('online', schedule);
+    return () => { clearTimeout(timer); window.removeEventListener('coptic-progress-change', schedule); window.removeEventListener('online', schedule); };
   }, [userId, synchronize]);
+
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine);
+    update(); window.addEventListener('online', update); window.addEventListener('offline', update);
+    return () => { window.removeEventListener('online', update); window.removeEventListener('offline', update); };
+  }, []);
 
   useEffect(() => () => { requestRef.current?.abort(); }, [userId]);
 
@@ -219,7 +253,7 @@ export default function ProgressSync() {
       const cloud = await fetchProgressSnapshot(client, userId, controller.signal);
       if (controller.signal.aborted) return;
       const currentSession = await client.auth.getSession();
-      if (currentSession.data.session?.user.id !== userId || localStorage.getItem(PROGRESS_SYNC_OPT_IN_KEY) !== userId) return;
+      if (currentSession.data.session?.user.id !== userId) return;
       const local = makeBackup().records;
       if (!sameProgressRecords(local, pending.local)) {
         setPending({ kind: 'conflict', local, cloud });
@@ -241,13 +275,15 @@ export default function ProgressSync() {
         const written = await writeProgressSnapshot(client, cloud?.revision ?? 0, local, controller.signal);
         if (controller.signal.aborted) return;
         const afterWrite = await client.auth.getSession();
-        if (afterWrite.data.session?.user.id !== userId || localStorage.getItem(PROGRESS_SYNC_OPT_IN_KEY) !== userId) return;
+        if (afterWrite.data.session?.user.id !== userId) return;
         if ('conflict' in written) {
           setPending({ kind: 'conflict', local: makeBackup().records, cloud: written.snapshot });
           setMessage('Cloud progress changed on another device. Review both copies before continuing.');
         } else {
           saveSyncBase(userId, written.revision, local);
+          localStorage.setItem(PROGRESS_SYNC_OPT_IN_KEY, userId);
           localStorage.setItem(LAST_USER_KEY, userId);
+          if (written.updatedAt) setLastSynced(written.updatedAt);
           if (sameProgressRecords(makeBackup().records, local)) setMessage('This device’s progress is synced to your account.');
           else {
             setMessage('More progress changed during upload. The uploaded copy is safe; the newer local progress is still pending sync.');
@@ -256,7 +292,7 @@ export default function ProgressSync() {
         }
       } else if (cloud) {
         const beforeInstall = await client.auth.getSession();
-        if (beforeInstall.data.session?.user.id !== userId || localStorage.getItem(PROGRESS_SYNC_OPT_IN_KEY) !== userId) return;
+        if (beforeInstall.data.session?.user.id !== userId) return;
         const currentLocal = makeBackup().records;
         if (!sameProgressRecords(currentLocal, pending.local)) {
           setPending({ kind: 'conflict', local: currentLocal, cloud });
@@ -265,6 +301,7 @@ export default function ProgressSync() {
         }
         installCloudProgress(cloud.records);
         saveSyncBase(userId, cloud.revision, cloud.records);
+        localStorage.setItem(PROGRESS_SYNC_OPT_IN_KEY, userId);
         localStorage.setItem(LAST_USER_KEY, userId);
         setMessage('Cloud progress downloaded. Your previous device copy is available in Recovery copy.');
       }
@@ -277,39 +314,13 @@ export default function ProgressSync() {
     }
   }
 
-  function toggle(enabledNext: boolean) {
-    setError(''); setMessage(''); setPending(null);
-    if (!enabledNext) {
-      try {
-        localStorage.removeItem(PROGRESS_SYNC_OPT_IN_KEY);
-        window.dispatchEvent(new Event('coptic-progress-sync-optout'));
-        setEnabled(false);
-        setMessage('Cloud sync is off. Progress already synced to your account remains there.');
-      } catch { setError('Device storage is unavailable. Cloud sync could not be turned off on this device.'); }
-      return;
-    }
-    try {
-      localStorage.setItem(PROGRESS_SYNC_OPT_IN_KEY, userId);
-      setEnabled(true);
-      setMessage('Cloud sync is on. Checking your account progress…');
-      void synchronize();
-    } catch { setError('Device storage is unavailable. Cloud sync was not enabled.'); }
-  }
-
-  if (!supabaseAuthConfigured) return null;
+  if (!supabaseAuthConfigured) return <section className="settings-cloud-progress" aria-labelledby="progress-sync-title"><h2 id="progress-sync-title" className="settings-section-title">Cloud sync</h2><div className="settings-group settings-group--content"><p>Unavailable</p></div></section>;
   return <section className="settings-cloud-progress" aria-labelledby="progress-sync-title">
-    <h2 id="progress-sync-title" className="settings-section-title">Cloud Progress</h2>
+    <h2 id="progress-sync-title" className="settings-section-title">Cloud sync</h2>
     <div className="settings-group settings-group--content">
-      {!userId ? <p>Sign in to enable optional cloud progress sync. Learning stays on this device while signed out.</p> : <>
-        <p className="settings-cloud-progress__intro">Sync lesson completion, practice results, vocabulary reviews, and saved reader passages or drafts across devices. Sync starts only after you turn it on. Offline learning continues locally.</p>
-        <div className="settings-row settings-cloud-progress__toggle">
-          <label htmlFor="progress-sync-switch">Enable Cloud Sync</label>
-          <input id="progress-sync-switch" type="checkbox" className="ui-switch" role="switch" checked={enabled} disabled={!ready || busy} onChange={event => toggle(event.target.checked)} />
-        </div>
-        {enabled && <div className="settings-action-row settings-cloud-progress__sync-action">
-          <button type="button" className="ui-secondary" disabled={busy} onClick={() => void synchronize()}>{busy ? 'Syncing…' : 'Sync now'}</button>
-        </div>}
-        {message && <p className="settings-cloud-progress__message" role="status">{message}</p>}
+      {!userId ? <p>Progress stays on this device while signed out.</p> : <>
+        <p className="settings-sync-state" role="status">{busy ? 'Syncing' : !online ? 'Offline' : error ? 'Error' : pending || /review|choice|conflict|paused/iu.test(message) ? 'Needs attention' : /pending|waiting to upload|ready to sync/iu.test(message) || !message ? 'Pending' : 'Synced'}{lastSynced && <small>Last synced: {new Date(lastSynced).toLocaleString()}</small>}</p>
+        <div className="settings-action-row settings-cloud-progress__sync-action"><button type="button" className="ui-secondary" disabled={!ready || busy || !online} onClick={() => void synchronize()}>{busy ? 'Syncing…' : 'Sync now'}</button></div>
         {error && <p className="settings-cloud-progress__error" role="alert">{error}</p>}
         {pending && <div className="ui-panel settings-cloud-progress__pending" role="region" aria-label="Review cloud progress">
           <h3>{pending.kind === 'upload' ? 'Upload this device’s progress?' : pending.kind === 'download' ? 'Download cloud progress?' : 'Choose a progress copy'}</h3>
@@ -327,6 +338,5 @@ export default function ProgressSync() {
         </div>}
       </>}
     </div>
-    <p className="settings-note settings-cloud-progress__note">Your account is identified by its signed-in user ID. Only that account can read or change its cloud snapshot. Turning sync off stops future syncs but does not delete the cloud copy.</p>
   </section>;
 }

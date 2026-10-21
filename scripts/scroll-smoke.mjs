@@ -6,6 +6,23 @@ const { lessons } = await import('data:text/javascript;base64,' + Buffer.from(so
 export async function checkScrollBounds(page, base) {
   for (const route of ['/', '/translator/']) {
     await page.goto(base + route); await page.waitForLoadState('networkidle');
+    for (const [theme, expected] of [['light', 'rgb(244, 244, 242)'], ['dark', 'rgb(8, 12, 16)']]) {
+      await page.evaluate(value => { document.documentElement.dataset.theme = value; }, theme);
+      const topColors = await page.evaluate(() => {
+        const normalize = color => { const probe = document.createElement('span'); probe.style.color = color; document.body.append(probe); const value = getComputedStyle(probe).color; probe.remove(); return value; };
+        return { root: normalize(getComputedStyle(document.documentElement).backgroundColor), body: normalize(getComputedStyle(document.body).backgroundColor), canvas: normalize(getComputedStyle(document.documentElement).getPropertyValue('--bg-color').trim()) };
+      });
+      assert.equal(topColors.root, expected, `${route} root uses the ${theme} canvas color at the top`);
+      assert.equal(topColors.body, expected, `${route} body uses the ${theme} canvas color at the top`);
+      assert.equal(topColors.canvas, expected, `${route} theme canvas resolves to the expected ${theme} color`);
+      await page.evaluate(() => scrollTo(0, 100000));
+      const bottomColors = await page.evaluate(() => {
+        const normalize = color => { const probe = document.createElement('span'); probe.style.color = color; document.body.append(probe); const value = getComputedStyle(probe).color; probe.remove(); return value; };
+        return { root: normalize(getComputedStyle(document.documentElement).backgroundColor), body: normalize(getComputedStyle(document.body).backgroundColor) };
+      });
+      assert.deepEqual(bottomColors, { root: expected, body: expected }, `${route} keeps a matching ${theme} canvas at the bottom scroll bound`);
+    }
+    await page.evaluate(() => { document.documentElement.dataset.theme = 'light'; scrollTo(0, 0); });
     const geometry = await page.evaluate(() => ({height:innerHeight,content:document.documentElement.scrollHeight,main:document.querySelector('main').getBoundingClientRect().height,insets:parseFloat(getComputedStyle(document.querySelector('.mobile-chin-page-shell')).paddingBottom)+parseFloat(getComputedStyle(document.querySelector('.mobile-chin-page-shell')).paddingTop)}));
     assert.ok(geometry.content <= Math.max(geometry.height,geometry.main+geometry.insets)+2, `${route} has no extra blank shell overflow: ${JSON.stringify(geometry)}`);
     await page.evaluate(() => scrollTo(0,100000));

@@ -271,7 +271,7 @@ export default function UnitProgressClient({ focusLessonId = null }: { focusLess
   }, [hasLoadedProgress, targetLesson, focusLessonId]);
 
   return <main ref={pathRoot} className="unit-map-page app-page">
-    <div ref={pathHeading} className="learning-path-heading"><PageHeader title="CoptLingo" icon="cross"/></div>
+    <div ref={pathHeading} className="learning-path-heading"><PageHeader title="Learn" icon="cross"/></div>
     <div className="course-map-shell">
       {visibleLessonStates.map(unitState => {
         const focused=unitState.lesson.id===targetLesson?.id;

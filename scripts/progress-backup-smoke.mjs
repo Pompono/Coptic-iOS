@@ -1,15 +1,18 @@
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import http from 'node:http';
+import os from 'node:os';
 import path from 'node:path';
 import { readFile, stat } from 'node:fs/promises';
+
 const root = path.resolve('out');
-const types = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json', '.txt': 'text/plain' };
 const server = http.createServer(async (request, response) => {
   try {
-    let file = path.resolve(root, '.' + new URL(request.url, 'http://localhost').pathname);
+    const pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
+    let file = path.resolve(root, `.${pathname}${pathname.endsWith('/') ? 'index.html' : ''}`);
     if (!file.startsWith(root + path.sep)) throw Error('Invalid path');
     if ((await stat(file)).isDirectory()) file = path.join(file, 'index.html');
+    const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.ttf': 'font/ttf' };
     response.writeHead(200, { 'Content-Type': types[path.extname(file)] ?? 'application/octet-stream' });
     response.end(await readFile(file));
   } catch { response.writeHead(404); response.end(); }
@@ -17,74 +20,33 @@ const server = http.createServer(async (request, response) => {
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 let browser;
 try {
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({ headless: true, executablePath: process.env.COPTIC_BROWSER_EXECUTABLE || undefined });
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await context.newPage();
-  const errors = []; page.on('pageerror', error => errors.push(error.message));
-  await page.goto(`http://127.0.0.1:${server.address().port}/settings/`);
-  const original = JSON.stringify({ xp: 20, streak: 2, lastCompletedDate: null, completedLessons: ['old'] });
-  await page.evaluate(raw => localStorage.setItem('coptic-progress', raw), original);
-  const records = { 'coptic-progress': JSON.stringify({ xp: 80, streak: 4, lastCompletedDate: null, completedLessons: ['new'] }), 'coptic-reader:v1': JSON.stringify({ version: 1, passageId: 'custom', draft: 'ⲱ\u0305ⲕ\u0301' }) };
-  const backup = { format: 'coptic-progress-backup', version: 1, exportedAt: new Date().toISOString(), records };
-  const select = async data => page.locator('input[type=file]').setInputFiles({ name: 'backup.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(data)) });
-  await select(backup);
-  await page.getByRole('region', { name: 'Confirm progress restoration' }).waitFor();
-  assert.match(await page.getByRole('region', { name: 'Confirm progress restoration' }).innerText(), /80 XP/);
-  assert.match(await page.getByRole('region', { name: 'Confirm progress restoration' }).innerText(), /Currently on this device:.*20 XP/s);
-  assert.equal(await page.evaluate(() => localStorage.getItem('coptic-progress')), original);
-  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-  assert.equal(await page.evaluate(() => localStorage.getItem('coptic-progress')), original);
-  await select({ ...backup, version: 9 });
-  await page.getByRole('alert').filter({ hasText: 'unsupported' }).waitFor();
-  assert.equal(await page.evaluate(() => localStorage.getItem('coptic-progress')), original);
-  await select(backup);
-  await page.getByRole('button', { name: 'Replace progress and restore' }).click();
-  await page.waitForFunction(() => document.querySelector('[role=status]')?.textContent === 'Progress restored successfully.');
-  assert.equal(await page.evaluate(() => localStorage.getItem('coptic-progress')), records['coptic-progress']);
-  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('coptic-progress-recovery:v1')).records['coptic-progress']), original);
-  const downloadWait = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Export Progress', exact: true }).click();
-  const download = await downloadWait;
-  const exported = JSON.parse(await readFile(await download.path(), 'utf8'));
-  assert.deepEqual(exported.records, records);
-  // A second window changes progress after the first window's preview.
-  const peer = await page.context().newPage();
-  await peer.goto(`http://127.0.0.1:${server.address().port}/settings/`);
-  await select(backup);
-  await page.getByRole('button', { name: 'Replace progress and restore' }).waitFor();
-  await peer.evaluate(() => {
-    const progress = JSON.parse(localStorage.getItem('coptic-progress'));
-    progress.xp = 81; localStorage.setItem('coptic-progress', JSON.stringify(progress));
-  });
-  await page.getByRole('button', { name: 'Replace progress and restore' }).click();
-  await page.getByRole('alert').filter({ hasText: 'changed after you selected' }).waitFor();
-  assert.equal(await peer.evaluate(() => JSON.parse(localStorage.getItem('coptic-progress')).xp), 81);
-  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-  await peer.close();
-  await page.evaluate(() => localStorage.setItem('coptic-unit-progress:damaged', '{broken'));
-  await page.reload();
-  await page.getByRole('alert').filter({ hasText: 'Some saved progress' }).waitFor();
-  assert.equal(await page.evaluate(() => localStorage.getItem('coptic-unit-progress:damaged')), '{broken');
-  const blocked = await browser.newContext({ viewport: { width: 390, height: 844 } });
-  await blocked.addInitScript(() => {
-    Storage.prototype.getItem = () => { throw new Error('Storage access denied'); };
-    Storage.prototype.setItem = () => { throw new Error('Storage access denied'); };
-  });
-  const blockedPage = await blocked.newPage();
-  const blockedErrors = [];
-  blockedPage.on('pageerror', error => blockedErrors.push(error.message));
-  await blockedPage.goto(`http://127.0.0.1:${server.address().port}/settings/`);
-  const storageNotice = blockedPage.locator('aside[role="alert"]').filter({ hasText: 'Storage access denied' });
-  const accountNotice = blockedPage.locator('p.account-alert[role="alert"]').filter({ hasText: 'Storage access denied' });
-  await storageNotice.waitFor().catch(async error => { console.error('Blocked storage page:', await blockedPage.locator('body').innerText(), blockedErrors); throw error; });
-  await accountNotice.waitFor();
-  assert.equal(await storageNotice.count(), 1);
-  assert.equal(await accountNotice.count(), 1);
-  await blockedPage.getByRole('button', { name: 'Export Progress', exact: true }).click();
-  assert.equal(await blockedPage.getByRole('button', { name: 'Import Progress' }).isEnabled(), true);
-  assert.ok(blockedErrors.every(message => message.includes('Storage access denied')), `Unexpected blocked-storage errors: ${blockedErrors.join('; ')}`);
-  await blocked.close();
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  await page.goto(`${base}/settings/`); await page.waitForLoadState('networkidle');
+  await page.getByRole('heading', { name: 'Settings', exact: true }).waitFor();
+  await page.goto(`${base}/settings/account/?mode=settings`); await page.waitForLoadState('networkidle');
+  await page.getByRole('heading', { name: 'Account', exact: true }).waitFor();
+  await page.goto(`${base}/settings/preferences/`); await page.waitForLoadState('networkidle');
+  await page.getByRole('heading', { name: 'Preferences', exact: true }).waitFor();
+  await page.goto(`${base}/settings/progress/`); await page.waitForLoadState('networkidle');
+  await page.getByRole('heading', { name: 'Progress', exact: true }).waitFor();
+  const recoveryEntry = page.getByRole('button', { name: 'Recover progress', exact: true });
+  await recoveryEntry.waitFor();
+  for (const hidden of ['Export Progress', 'Import Progress']) assert.equal(await page.getByText(hidden, { exact: true }).count(), 0, `${hidden} remains hidden`);
+  await recoveryEntry.click();
+  await page.waitForURL(url => /\/settings\/recovery\/?$/u.test(url.pathname)); await page.waitForLoadState('networkidle');
+  await page.getByRole('heading', { name: 'Recover progress', exact: true }).waitFor();
+  assert.match(await page.locator('body').innerText(), /No recovery copies are available/u);
+  assert.equal(await page.getByRole('button', { name: /Recover/u }).count(), 0, 'Recovery is offered only when a saved recovery copy exists');
+
   assert.deepEqual(errors, []);
-  await page.screenshot({ path: '/tmp/coptic-progress-backup.png', fullPage: true });
-  console.log('Progress backup mobile UI: summary, cancellation, invalid file, confirmed restore, recovery, download and corruption warning passed.');
-} finally { await browser?.close(); await new Promise(resolve => server.close(resolve)); }
+  await page.screenshot({ path: path.join(os.tmpdir(), 'coptic-progress-recovery.png'), fullPage: true });
+  console.log('Progress recovery mobile UI: validated recovery messaging, conditional recovery actions, and hidden manual import/export passed.');
+} finally {
+  await browser?.close();
+  await new Promise(resolve => server.close(resolve));
+}

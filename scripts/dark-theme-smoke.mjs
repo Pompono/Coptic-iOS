@@ -21,7 +21,7 @@ async function colors(locator) {
   });
 }
 export async function checkDarkTheme(page, base) {
-  await page.goto(base + '/settings/'); await page.waitForLoadState('networkidle');
+  await page.goto(base + '/settings/learning/'); await page.waitForLoadState('networkidle');
   await page.evaluate(() => localStorage.removeItem('theme-mode'));
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.reload(); await page.waitForLoadState('networkidle');
@@ -29,11 +29,11 @@ export async function checkDarkTheme(page, base) {
   assert.equal(await page.evaluate(() => localStorage.getItem('theme-mode')), null, 'System is the first-launch preference');
   await page.emulateMedia({ colorScheme: 'light' });
   await page.waitForFunction(() => document.documentElement.dataset.theme === 'light', null, { timeout: 5000 });
-  await page.getByRole('combobox', { name: 'App theme', exact: true }).selectOption('light');
+  await page.getByRole('combobox', { name: 'Appearance', exact: true }).selectOption('light');
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.waitForTimeout(100);
   assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'light', 'Explicit Light ignores system changes');
-  await page.getByRole('combobox', { name: 'App theme', exact: true }).selectOption('dark');
+  await page.getByRole('combobox', { name: 'Appearance', exact: true }).selectOption('dark');
   await page.reload(); await page.waitForLoadState('networkidle');
   assert.equal(await page.evaluate(() => localStorage.getItem('theme-mode')), 'dark', 'Explicit preference persists after reload');
   for (const route of ['/', '/learn/', '/dictionary/', '/translator/', '/read/', '/vocabulary/', '/settings/', '/translator/scanner/']) {
@@ -87,8 +87,8 @@ export async function checkDarkTheme(page, base) {
       assert.equal((await colors(outcome)).background, 'rgb(8, 12, 16)', 'Completion screen stays dark');
     }
   }
-  await page.goto(base + '/settings/'); await page.waitForLoadState('networkidle');
-  await page.getByRole('combobox', { name: 'App theme', exact: true }).selectOption('light');
+  await page.goto(base + '/settings/learning/'); await page.waitForLoadState('networkidle');
+  await page.getByRole('combobox', { name: 'Appearance', exact: true }).selectOption('light');
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto(base + '/learn/'); await page.waitForLoadState('networkidle');
   const light = await colors(page.locator('main'));

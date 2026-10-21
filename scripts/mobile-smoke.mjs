@@ -38,23 +38,44 @@ async function checkSettingsLayout(page) {
   await page.evaluate(() => {
     document.documentElement.dataset.largeText = 'true';
     document.documentElement.style.fontSize = '180%';
+  });
+  const result = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, document: document.documentElement.scrollWidth }));
+  assert.ok(result.document <= result.viewport + 1, 'Settings has no horizontal overflow at a narrow, large-text viewport');
+  await page.evaluate(() => {
+    delete document.documentElement.dataset.largeText;
+    document.documentElement.style.removeProperty('font-size');
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+}
+async function checkAccountLayout(page) {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.evaluate(() => {
+    document.documentElement.dataset.largeText = 'true';
+    document.documentElement.style.fontSize = '180%';
+    const moduleClass = name => {
+      for (const sheet of document.styleSheets) {
+        let rules;
+        try { rules = sheet.cssRules; } catch { continue; }
+        for (const rule of rules) {
+          if (!rule.selectorText) continue;
+          const match = rule.selectorText.match(new RegExp(`\\.([\\w-]*${name}_[\\w-]+)`));
+          if (match) return match[1];
+        }
+      }
+      throw new Error(`Account layout style not found: ${name}`);
+    };
     const fixture = document.createElement('section');
-    fixture.className = 'settings-group settings-group--content account-settings-card';
+    fixture.className = 'settings-group settings-group--content';
     fixture.setAttribute('aria-label', 'Long account identity layout fixture');
-    fixture.innerHTML = '<div class="account-summary"><div class="account-summary__identity"><span class="account-summary__label">Signed in as</span><strong>A long display name for a learner account</strong></div><div class="account-summary__email"><span class="account-summary__label">Email</span><span class="account-summary__value">learner.with.a.long.address.for.mobile.layout@example.invalid</span></div><span class="account-summary__verification">Email not verified</span></div><div class="account-actions"><button type="button">Account settings</button><button type="button">Sign Out</button></div>';
+    fixture.innerHTML = `<div class="${moduleClass('accountInfo')}"><label class="${moduleClass('field')}">Display name<input value="A long display name for a learner account"></label><div class="${moduleClass('field')}">Email address<span class="${moduleClass('readOnlyValue')}">learner.with.a.long.address.for.mobile.layout@example.invalid</span><span class="${moduleClass('status')}">Email not verified</span></div></div><div class="${moduleClass('accountActions')}"><button class="${moduleClass('linkButton')}" type="button">Change password</button><button class="${moduleClass('linkButton')}" type="button">Sign Out</button></div>`;
     document.querySelector('.settings-page').append(fixture);
   });
   const result = await page.evaluate(() => {
-    const email = document.querySelector('[aria-label="Long account identity layout fixture"] .account-summary__value');
+    const email = document.querySelector('[aria-label="Long account identity layout fixture"] span[class*="readOnlyValue"]');
     const buttons = [...document.querySelectorAll('[aria-label="Long account identity layout fixture"] button')];
-    return {
-      viewport: document.documentElement.clientWidth,
-      document: document.documentElement.scrollWidth,
-      emailFits: email.scrollWidth <= email.clientWidth + 1,
-      buttonHeights: buttons.map(button => button.getBoundingClientRect().height),
-    };
+    return { viewport: document.documentElement.clientWidth, document: document.documentElement.scrollWidth, emailFits: email.scrollWidth <= email.clientWidth + 1, buttonHeights: buttons.map(button => button.getBoundingClientRect().height) };
   });
-  assert.ok(result.document <= result.viewport + 1, 'Settings has no horizontal overflow at a narrow, large-text viewport');
+  assert.ok(result.document <= result.viewport + 1, 'Account has no horizontal overflow at a narrow, large-text viewport');
   assert.equal(result.emailFits, true, 'Long account emails wrap within their content column');
   assert.ok(result.buttonHeights.every(height => height >= 44), 'Account actions remain large enough to tap with large text');
   await page.evaluate(() => {
@@ -66,7 +87,7 @@ async function checkSettingsLayout(page) {
 }
 try {
   const engine = process.env.COPTIC_BROWSER === 'webkit' ? webkit : chromium;
-  browser = await engine.launch({ headless: true });
+  browser = await engine.launch({ headless: true, executablePath: engine === chromium ? process.env.COPTIC_BROWSER_EXECUTABLE || undefined : undefined });
   await checkDesign(browser, base);
   await checkLessonLayouts(browser, base);
   await checkLearning(browser, base);
@@ -96,7 +117,7 @@ try {
   const errors = [];
   page.on('pageerror', error => errors.push(`${page.url()}: ${error.message}`));
   const unit = '/learn/section-1-unit-01-pair-letters-and-sounds/';
-  for (const route of ['/', '/learn/', unit, unit + 'play/lesson-1-a-o-d/', '/dictionary/', '/dictionary/entry/?lemma=%E2%B2%81', '/settings/', '/translator/']) {
+  for (const route of ['/', '/learn/', unit, unit + 'play/lesson-1-a-o-d/', '/dictionary/', '/dictionary/entry/?lemma=%E2%B2%81', '/settings/', '/settings/account/', '/settings/preferences/', '/settings/progress/', '/settings/recovery/', '/translator/']) {
     const response = await page.goto(base + route);
     assert.equal(response.status(), 200, route);
     await page.waitForLoadState('networkidle');
@@ -133,19 +154,33 @@ try {
     }
     if (route === '/dictionary/') await page.locator('.dictionary-results[data-state="ready"]').waitFor();
     if (route === '/settings/') {
-      await page.getByRole('heading', { name: 'Account', exact: true }).waitFor();
-      await page.getByRole('button', { name: 'Sign In', exact: true }).waitFor();
-      await page.getByRole('button', { name: 'Create Account', exact: true }).waitFor();
-      assert.match(await page.locator('body').innerText(), /Cloud sync is optional and stays off until you enable it under Cloud Progress\./u);
-      await page.getByRole('combobox', { name: 'App theme', exact: true }).selectOption('dark');
-      await page.waitForLoadState('networkidle');
+      await page.getByRole('heading', { name: 'Settings', exact: true }).waitFor();
+      for (const title of ['Preferences', 'Progress']) await page.getByRole('link', { name: new RegExp(title, 'u') }).waitFor();
+      assert.equal(await page.locator('.settings-navigation__row').count(), 2);
+      assert.equal(await page.getByRole('link', { name: 'Keyboard', exact: true }).count(), 0);
+      assert.equal(await page.getByText('Type with the iOS Coptic keyboard', { exact: true }).count(), 1);
+      assert.ok(await page.locator('.settings-navigation__icon.is-learning svg').count());
+      assert.equal(await page.locator('.settings-navigation__row').filter({ hasText: 'Account' }).count(), 0);
+      assert.equal(await page.getByText('Enable Cloud Sync', { exact: true }).count(), 0);
+      assert.equal(await page.getByText('Export Progress', { exact: true }).count(), 0);
+      assert.equal(await page.getByText('Import Progress', { exact: true }).count(), 0);
       await checkSettingsLayout(page);
-      await page.reload();
-      await page.waitForLoadState('networkidle');
+    }
+    if (route === '/learn/') await page.getByRole('heading', { name: 'Learn', exact: true }).waitFor();
+    if (route === '/settings/account/') await checkAccountLayout(page);
+    if (route === '/settings/preferences/') {
+      await page.getByRole('heading', { name: 'Preferences', exact: true }).waitFor();
+      await page.getByRole('combobox', { name: 'Appearance', exact: true }).selectOption('dark');
       await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark');
       assert.equal(await page.evaluate(() => localStorage.getItem('theme-mode')), 'dark');
-      await page.getByRole('combobox', { name: 'App theme', exact: true }).selectOption('light');
-      await checkSettingsLayout(page);
+      await page.getByRole('combobox', { name: 'Appearance', exact: true }).selectOption('light');
+    }
+    if (route === '/settings/progress/') {
+      await page.getByRole('heading', { name: 'Cloud sync', exact: true }).waitFor();
+      assert.match(await page.locator('body').innerText(), /Progress stays on this device while signed out|Unavailable/u);
+      assert.equal(await page.getByText('Enable Cloud Sync', { exact: true }).count(), 0);
+      assert.equal(await page.getByText('Export Progress', { exact: true }).count(), 0);
+      assert.equal(await page.getByText('Import Progress', { exact: true }).count(), 0);
     }
     // WebKit reports aborted speculative fetches as page errors if a test
     // tears down the document while Next's link prefetches are still running.

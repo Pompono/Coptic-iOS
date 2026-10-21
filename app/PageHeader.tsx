@@ -14,7 +14,7 @@ export default function PageHeader({ title, icon, children }: {
 }
 
 export function PageBackLink({ href, children }: { href: string; children: ReactNode }) {
-  return <Link href={href} className="page-back"><span className="page-back__icon"><AppIcon name="chevron" size={18}/></span>{children}</Link>;
+  return <Link href={href} className="page-back" data-settings-direction="back"><span className="page-back__icon"><AppIcon name="chevron" size={18}/></span>{children}</Link>;
 }
 
 import Link from '@/lib/AppLink';

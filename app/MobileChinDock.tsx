@@ -31,6 +31,8 @@ function isItemActive(pathname: string, item: DockItem) {
     return false;
   }
 
+  if (item.href === '/settings' && pathname === '/account') return true;
+
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
 

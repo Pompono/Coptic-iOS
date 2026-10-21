@@ -1,7 +1,6 @@
 "use client";
 import useSettingsLockNotice from "../SettingsLockNotice";
 import PageHeader from "../PageHeader";
-import Link from "@/lib/AppLink";
 
 import AppIcon from "../AppIcon";
 import { applyCopticCase, COPTIC_KEYBOARD_LAYOUTS, CopticKeyboardGrid, isCopticKey, isCopticSpecialKey, updateInputAtSelection, type CopticKey, type CopticKeyboardMode, type CopticShiftMode } from "../CopticKeyboard";
@@ -482,10 +481,6 @@ export default function TranslatorPage() {
       >
         <PageHeader title="Translator" icon="translate"/>
         {notice}
-        <div className="translator-quick-actions">
-          <span>{bohairicOnlyEnabled ? "Bohairic-only mode" : `${dialectLabel} dialect`}</span>
-          <Link className="ui-text-action" href="/translator/scanner"><AppIcon name="scan" size={18}/> Scan a photo</Link>
-        </div>
         <section className="translation-input-panel" aria-label="Translation input">
           <div className="translation-direction"><span>{isCopticToEnglish?'Coptic → English':'English → Coptic'}</span><button type="button" onClick={handleSwitchDirection} disabled={currentState==='loading'} aria-label="Switch translation direction"><AppIcon name="return"/></button></div>
           <form className="translation-form" onSubmit={handleSubmit}>

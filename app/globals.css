@@ -32,7 +32,9 @@ button.coptic-text {
 html,
 body {
   min-height: 100%;
-  overscroll-behavior: none;
+  background-color: var(--bg-color);
+  /* Leave boundary motion to the browser / native scroll view. */
+  overscroll-behavior-y: auto;
 }
 
 body {
@@ -40,6 +42,7 @@ body {
   color: var(--text-color);
   -webkit-text-size-adjust: 100%;
   overflow-x: clip;
+  -webkit-overflow-scrolling: touch;
 }
 
 button, a, input, textarea, select { touch-action: manipulation; }

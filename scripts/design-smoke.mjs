@@ -38,7 +38,7 @@ export async function checkDesign(browser,base){
    await page.goto(base+route);await page.waitForLoadState('networkidle');
    const header=page.locator('.page-header');
    assert.equal(await header.count(),1,route+' has one shared page header');
-   if(route==='/translator/')assert.equal(await page.getByRole('link',{name:'Scan a photo',exact:true}).count(),1,'Photo scanning is available from the translator');
+   if(route==='/translator/')assert.equal(await page.getByRole('link',{name:'Scan a photo',exact:true}).count(),0,'Translator header omits the removed photo-scan shortcut');
    const disclosureTitles=route==='/translator/'?['About translation & offline use','Translation options']:route==='/read/'?['Read your own passage']:route==='/translator/scanner/'?['About photo recognition']:[];
    for(const title of disclosureTitles){
     const summary=page.locator('summary.disclosure-summary').filter({hasText:title});
@@ -61,7 +61,7 @@ export async function checkDesign(browser,base){
   assert.ok(headings.every(style=>JSON.stringify(style)===JSON.stringify(headings[0])),'All main pages share title typography');
   for(const [route,selector,min] of [
    ['/translator/','button[type=submit]',50],
-   ['/settings/','select',44],['/dictionary/entry/?lemma=ⲁ','.dictionary-entry-toolbar button,.dictionary-entry-toolbar a',44],['/dictionary/','.dictionary-search-shell',44],
+   ['/settings/learning/','select',44],['/dictionary/entry/?lemma=ⲁ','.dictionary-entry-toolbar button,.dictionary-entry-toolbar a',44],['/dictionary/','.dictionary-search-shell',44],
    ['/read/','[role=group][aria-label="Reading passage"] button',44],['/translator/scanner/','button',44]
   ]){
    await page.goto(base+route);await page.waitForLoadState('networkidle');

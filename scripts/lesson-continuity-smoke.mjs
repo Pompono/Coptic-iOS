@@ -7,8 +7,8 @@ import { startLesson, finishTransfer } from './learning-smoke.mjs';
 const browser = await chromium.launch({headless:true, channel:process.platform === 'win32' ? 'msedge' : undefined});
 try {
  const page = await browser.newPage({viewport:{width:390,height:844}});
- await page.goto((process.env.COPTIC_TEST_BASE ?? 'http://127.0.0.1:3000') + '/settings/');
- await page.getByRole('combobox',{name:'App theme',exact:true}).selectOption('dark');
+ await page.goto((process.env.COPTIC_TEST_BASE ?? 'http://127.0.0.1:3000') + '/settings/learning/');
+ await page.getByRole('combobox',{name:'Appearance',exact:true}).selectOption('dark');
  await page.goto((process.env.COPTIC_TEST_BASE ?? 'http://127.0.0.1:3000') + '/learn/section-1-unit-01-pair-letters-and-sounds/play/lesson-1-a-o-d/');
  await startLesson(page);
  const answers = ['ⲁ','a','a','dha','dha','ⲇⲁ','o','o','ⲟ','dho','ⲇⲟ','dhad','dho','ⲇⲁⲇ','dhod','dhod','ⲇⲟⲇ','dhad','dha'];

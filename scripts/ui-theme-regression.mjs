@@ -34,7 +34,7 @@ const exerciseRoute = `/learn/${exerciseLesson.id}/play/${exercise.id}/`;
 const routes = [
   ["home", "/"], ["learning", "/learn/"], ["exercise", exerciseRoute],
   ["dictionary", "/dictionary/"], ["translator", "/translator/"], ["reading", "/read/"],
-  ["scanner", "/translator/scanner/"], ["vocabulary", "/vocabulary/"], ["settings", "/settings/"],
+  ["scanner", "/translator/scanner/"], ["vocabulary", "/vocabulary/"], ["settings", "/settings/"], ["learning-settings", "/settings/learning/"],
 ];
 const exerciseExportDirectory = path.resolve(root, `.${exerciseRoute}`);
 const exerciseSegment = (await readdir(exerciseExportDirectory)).find(name => /^__next\..*__PAGE__\.txt$/.test(name));
@@ -69,8 +69,8 @@ try {
     if (message.type() === "error" && /hydration|react error #(?:418|423|425)/i.test(message.text())) hydrationErrors.push(message.text());
   });
 
-  await page.goto(`${base}/settings/`);
-  const theme = page.getByRole("combobox", { name: "App theme", exact: true });
+  await page.goto(`${base}/settings/learning/`);
+  const theme = page.getByRole("combobox", { name: "Appearance", exact: true });
   await assert.doesNotReject(() => theme.waitFor());
   assert.equal(await theme.inputValue(), "system");
   assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "dark");
@@ -97,15 +97,19 @@ try {
       const layout = await page.evaluate(() => ({
         width: innerWidth,
         documentWidth: document.documentElement.scrollWidth,
+        rootBackground: getComputedStyle(document.documentElement).backgroundColor,
         bodyBackground: getComputedStyle(document.body).backgroundColor,
+        canvasBackground: getComputedStyle(document.documentElement).getPropertyValue('--bg-color').trim(),
         pageTitle: document.querySelector("h1")?.textContent?.trim() ?? "missing heading",
       }));
       assert.ok(layout.pageTitle.length > 0, `${name} renders a page heading`);
       assert.ok(layout.documentWidth <= layout.width + 1, `${name} has no horizontal overflow at desktop width: ${JSON.stringify(layout)}`);
+      assert.equal(layout.rootBackground, layout.bodyBackground, `${name} root and body backgrounds match in ${mode} theme`);
+      assert.equal(layout.rootBackground, layout.canvasBackground, `${name} overscroll canvas matches the app background in ${mode} theme`);
       if (name === "exercise") await startExercise(page);
       await page.screenshot({ path: path.join(screenshots, `${mode}-${name}-desktop.png`) });
-      if (name === "settings") {
-        assert.equal(await page.getByRole("combobox", { name: "App theme", exact: true }).inputValue(), mode);
+      if (name === "learning-settings") {
+        assert.equal(await page.getByRole("combobox", { name: "Appearance", exact: true }).inputValue(), mode);
       }
       await page.reload();
       await page.waitForFunction(value => document.documentElement.dataset.theme === value, mode);
@@ -115,7 +119,8 @@ try {
   // Exercise responsive layout and navigation through the actual home links.
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${base}/settings/`);
-  await page.getByRole("combobox", { name: "App theme", exact: true }).selectOption("light");
+  await page.goto(`${base}/settings/learning/`);
+  await page.getByRole("combobox", { name: "Appearance", exact: true }).selectOption("light");
   await page.goto(`${base}/`);
   await page.getByRole("link", { name: /Read Coptic/ }).click();
   await page.getByRole("heading", { level: 1 }).waitFor();
@@ -129,12 +134,13 @@ try {
   await exerciseCopticEditing(page, translatorInput, "Translator");
 
   await page.getByRole("navigation", { name: "Mobile navigation" }).getByRole("link", { name: "Settings" }).click();
+  await page.goto(`${base}/settings/learning/`);
   await page.evaluate(() => {
     localStorage.removeItem("coptic-dictionary-recent");
     sessionStorage.removeItem("coptic-dictionary-search");
   });
   for (const [mode, colorScheme] of [["light", "light"], ["dark", "dark"]]) {
-    await page.getByRole("combobox", { name: "App theme", exact: true }).selectOption(mode);
+    await page.getByRole("combobox", { name: "Appearance", exact: true }).selectOption(mode);
     await page.emulateMedia({ colorScheme });
     for (const [name, route] of routes) {
       await page.goto(`${base}${route}`);
@@ -151,8 +157,8 @@ try {
   // Check the three disclosure-heavy surfaces at the narrower requested phone width too.
   await page.setViewportSize({ width: 375, height: 812 });
   for (const [mode, colorScheme] of [["light", "light"], ["dark", "dark"]]) {
-    await page.goto(`${base}/settings/`);
-    await page.getByRole("combobox", { name: "App theme", exact: true }).selectOption(mode);
+    await page.goto(`${base}/settings/learning/`);
+    await page.getByRole("combobox", { name: "Appearance", exact: true }).selectOption(mode);
     await page.emulateMedia({ colorScheme });
     for (const [name, route] of [["translator", "/translator/"], ["reading", "/read/"], ["scanner", "/translator/scanner/"]]) {
       await page.goto(`${base}${route}`);

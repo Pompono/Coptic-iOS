@@ -200,7 +200,7 @@ test('malformed cloud snapshots and unsafe revisions are rejected before reconci
 });
 
 function coordinatorFixture(options = {}) {
-  const base = options.base ?? { revision: 1, records: { 'coptic-progress': raw(1) } };
+  const base = options.base === undefined ? { revision: 1, records: { 'coptic-progress': raw(1) } } : options.base;
   const state = {
     user: options.user === undefined ? 'user-a' : options.user,
     enabled: options.enabled !== false,
@@ -219,7 +219,7 @@ function coordinatorFixture(options = {}) {
     cloud: async () => { state.calls.cloud++; return state.cloud; },
     upload: async (revision, records) => {
       state.calls.upload++;
-      if (revision !== state.cloud?.revision) return { conflict: true, snapshot: state.cloud };
+      if (revision !== (state.cloud?.revision ?? 0)) return { conflict: true, snapshot: state.cloud };
       state.cloud = { revision: revision + 1, records: structuredClone(records), updatedAt: null };
       return state.cloud;
     },
@@ -230,21 +230,62 @@ function coordinatorFixture(options = {}) {
   return { state, coordinator: createProgressSyncCoordinator(adapter), adapter };
 }
 
-test('first sync stays pending for explicit review; empty local and cloud do not create progress', async () => {
+test('first sync uploads a sole local copy and restores cloud progress to an empty device', async () => {
   const empty = { revision: 1, records: {}, updatedAt: null };
   const firstLocal = coordinatorFixture({ base: null, cloud: null, local: { 'coptic-progress': raw(3) } });
   await firstLocal.coordinator.request();
-  assert.equal(firstLocal.state.calls.upload, 0);
+  assert.equal(firstLocal.state.calls.upload, 1);
+  assert.equal(firstLocal.state.cloud.records['coptic-progress'], raw(3));
+  assert.equal(firstLocal.state.base.revision, 1);
   assert.equal(firstLocal.state.calls.install, 0);
 
   const firstCloud = coordinatorFixture({ base: null, cloud: { revision: 2, records: { 'coptic-progress': raw(9) }, updatedAt: null }, local: {} });
   await firstCloud.coordinator.request();
-  assert.equal(firstCloud.state.calls.install, 0);
+  assert.equal(firstCloud.state.calls.install, 1);
+  assert.equal(firstCloud.state.local['coptic-progress'], raw(9));
+  assert.equal(firstCloud.state.base.revision, 2);
 
   const noData = coordinatorFixture({ base: { revision: 1, records: {} }, cloud: empty, local: {} });
   await noData.coordinator.request();
   assert.equal(noData.state.calls.upload, 0);
   assert.equal(noData.state.calls.install, 0);
+});
+
+test('first sign-in with differing local and cloud progress preserves both until explicit review', async () => {
+  const fixture = coordinatorFixture({ base: null, local: { 'coptic-progress': raw(3) }, cloud: { revision: 4, records: { 'coptic-progress': raw(9) }, updatedAt: null } });
+  await fixture.coordinator.request();
+  assert.equal(fixture.state.calls.install, 0);
+  assert.equal(fixture.state.calls.upload, 0);
+  assert.equal(fixture.state.local['coptic-progress'], raw(3));
+  assert.equal(fixture.state.cloud.records['coptic-progress'], raw(9));
+  assert.equal(fixture.state.base, null);
+});
+
+test('signed-in sync keeps an existing per-user baseline and revision instead of migrating it away', async () => {
+  const baseline = { revision: 7, records: { 'coptic-progress': raw(10) } };
+  const fixture = coordinatorFixture({ base: baseline, cloud: { revision: 7, records: baseline.records, updatedAt: null }, local: baseline.records });
+  await fixture.coordinator.request();
+  assert.equal(fixture.state.calls.upload, 0);
+  assert.equal(fixture.state.calls.install, 0);
+  assert.equal(fixture.state.base.revision, 7);
+  assert.deepEqual(fixture.state.base.records, baseline.records);
+});
+
+test('a legacy account with sync disabled never enters automatic reconciliation', async () => {
+  const baseline = { revision: 7, records: { 'coptic-progress': raw(10) } };
+  const fixture = coordinatorFixture({
+    enabled: false,
+    base: baseline,
+    local: { 'coptic-progress': raw(12) },
+    cloud: { revision: 7, records: baseline.records, updatedAt: null },
+  });
+  await fixture.coordinator.request();
+  assert.equal(fixture.state.calls.cloud, 0);
+  assert.equal(fixture.state.calls.upload, 0);
+  assert.equal(fixture.state.calls.install, 0);
+  assert.equal(fixture.state.local['coptic-progress'], raw(12));
+  assert.equal(fixture.state.cloud.records['coptic-progress'], raw(10));
+  assert.deepEqual(fixture.state.base, baseline);
 });
 
 test('local-only progress uploads by compare-and-swap and retains exact Unicode/schedule records', async () => {

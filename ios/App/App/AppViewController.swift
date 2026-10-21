@@ -9,9 +9,11 @@ class AppViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(AppIconPlugin())
         bridge?.registerPluginInstance(AppExperiencePlugin())
         bridge?.registerPluginInstance(LessonAudioPlugin())
-        // Keep normal content scrolling, but never rubber-band past its bounds.
-        webView?.scrollView.bounces = false
-        webView?.scrollView.alwaysBounceVertical = false
+        // Let WKWebView provide native momentum and rubber-band behavior for
+        // the document scroll. Lesson exercises lock this scroll view only
+        // while their dedicated inner panes are active.
+        webView?.scrollView.bounces = true
+        webView?.scrollView.alwaysBounceVertical = true
         webView?.scrollView.alwaysBounceHorizontal = false
         #if DEBUG
         if let audioURL = Bundle.main.resourceURL?.appendingPathComponent("public/audio/learn/shared/a.wav") {
@@ -54,6 +56,20 @@ class AppViewController: CAPBridgeViewController {
                 await cap.nativePromise('AppExperience', 'copy', { text: 'Coptic clipboard check' });
                 const preferences = await cap.nativePromise('AppExperience', 'preferences', {});
                 if (!(preferences.textScale > 0)) throw new Error('Invalid preferred text scale');
+                const backgrounds = [
+                  { red: 244 / 255, green: 244 / 255, blue: 242 / 255 },
+                  { red: 8 / 255, green: 12 / 255, blue: 16 / 255 }
+                ];
+                for (const expected of backgrounds) {
+                  const applied = await cap.nativePromise('AppExperience', 'setWebViewBackground', expected);
+                  if (['red', 'green', 'blue'].some(channel => Math.abs(applied[channel] - expected[channel]) > 0.001)) {
+                    throw new Error('WKWebView backing background did not follow the requested theme');
+                  }
+                }
+                const activeBackground = getComputedStyle(document.body).backgroundColor.match(/[\\d.]+/g)?.slice(0, 3).map(value => Number(value) / 255);
+                if (activeBackground?.length === 3) {
+                  await cap.nativePromise('AppExperience', 'setWebViewBackground', { red: activeBackground[0], green: activeBackground[1], blue: activeBackground[2] });
+                }
                 await cap.nativePromise('AppExperience', 'feedback', { correct: true });
                 await cap.nativePromise('AppExperience', 'feedback', { correct: false });
                 await cap.nativePromise('LessonAudio', 'activate', {});
@@ -307,7 +323,8 @@ public class AppExperiencePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "preferences", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "copy", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "feedback", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "exerciseMode", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "exerciseMode", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setWebViewBackground", returnType: CAPPluginReturnPromise)
     ]
     private var textObserver: NSObjectProtocol?
     private var exerciseActive = false
@@ -340,6 +357,24 @@ public class AppExperiencePlugin: CAPPlugin, CAPBridgedPlugin {
                 #endif
             }
             call.resolve(["pinned": self.exerciseActive, "offsetY": Double(scroll.contentOffset.y)])
+        }
+    }
+    @objc func setWebViewBackground(_ call: CAPPluginCall) {
+        guard let red = call.getDouble("red"), let green = call.getDouble("green"), let blue = call.getDouble("blue"),
+              [red, green, blue].allSatisfy({ $0.isFinite && (0...1).contains($0) }) else {
+            call.reject("Expected normalized red, green, and blue channels")
+            return
+        }
+        DispatchQueue.main.async {
+            guard let webView = self.bridge?.webView else {
+                call.reject("Web view is unavailable")
+                return
+            }
+            let color = UIColor(red: CGFloat(red), green: CGFloat(green), blue: CGFloat(blue), alpha: 1)
+            webView.isOpaque = false
+            webView.backgroundColor = color
+            webView.scrollView.backgroundColor = color
+            call.resolve(["red": red, "green": green, "blue": blue])
         }
     }
     @objc func preferences(_ call: CAPPluginCall) {

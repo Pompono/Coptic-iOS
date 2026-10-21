@@ -1,6 +1,7 @@
 "use client";
 
 import { syncNativeAppIcon } from "@/lib/nativeAppIcon";
+import { setNativeWebViewBackground } from "@/lib/nativeExperience";
 import { createThemeInitScript, readThemeMode, resolveTheme as resolveThemePreference, THEME_STORAGE_KEY } from "@/lib/themePreference.mjs";
 import { useEffect } from "react";
 import { subscribeToMediaQueryChange } from "@/lib/mediaQuery";
@@ -16,6 +17,8 @@ function resolveTheme(mode: ThemeMode): ResolvedTheme {
 export function applyThemeMode(mode: ThemeMode) {
   const resolved = resolveTheme(mode);
   document.documentElement.dataset.theme = resolved;
+  const channels = getComputedStyle(document.body).backgroundColor.match(/[\d.]+/gu)?.slice(0, 3).map(Number);
+  if (channels?.length === 3) void setNativeWebViewBackground(channels[0] / 255, channels[1] / 255, channels[2] / 255);
   void syncNativeAppIcon(resolved).catch(error => console.warn("App icon could not follow theme:", error));
 }
 

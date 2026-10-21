@@ -15,3 +15,7 @@
 .alert { color: var(--text-color); padding: 12px; border-radius: 12px; background: color-mix(in srgb, var(--accent-color) 12%, var(--surface-1)); }
 .email { font-weight: 700; overflow-wrap: anywhere; }
 .sectionTitle { margin: 0; font-size: 1.25rem; }
+.accountInfo { display: grid; gap: 14px; }
+.readOnlyValue { min-height: 48px; display: flex; align-items: center; padding: 11px 13px; border-radius: 12px; background: var(--surface-2); color: var(--text-color); font-weight: 400; overflow-wrap: anywhere; }
+.accountActions { display: grid; gap: 6px; border-top: 1px solid var(--separator-color); padding-top: 12px; }
+.signOut { color: var(--lesson-choice-wrong-text); }
