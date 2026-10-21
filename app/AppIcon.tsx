@@ -1,5 +1,5 @@
 import HeritageIcon from './HeritageIcon';
-export type IconName = 'arrow' | 'settings' | 'return' | 'home' | 'book' | 'learn' | 'translate' | 'search' | 'scan' | 'check' | 'lock' | 'close' | 'review' | 'chevron' | 'copy' | 'cross' | 'play' | 'reader';
+export type IconName = 'arrow' | 'settings' | 'return' | 'home' | 'book' | 'learn' | 'translate' | 'search' | 'scan' | 'check' | 'lock' | 'close' | 'review' | 'chevron' | 'copy' | 'cross' | 'play' | 'reader' | 'sliders';
 /** Original Coptic identity icons alongside quiet utility symbols. */
 export default function AppIcon({ name, size = 20 }: { name: IconName; size?: number }) {
  if (["book","learn","translate","home","settings","cross"].includes(name)) return <HeritageIcon name={name as "book"|"learn"|"translate"|"home"|"settings"|"cross"} size={size}/>;
@@ -8,6 +8,7 @@ export default function AppIcon({ name, size = 20 }: { name: IconName; size?: nu
  arrow:<path d="M5 12h14m-6-6 6 6-6 6"/>,return:<path d="M20 5v7H4m5-5-5 5 5 5"/>,
  reader:<><path d="M12 5C8 3 4 3 2 4v15c3-1 7-1 10 1 3-2 7-2 10-1V4c-2-1-6-1-10 1Z"/><path d="M12 5v15"/></>,
  search:<><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></>,
+ sliders:<><path d="M4 6h6m4 0h6M4 12h2m4 0h10M4 18h10m4 0h2"/><circle cx="12" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/></>,
  scan:<><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M4 12h16"/></>,
  check:<path d="m5 12 4 4L19 6"/>,lock:<><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/></>,
  close:<path d="m6 6 12 12M18 6 6 18"/>,review:<><path d="M3 10a9 9 0 1 1 2 8M3 4v6h6"/><path d="M12 7v5l3 2"/></>,

@@ -16,12 +16,13 @@ export async function checkKeyboardPrompt(browser, base) {
     assert.equal(await prompt.count(), 0, 'Permanent dismissal survives relaunch');
     await page.goto(base + '/settings/'); await page.waitForLoadState('networkidle');
     assert.equal(await page.getByText('On-screen Coptic Keyboard', {exact:true}).count(), 0);
-    // Use the last visible Settings category to check that the dock does not cover it.
-    const lastCategory = page.getByRole('link', { name: /Keyboard/u });
-    await lastCategory.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
-    const category = await lastCategory.boundingBox();
+    // The original App Store row now lives below the primary Settings cards.
+    const keyboardDownload = page.locator('.settings-keyboard-install__card');
+    await keyboardDownload.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
+    const downloadRow = await keyboardDownload.boundingBox();
     const dock = await page.getByRole('navigation', {name:'Mobile navigation'}).boundingBox();
-    assert.ok(category.y + category.height < dock.y, 'Settings categories remain visible above the dock');
+    assert.ok(downloadRow.y + downloadRow.height < dock.y, 'Keyboard download row remains visible above the dock');
+    assert.match(await keyboardDownload.getByRole('link').getAttribute('href'), /apps\.apple\.com\/us\/app\/coptic-keyboard\/id1510907422/);
     await page.evaluate(() => {localStorage.setItem('coptic-keyboard-enabled','true');sessionStorage.setItem('coptic-keyboard-visible-session','true');});
     for (const width of [390,1024]) {
       await page.setViewportSize({width,height:844});

@@ -5,8 +5,6 @@ import type { ReactNode } from 'react';
 import PageHeader, { PageBackLink } from '../PageHeader';
 import ProgressSync from './ProgressSync';
 import ProgressBackup from './ProgressBackup';
-import { COPTIC_KEYBOARD_APP_STORE_URL } from '../KeyboardInstallPrompt';
-import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { COPTIC_FONT_OPTIONS, COPTIC_FONT_STORAGE_KEY, applyCopticFontMode, readCopticFontMode, type CopticFontMode } from '../CopticFontPreference';
 import { applyThemeMode, readThemePreference, THEME_STORAGE_KEY, type ThemeMode } from '../ThemePreference';
@@ -29,15 +27,12 @@ function LearningSettings() {
   </div></section></Shell>;
 }
 
-function KeyboardSettings() { return <Shell title="Keyboard"><section className="settings-group settings-group--content keyboard-resource"><p>Type Coptic with the optional Coptic Keyboard app.</p><a href={COPTIC_KEYBOARD_APP_STORE_URL} target="_blank" rel="noreferrer" aria-label="Download the Coptic Keyboard app on the App Store"><Image src="/download-on-the-app-store-badge.svg" alt="Download on the App Store" width={160} height={54}/></a></section></Shell>; }
-
 export default function SettingsSubpage() {
   const pathname = usePathname(); const section = pathname.split('/').filter(Boolean).at(-1) ?? '';
   if (section === 'account') return <AccountPage/>;
   if (section === 'learning' || section === 'preferences') return <LearningSettings/>;
   if (section === 'progress') return <Shell title="Progress"><ProgressSync/><ProgressBackup/></Shell>;
   if (section === 'recovery') return <Shell title="Recover progress"><ProgressBackup focused/></Shell>;
-  if (section === 'keyboard') return <KeyboardSettings/>;
   if (section === 'developer') return <DeveloperSettings/>;
   return <Shell title="Settings"><p>That settings page is unavailable.</p></Shell>;
 }

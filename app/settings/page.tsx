@@ -4,11 +4,13 @@ import PageHeader from '../PageHeader';
 import { useAuth } from '../AuthProvider';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import AppIcon from '../AppIcon';
+import Image from 'next/image';
+import { COPTIC_KEYBOARD_APP_STORE_URL } from '../KeyboardInstallPrompt';
 
 const entries = [
-  { href: '/settings/preferences', icon: '文', color: 'learning', title: 'Preferences' },
+  { href: '/settings/preferences', icon: 'sliders', color: 'learning', title: 'Preferences' },
   { href: '/settings/progress', icon: '↻', color: 'progress', title: 'Progress' },
-  { href: '/settings/keyboard', icon: '⌨', color: 'keyboard', title: 'Keyboard' },
 ];
 
 export default function SettingsPage() {
@@ -28,8 +30,17 @@ export default function SettingsPage() {
       </button>}
     <nav className="settings-navigation" aria-label="Settings categories">
       {entries.map(item => <Link className="settings-navigation__row" href={item.href} key={item.href}>
-        <span className={`settings-navigation__icon is-${item.color}`} aria-hidden="true">{item.icon}</span><span className="settings-navigation__copy"><strong>{item.title}</strong></span><span className="settings-chevron" aria-hidden="true">›</span>
+        <span className={`settings-navigation__icon is-${item.color}`} aria-hidden="true">{item.icon === 'sliders' ? <AppIcon name="sliders" size={22}/> : item.icon}</span><span className="settings-navigation__copy"><strong>{item.title}</strong></span><span className="settings-chevron" aria-hidden="true">›</span>
       </Link>)}
     </nav>
+    <section className="settings-keyboard-install" aria-labelledby="settings-keyboard-title">
+      <h2 id="settings-keyboard-title">Coptic keyboard</h2>
+      <div className="settings-keyboard-install__card">
+        <p>Type with the iOS Coptic keyboard</p>
+        <a href={COPTIC_KEYBOARD_APP_STORE_URL} target="_blank" rel="noreferrer" aria-label="Download the Coptic Keyboard app on the App Store">
+          <Image src="/download-on-the-app-store-badge.svg" alt="Download on the App Store" width={160} height={54}/>
+        </a>
+      </div>
+    </section>
   </main>;
 }

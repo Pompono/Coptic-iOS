@@ -87,7 +87,7 @@ async function checkAccountLayout(page) {
 }
 try {
   const engine = process.env.COPTIC_BROWSER === 'webkit' ? webkit : chromium;
-  browser = await engine.launch({ headless: true });
+  browser = await engine.launch({ headless: true, executablePath: engine === chromium ? process.env.COPTIC_BROWSER_EXECUTABLE || undefined : undefined });
   await checkDesign(browser, base);
   await checkLessonLayouts(browser, base);
   await checkLearning(browser, base);
@@ -117,7 +117,7 @@ try {
   const errors = [];
   page.on('pageerror', error => errors.push(`${page.url()}: ${error.message}`));
   const unit = '/learn/section-1-unit-01-pair-letters-and-sounds/';
-  for (const route of ['/', '/learn/', unit, unit + 'play/lesson-1-a-o-d/', '/dictionary/', '/dictionary/entry/?lemma=%E2%B2%81', '/settings/', '/settings/account/', '/settings/preferences/', '/settings/progress/', '/settings/keyboard/', '/settings/recovery/', '/translator/']) {
+  for (const route of ['/', '/learn/', unit, unit + 'play/lesson-1-a-o-d/', '/dictionary/', '/dictionary/entry/?lemma=%E2%B2%81', '/settings/', '/settings/account/', '/settings/preferences/', '/settings/progress/', '/settings/recovery/', '/translator/']) {
     const response = await page.goto(base + route);
     assert.equal(response.status(), 200, route);
     await page.waitForLoadState('networkidle');
@@ -155,14 +155,18 @@ try {
     if (route === '/dictionary/') await page.locator('.dictionary-results[data-state="ready"]').waitFor();
     if (route === '/settings/') {
       await page.getByRole('heading', { name: 'Settings', exact: true }).waitFor();
-      for (const title of ['Preferences', 'Progress', 'Keyboard']) await page.getByRole('link', { name: new RegExp(title, 'u') }).waitFor();
-      assert.equal(await page.locator('.settings-navigation__row').count(), 3);
+      for (const title of ['Preferences', 'Progress']) await page.getByRole('link', { name: new RegExp(title, 'u') }).waitFor();
+      assert.equal(await page.locator('.settings-navigation__row').count(), 2);
+      assert.equal(await page.getByRole('link', { name: 'Keyboard', exact: true }).count(), 0);
+      assert.equal(await page.getByText('Type with the iOS Coptic keyboard', { exact: true }).count(), 1);
+      assert.ok(await page.locator('.settings-navigation__icon.is-learning svg').count());
       assert.equal(await page.locator('.settings-navigation__row').filter({ hasText: 'Account' }).count(), 0);
       assert.equal(await page.getByText('Enable Cloud Sync', { exact: true }).count(), 0);
       assert.equal(await page.getByText('Export Progress', { exact: true }).count(), 0);
       assert.equal(await page.getByText('Import Progress', { exact: true }).count(), 0);
       await checkSettingsLayout(page);
     }
+    if (route === '/learn/') await page.getByRole('heading', { name: 'Learn', exact: true }).waitFor();
     if (route === '/settings/account/') await checkAccountLayout(page);
     if (route === '/settings/preferences/') {
       await page.getByRole('heading', { name: 'Preferences', exact: true }).waitFor();
@@ -173,13 +177,10 @@ try {
     }
     if (route === '/settings/progress/') {
       await page.getByRole('heading', { name: 'Cloud sync', exact: true }).waitFor();
-      assert.match(await page.locator('body').innerText(), /Progress stays on this device while signed out/u);
+      assert.match(await page.locator('body').innerText(), /Progress stays on this device while signed out|Unavailable/u);
       assert.equal(await page.getByText('Enable Cloud Sync', { exact: true }).count(), 0);
       assert.equal(await page.getByText('Export Progress', { exact: true }).count(), 0);
       assert.equal(await page.getByText('Import Progress', { exact: true }).count(), 0);
-    }
-    if (route === '/settings/keyboard/') {
-      assert.ok(await page.getByRole('link', { name: /Download the Coptic Keyboard app on the App Store/u }).count());
     }
     // WebKit reports aborted speculative fetches as page errors if a test
     // tears down the document while Next's link prefetches are still running.

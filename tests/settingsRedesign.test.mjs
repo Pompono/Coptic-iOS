@@ -3,13 +3,14 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const font = await import('../lib/copticFontPreference.mjs');
-const [settingsHome, subpage, account, progress, recovery, progressStorage] = await Promise.all([
+const [settingsHome, subpage, account, progress, recovery, progressStorage, learningPath] = await Promise.all([
   readFile('app/settings/page.tsx', 'utf8'),
   readFile('app/settings/Subpage.tsx', 'utf8'),
   readFile('app/account/page.tsx', 'utf8'),
   readFile('app/settings/ProgressSync.tsx', 'utf8'),
   readFile('app/settings/ProgressBackup.tsx', 'utf8'),
   readFile('lib/progressStorage.ts', 'utf8'),
+  readFile('app/learn/[lessonId]/UnitProgressClient.tsx', 'utf8'),
 ]);
 
 test('Modern and Classic keep their original font implementations and saved values', () => {
@@ -24,10 +25,16 @@ test('Modern and Classic keep their original font implementations and saved valu
   assert.match(subpage, /font-choice.*COPTIC_FONT_OPTIONS\.map/su);
 });
 
-test('Settings exposes one profile entry and exactly three primary categories', () => {
+test('Settings exposes one profile entry, two primary categories, and the keyboard download row', () => {
   assert.match(settingsHome, /href: '\/settings\/preferences',[^\n]*title: 'Preferences'/u);
   assert.match(settingsHome, /href: '\/settings\/progress',[^\n]*title: 'Progress'/u);
-  assert.match(settingsHome, /href: '\/settings\/keyboard',[^\n]*title: 'Keyboard'/u);
+  assert.doesNotMatch(settingsHome, /href: '\/settings\/keyboard'/u);
+  assert.match(settingsHome, /icon: 'sliders'/u);
+  assert.match(settingsHome, /Coptic keyboard/u);
+  assert.match(settingsHome, /Type with the iOS Coptic keyboard/u);
+  assert.match(settingsHome, /COPTIC_KEYBOARD_APP_STORE_URL/u);
+  assert.match(settingsHome, /download-on-the-app-store-badge\.svg/u);
+  assert.doesNotMatch(subpage, /KeyboardSettings|section === 'keyboard'/u);
   assert.doesNotMatch(settingsHome, /title: 'Account'/u);
   assert.doesNotMatch(settingsHome, /description:/u);
   assert.match(settingsHome, /router\.push\('\/settings\/account\?mode=settings'\)/u);
@@ -39,6 +46,12 @@ test('Settings subpages share their back navigation and omit a sync toggle', () 
   assert.match(subpage, /section === 'preferences'/u);
   assert.match(subpage, /<Shell title="Preferences"/u);
   assert.doesNotMatch(progress, /Enable Cloud Sync|settings-cloud-progress__toggle/u);
+});
+
+test('The learning pathway uses its page name while preserving the unit map', () => {
+  assert.match(learningPath, /PageHeader title="Learn"/u);
+  assert.doesNotMatch(learningPath, /PageHeader title="CoptLingo"/u);
+  assert.match(learningPath, /course-map-shell/u);
 });
 
 test('Account has one page title and enables save only for changed profile values', () => {
