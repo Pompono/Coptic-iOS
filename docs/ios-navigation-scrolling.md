@@ -1,6 +1,6 @@
 # iOS navigation and scrolling behavior
 
-Settings route changes use the browser View Transitions API on the Settings page element. The tab dock and app shell are outside the named transition, so they stay fixed. Supported browsers animate the current page over the previous page with a short horizontal push or pop. Browsers without View Transitions, and users who enable Reduce Motion, navigate immediately without a substitute animation.
+Settings route changes use the browser View Transitions API on the Settings page element where available. Older WKWebViews use a small DOM snapshot and Web Animations fallback on that page. The tab dock and app shell stay fixed in both paths. Users who enable Reduce Motion navigate without animation.
 
 An interactive edge-swipe pop is not enabled. The Capacitor app uses Next.js client routing inside a WKWebView, not a `UINavigationController` stack, and a custom edge gesture would compete with system gestures and controls. The back row remains available and receives the reverse page transition.
 
