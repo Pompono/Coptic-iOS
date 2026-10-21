@@ -14,6 +14,7 @@ on:
       - 'tests/progressFiles.test.mjs'
       - 'lib/auth/**'
       - 'lib/progressSync.ts'
+      - 'lib/settingsNavigation.ts'
       - 'lib/progressStorage.ts'
       - 'app/ProgressSyncLifecycle.tsx'
       - 'app/settings/ProgressSync.tsx'
