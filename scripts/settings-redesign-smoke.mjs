@@ -28,7 +28,8 @@ try {
   browser = await chromium.launch({ headless: true, timeout: 15000, executablePath: process.env.COPTIC_BROWSER_EXECUTABLE || undefined });
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
   page.setDefaultTimeout(15000);
-  const waitForPath = path => page.waitForURL(url => url.pathname.replace(/\/$/u, '') === path);
+  const normalizePath = path => path.replace(/\/$/u, '') || '/';
+  const waitForPath = path => page.waitForURL(url => normalizePath(url.pathname) === normalizePath(path));
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   for (const [route, title, screenshot] of [
