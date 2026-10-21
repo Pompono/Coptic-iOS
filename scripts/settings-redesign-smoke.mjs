@@ -80,11 +80,19 @@ try {
       await page.getByRole('main').getByRole('link', { name: 'Settings', exact: true }).click();
       await waitForPath('/settings');
       assert.equal(await page.locator('.settings-home > .page-header h1').textContent(), 'Settings', 'The Settings back row returns to the previous history entry');
+      await page.evaluate(() => {
+        const nativeAnimate = Element.prototype.animate;
+        window.__settingsSmokeAnimations = [];
+        Element.prototype.animate = function (keyframes, options) {
+          window.__settingsSmokeAnimations.push({ snapshot: this.hasAttribute('data-settings-snapshot'), keyframes });
+          return nativeAnimate.call(this, keyframes, options);
+        };
+      });
       await page.getByRole('link', { name: /Progress/u }).click();
       await waitForPath('/settings/progress');
-      await page.waitForFunction(() => document.querySelector('.settings-subpage') && document.querySelector('[data-settings-snapshot]'));
-      const fallbackTransform = await page.locator('.settings-subpage:not([data-settings-snapshot])').evaluate(node => getComputedStyle(node).transform);
-      assert.notEqual(fallbackTransform, 'none', 'Older WebViews animate the incoming Settings page with the fallback');
+      await page.waitForFunction(() => window.__settingsSmokeAnimations?.length >= 2);
+      const fallbackTransform = await page.evaluate(() => window.__settingsSmokeAnimations.find(animation => !animation.snapshot)?.keyframes?.[0]?.transform);
+      assert.equal(fallbackTransform, 'translateX(100%)', 'Older WebViews animate the incoming Settings page with the fallback');
       await page.waitForFunction(() => document.querySelector('[data-settings-snapshot]') === null);
       await page.getByRole('button', { name: /Recover progress/u }).click();
       await waitForPath('/settings/recovery');
