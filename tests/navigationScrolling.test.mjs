@@ -30,6 +30,7 @@ test('Settings navigation animates page snapshots and respects reduced motion', 
   assert.match(navigation, /transitionSettingsHistoryPop/u);
   assert.match(recoveryPage, /navigateSettings\(\(\) => router\.push\('\/settings\/recovery'\)/u);
   assert.match(navigation, /duration: 280/u);
+  assert.match(navigation, /frames >= 300/u);
   assert.match(navigation, /transitionSettingsHistoryPop/u);
 });
 

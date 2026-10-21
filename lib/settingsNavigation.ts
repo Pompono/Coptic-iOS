@@ -102,7 +102,9 @@ function animateSettingsFallback(update: () => void, direction: "forward" | "bac
       void Promise.all([oldAnimation.finished, newAnimation.finished]).then(cleanup, cleanup);
       return;
     }
-    if (++frames >= 60) { cleanup(); return; }
+    // Keep the outgoing page visible while Next.js loads a route chunk. Slow
+    // WebViews can take longer than one second before the incoming page mounts.
+    if (++frames >= 300) { cleanup(); return; }
     frame = requestAnimationFrame(inspectRoute);
   };
 
