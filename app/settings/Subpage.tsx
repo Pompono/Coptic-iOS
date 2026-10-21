@@ -27,10 +27,10 @@ function LearningSettings() {
   </div></section></Shell>;
 }
 
-export default function SettingsSubpage({ section }: { section: string }) {
+export default function SettingsSubpage({ section, preview = false }: { section: string; preview?: boolean }) {
   if (section === 'account') return <AccountPage/>;
   if (section === 'learning' || section === 'preferences') return <LearningSettings/>;
-  if (section === 'progress') return <Shell title="Progress"><ProgressSync/><ProgressBackup/></Shell>;
+  if (section === 'progress') return <Shell title="Progress"><ProgressSync active={!preview}/><ProgressBackup/></Shell>;
   if (section === 'recovery') return <Shell title="Recover progress" backHref="/settings/progress/" backLabel="Progress"><ProgressBackup focused/></Shell>;
   if (section === 'developer') return <DeveloperSettings/>;
   return <Shell title="Settings"><p>That settings page is unavailable.</p></Shell>;

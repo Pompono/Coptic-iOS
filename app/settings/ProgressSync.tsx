@@ -27,7 +27,7 @@ function progressComparison(local: Records, cloud: Records | null) {
 type PendingChoice = { kind: 'upload' | 'download' | 'conflict'; local: Records; cloud: ProgressSnapshot | null };
 const LAST_USER_KEY = 'coptic-progress-sync-last-user:v1';
 
-export default function ProgressSync() {
+export default function ProgressSync({ active = true }: { active?: boolean }) {
   const { session } = useAuth();
   const userId = session?.user.id ?? '';
   const [ready, setReady] = useState(false);
@@ -222,6 +222,8 @@ export default function ProgressSync() {
   }, [userId]);
 
   useEffect(() => {
+    // A swipe preview must never schedule cloud work before navigation commits.
+    if (!active) return;
     setReady(false); setPending(null); setMessage(''); setError('');
     if (!userId) { setReady(true); return; }
     setReady(true);
@@ -231,7 +233,7 @@ export default function ProgressSync() {
     window.addEventListener('coptic-progress-change', schedule);
     window.addEventListener('online', schedule);
     return () => { clearTimeout(timer); window.removeEventListener('coptic-progress-change', schedule); window.removeEventListener('online', schedule); };
-  }, [userId, synchronize]);
+  }, [userId, synchronize, active]);
 
   useEffect(() => {
     const update = () => setOnline(navigator.onLine);

@@ -77,9 +77,23 @@ jobs:
       - run: npm run lint
       - run: npm run build
       - run: npm run test:translation-assets
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:mobile
       - run: node scripts/settings-redesign-smoke.mjs
+      - run: npm run test:settings-navigation
+        env:
+          SETTINGS_NAV_ARTIFACTS: .codex-temp/settings-navigation/chromium
+      - run: npm run test:settings-navigation
+        env:
+          SETTINGS_BROWSER: webkit
+          SETTINGS_NAV_ARTIFACTS: .codex-temp/settings-navigation/webkit
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: settings-navigation-video-and-frames
+          path: .codex-temp/settings-navigation
+          if-no-files-found: warn
+          retention-days: 30
       - run: npm run test:backup
       - uses: actions/upload-artifact@v4
         with:
