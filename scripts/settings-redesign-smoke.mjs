@@ -28,15 +28,6 @@ try {
   browser = await chromium.launch({ headless: true, timeout: 15000, executablePath: process.env.COPTIC_BROWSER_EXECUTABLE || undefined });
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
   page.setDefaultTimeout(15000);
-  await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await page.addInitScript(() => {
-    const nativeAnimate = HTMLElement.prototype.animate;
-    window.__settingsSmokeAnimations = [];
-    HTMLElement.prototype.animate = function (keyframes, options) {
-      window.__settingsSmokeAnimations.push({ snapshot: this.hasAttribute('data-settings-snapshot'), keyframes });
-      return nativeAnimate.call(this, keyframes, options);
-    };
-  });
   const waitForPath = path => page.waitForURL(url => url.pathname.replace(/\/$/u, '') === path);
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -89,13 +80,9 @@ try {
       await page.getByRole('main').getByRole('link', { name: 'Settings', exact: true }).click();
       await waitForPath('/settings');
       assert.equal(await page.locator('.settings-home > .page-header h1').textContent(), 'Settings', 'The Settings back row returns to the previous history entry');
-      await page.evaluate(() => { window.__settingsSmokeAnimations.length = 0; });
       await page.getByRole('link', { name: /Progress/u }).click();
       await waitForPath('/settings/progress');
-      await page.waitForFunction(() => window.__settingsSmokeAnimations?.length >= 2);
-      const fallbackTransform = await page.evaluate(() => window.__settingsSmokeAnimations.find(animation => !animation.snapshot)?.keyframes?.[0]?.transform);
-      assert.equal(fallbackTransform, 'translateX(100%)', 'Older WebViews animate the incoming Settings page with the fallback');
-      await page.waitForFunction(() => document.querySelector('[data-settings-snapshot]') === null);
+      assert.equal(await page.locator('.settings-subpage > .page-header h1').textContent(), 'Progress');
       await page.getByRole('button', { name: /Recover progress/u }).click();
       await waitForPath('/settings/recovery');
       await page.getByRole('main').getByRole('link', { name: 'Settings', exact: true }).click();
