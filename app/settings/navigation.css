@@ -1,0 +1,8 @@
+/* These are the original React pages, contained in the Settings layout. */
+.settings-navigation-host { position:relative; isolation:isolate; overflow-x:clip; background:var(--bg-color); min-height:var(--page-content-height); }
+.settings-navigation-surface { width:100%; background:var(--bg-color); min-height:var(--page-content-height); }
+.settings-navigation-host:not([data-settings-phase=idle]) .settings-navigation-surface { will-change:transform; }
+.settings-navigation-surface[inert] { pointer-events:none; user-select:none; -webkit-user-select:none; }
+@media (prefers-reduced-motion:reduce) {
+  .settings-navigation-surface { will-change:auto!important; }
+}

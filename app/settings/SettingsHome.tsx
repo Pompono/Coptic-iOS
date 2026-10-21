@@ -7,7 +7,7 @@ import Link from '@/lib/AppLink';
 import AppIcon from '../AppIcon';
 import Image from 'next/image';
 import { COPTIC_KEYBOARD_APP_STORE_URL } from '../KeyboardInstallPrompt';
-import { navigateSettings, rememberSettingsPush } from '@/lib/settingsNavigation';
+import { navigateSettings, rememberSettingsPush, requestSettingsNavigation } from '@/lib/settingsNavigation';
 
 const entries = [
   { href: '/settings/preferences', icon: 'sliders', color: 'learning', title: 'Preferences' },
@@ -21,12 +21,12 @@ export default function SettingsPage() {
   return <main className="app-page settings-page settings-home">
     <PageHeader title="Settings" icon="settings" />
     {loading ? <div className="settings-account-entry" role="status">Checking account…</div> : session ?
-      <button className="settings-account-entry" type="button" onClick={() => { rememberSettingsPush('/settings/account?mode=settings'); navigateSettings(() => router.push('/settings/account?mode=settings')); }} aria-label={`Account settings for ${displayName}`}>
+      <button className="settings-account-entry" type="button" onClick={() => { if (requestSettingsNavigation('/settings/account?mode=settings')) return; rememberSettingsPush('/settings/account?mode=settings'); navigateSettings(() => router.push('/settings/account?mode=settings')); }} aria-label={`Account settings for ${displayName}`}>
         <span className="settings-avatar" aria-hidden="true">{displayName.slice(0, 1).toUpperCase()}</span>
         <span className="settings-account-entry__text"><strong>{displayName}</strong><span>{session.user.email}</span><small>{session.user.email_confirmed_at ? 'Email verified' : 'Email not verified'}</small></span>
         <span className="settings-chevron" aria-hidden="true">›</span>
       </button> :
-      <button className="settings-account-entry settings-account-entry--guest" type="button" onClick={() => { rememberSettingsPush('/settings/account?mode=sign-in'); navigateSettings(() => router.push('/settings/account?mode=sign-in')); }}>
+      <button className="settings-account-entry settings-account-entry--guest" type="button" onClick={() => { if (requestSettingsNavigation('/settings/account?mode=sign-in')) return; rememberSettingsPush('/settings/account?mode=sign-in'); navigateSettings(() => router.push('/settings/account?mode=sign-in')); }}>
         <span className="settings-avatar" aria-hidden="true">◉</span><span className="settings-account-entry__text"><strong>Sign In / Create Account</strong></span><span className="settings-chevron" aria-hidden="true">›</span>
       </button>}
     <nav className="settings-navigation" aria-label="Settings categories">
@@ -45,3 +45,4 @@ export default function SettingsPage() {
     </section>
   </main>;
 }
+

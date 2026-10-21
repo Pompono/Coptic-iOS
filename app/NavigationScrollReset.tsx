@@ -7,7 +7,7 @@ export default function NavigationScrollReset() {
   const path = usePathname();
   useLayoutEffect(() => {
     recordSettingsRoute(path);
-    if (takeNavigationScroll(path) && !/^\/learn(?:\/[^/]+)?\/?$/.test(path)) window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (takeNavigationScroll(path) && !/^\/settings(?:\/|$)/.test(path) && !/^\/learn(?:\/[^/]+)?\/?$/.test(path)) window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, [path]);
   useEffect(() => {
     const onPopState = () => { recordSettingsHistoryPop(); clearNavigationScroll(); };

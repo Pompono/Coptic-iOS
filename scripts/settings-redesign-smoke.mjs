@@ -29,7 +29,10 @@ try {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
   page.setDefaultTimeout(15000);
   const normalizePath = path => path.replace(/\/$/u, '') || '/';
-  const waitForPath = path => page.waitForURL(url => normalizePath(url.pathname) === normalizePath(path));
+  const waitForPath = async path => {
+    await page.waitForURL(url => normalizePath(url.pathname) === normalizePath(path));
+    if (path.startsWith('/settings')) await page.locator('.settings-navigation-host[data-settings-phase="idle"]').waitFor();
+  };
   const assertSingleSettingsSurface = async expectedTitle => {
     assert.equal(await page.locator('.settings-page').count(), 1, `${expectedTitle} has exactly one mounted Settings surface`);
     assert.equal(await page.locator('h1').count(), 1, `${expectedTitle} has exactly one visible page heading`);
@@ -95,8 +98,8 @@ try {
         preferences.click();
         progress.click();
       });
-      await waitForPath('/settings/progress');
-      await assertSingleSettingsSurface('Progress');
+      await waitForPath('/settings/preferences');
+      await assertSingleSettingsSurface('Preferences');
       assert.equal(await page.locator('.settings-navigation__row').count(), 0, 'The outgoing Settings cards are not retained beneath Progress');
       await page.getByRole('main').getByRole('link', { name: 'Settings', exact: true }).click();
       await waitForPath('/settings');

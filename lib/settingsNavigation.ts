@@ -1,5 +1,18 @@
 "use client";
 
+type SettingsDelegate = { navigate: (href: string, direction: 'forward' | 'back') => void; leave: () => void };
+let delegate: SettingsDelegate | undefined;
+export function registerSettingsNavigation(value: SettingsDelegate) {
+  delegate = value;
+  return () => { if (delegate === value) delegate = undefined; };
+}
+/** Only a mounted Settings host may handle these requests. */
+export function requestSettingsNavigation(href: string, direction: 'forward' | 'back' = 'forward') {
+  if (!delegate || !isSettingsPath(pathname(window.location.pathname))) return false;
+  delegate.navigate(href, direction);
+  return true;
+}
+
 const settingsHistory: string[] = [];
 let activeSettingsPath: string | undefined;
 let pendingSettingsPath: string | undefined;
@@ -63,16 +76,14 @@ export function recordSettingsHistoryPop() {
 
 /** Clear the in-app hint when navigation leaves Settings through a tab or link. */
 export function leaveSettingsNavigation() {
+  delegate?.leave();
   settingsHistory.length = 0;
   activeSettingsPath = undefined;
   pendingSettingsPath = undefined;
 }
 
 /**
- * Settings route changes deliberately use the unanimated fallback. The prior
- * route is not retained by the current App Router layout, so an overlay or
- * finger-driven transition would need to duplicate page trees. Keep the call
- * shape for Settings callers while making route updates synchronous and safe.
+ * Stable direct App Router fallback for callers outside the persistent host.
  */
 export function navigateSettings(update: () => void) {
   update();

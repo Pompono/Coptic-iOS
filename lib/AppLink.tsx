@@ -4,7 +4,7 @@ import NextLink from 'next/link';
 import { forwardRef, type ComponentProps } from 'react';
 import { useRouter } from 'next/navigation';
 import { prepareNavigationScroll } from './navigationScroll';
-import { consumeSettingsBack, leaveSettingsNavigation, navigateSettings, rememberSettingsPush } from './settingsNavigation';
+import { consumeSettingsBack, leaveSettingsNavigation, navigateSettings, rememberSettingsPush, requestSettingsNavigation } from './settingsNavigation';
 
 // All pages are bundled locally. Speculative fetches add work and can be
 // aborted by WebKit during document navigation; fetch pages when requested.
@@ -22,6 +22,7 @@ const AppLink = forwardRef<HTMLAnchorElement, ComponentProps<typeof NextLink>>(
     if (/^\/settings(?:\/|$)/.test(href) && href !== window.location.pathname) {
       event.preventDefault();
       const direction = props['data-settings-direction'] === 'back' ? 'back' : 'forward';
+      if (requestSettingsNavigation(href, direction)) return;
       if (direction === 'back') {
         const canReturn = consumeSettingsBack(href);
         restoringSettingsHistory = canReturn;
