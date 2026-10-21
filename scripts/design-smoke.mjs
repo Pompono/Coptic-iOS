@@ -38,7 +38,7 @@ export async function checkDesign(browser,base){
    await page.goto(base+route);await page.waitForLoadState('networkidle');
    const header=page.locator('.page-header');
    assert.equal(await header.count(),1,route+' has one shared page header');
-   if(route==='/translator/')assert.equal(await page.getByRole('link',{name:'Scan a photo',exact:true}).count(),1,'Photo scanning is available from the translator');
+   if(route==='/translator/')assert.equal(await page.getByRole('link',{name:'Scan a photo',exact:true}).count(),0,'Translator header omits the removed photo-scan shortcut');
    const disclosureTitles=route==='/translator/'?['About translation & offline use','Translation options']:route==='/read/'?['Read your own passage']:route==='/translator/scanner/'?['About photo recognition']:[];
    for(const title of disclosureTitles){
     const summary=page.locator('summary.disclosure-summary').filter({hasText:title});
