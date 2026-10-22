@@ -114,6 +114,9 @@ The same surfaces remain mounted during tracking, settling and route loading.
 
 History entries carry a Settings session, monotonic index, bounded ancestor
 trail, and document scroll offset while preserving Next's own history state.
+Scroll events retain precise offsets in memory. History persistence waits for
+scrolling to rest and is throttled, avoiding WebKit's history-write rate limit;
+explicit navigation and page hide also persist the current offset.
 Buttons and gesture commits call App Router once; gesture cancellation calls
 neither push, replace nor back. Browser navigation that interrupts a transition
 settles the actual URL and cannot resurrect its abandoned destination.

@@ -28,7 +28,8 @@ export default function SettingsNavigationHost() {
   const [scene, setScene] = useState<Scene | null>(null);
   const [, refresh] = useState(0);
   const live = useRef({ current, scene, pending: null as Pending | null, history: null as SettingsHistory | null,
-    animations: [] as Animation[], disabled: false, leaving: false, disposed: false, scroll: 0, restore: null as number | null, timer: 0, drag: null as Drag | null, focus: false });
+    animations: [] as Animation[], disabled: false, leaving: false, disposed: false, scroll: 0, restore: null as number | null, timer: 0, drag: null as Drag | null, focus: false,
+    scrollTimer: 0, lastScrollSave: 0, scrolls: new Map<string, number>() });
   const state = live.current;
 
   function motionAvailable() {
@@ -45,7 +46,7 @@ export default function SettingsNavigationHost() {
   }
   function show(page: Page, focus = false) {
     cancelAnimations();
-    state.current = page; state.scene = null; state.restore = page.y; state.drag = null;
+    state.current = page; state.scene = null; state.restore = page.y; state.scroll = page.y; state.drag = null;
     state.focus = focus;
     setCurrent(page); setScene(null);
   }
@@ -53,6 +54,12 @@ export default function SettingsNavigationHost() {
     state.history = history;
     try { window.history.replaceState({ ...window.history.state, [SETTINGS_HISTORY_KEY]: history }, ''); }
     catch { state.disabled = true; }
+  }
+  const scrollKey = (history: SettingsHistory) => `${history.session}:${history.index}:${history.path}`;
+  function saveScroll() {
+    if (!state.history || normalizeSettingsPath(window.location.pathname) !== state.history.path) return;
+    saveHistory({ ...state.history, y: state.scroll });
+    state.lastScrollSave = performance.now();
   }
   function finish(value: Scene) {
     if (state.scene !== value || state.disposed) return;
@@ -149,16 +156,24 @@ export default function SettingsNavigationHost() {
     saveHistory(history); state.scroll = history.y;
     show({ path, y: history.y });
     const unregister = registerSettingsNavigation({ navigate, leave: () => {
+      if (!state.scene) saveScroll();
       state.leaving = true; state.pending = null; clearTimeout(state.timer);
       if (state.scene) show(state.scene.end === 1 ? state.scene.to : state.scene.from);
     } });
     const scroll = () => {
       if (state.scene || state.pending || state.leaving || normalizeSettingsPath(window.location.pathname) !== state.current.path) return;
       state.scroll = Math.max(0, window.scrollY);
-      if (state.history) saveHistory({ ...state.history, y: state.scroll });
+      if (state.history) state.scrolls.set(scrollKey(state.history), state.scroll);
+      // WebKit rate-limits history writes. Never replaceState once per scroll
+      // frame: retain exact offsets in memory and persist after scrolling rests.
+      clearTimeout(state.scrollTimer);
+      state.scrollTimer = window.setTimeout(() => {
+        if (!state.scene && !state.pending && !state.leaving) saveScroll();
+      }, Math.max(150, 1000 - (performance.now() - state.lastScrollSave)));
     };
     const interrupt = () => { state.drag = null; if (state.scene) finish(state.scene); };
     const visibility = () => { if (document.hidden) interrupt(); };
+    const pageHide = () => { interrupt(); saveScroll(); };
     const media = matchMedia('(prefers-reduced-motion: reduce)');
     let nativeListener: PluginListenerHandle | undefined;
     let disposed = false;
@@ -169,7 +184,7 @@ export default function SettingsNavigationHost() {
     }
     window.addEventListener('scroll', scroll, { passive: true });
     window.addEventListener('resize', interrupt);
-    window.addEventListener('pagehide', interrupt);
+    window.addEventListener('pagehide', pageHide);
     document.addEventListener('visibilitychange', visibility);
     media.addEventListener('change', interrupt);
     const element = host.current!;
@@ -198,10 +213,11 @@ export default function SettingsNavigationHost() {
     element.addEventListener('pointerup', pointerUp); element.addEventListener('pointercancel', pointerCancel);
     return () => {
       state.disposed = true; unregister(); cancelAnimations(); clearTimeout(state.timer);
+      clearTimeout(state.scrollTimer);
       disposed = true; void nativeListener?.remove();
       window.history.scrollRestoration = priorRestoration;
       window.removeEventListener('scroll', scroll); window.removeEventListener('resize', interrupt);
-      window.removeEventListener('pagehide', interrupt); document.removeEventListener('visibilitychange', visibility);
+      window.removeEventListener('pagehide', pageHide); document.removeEventListener('visibilitychange', visibility);
       media.removeEventListener('change', interrupt);
       element.removeEventListener('touchstart', touchStart); element.removeEventListener('touchmove', touchMove);
       element.removeEventListener('touchend', touchEnd); element.removeEventListener('touchcancel', touchCancel);
@@ -229,7 +245,9 @@ export default function SettingsNavigationHost() {
     clearTimeout(state.timer); state.pending = null;
     const oldHistory = state.history!;
     const traversed = readSettingsHistory(window.history.state?.[SETTINGS_HISTORY_KEY], path);
-    const history = pending?.history ?? traversed ?? { path, y: 0, trail: [], session: oldHistory.session, index: 0 };
+    let history = pending?.history ?? traversed ?? { path, y: 0, trail: [], session: oldHistory.session, index: 0 };
+    if (!pending?.history && state.scrolls.has(scrollKey(history))) history = { ...history, y: state.scrolls.get(scrollKey(history))! };
+    state.scrolls.set(scrollKey(history), history.y);
     const direction = pending?.direction ?? (history.session === oldHistory.session && history.index < oldHistory.index ? 'back' : path === '/settings' ? 'back' : 'forward');
     const from = { path: state.current.path, y: state.scroll };
     const to = { path, y: history.y };

@@ -22,8 +22,9 @@ if (server) await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
 const base = process.env.SETTINGS_SMOKE_BASE_URL || `http://127.0.0.1:${server.address().port}`;
 const browserType = process.env.SETTINGS_BROWSER === 'webkit' ? webkit : chromium;
 const browser = await browserType.launch({ headless: true, executablePath: process.env.COPTIC_BROWSER_EXECUTABLE || undefined });
-const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, recordVideo: { dir: output, size: { width: 390, height: 844 } } });
+const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, reducedMotion: 'no-preference', recordVideo: { dir: output, size: { width: 390, height: 844 } } });
 const page = await context.newPage();
+if (process.env.SETTINGS_SMOKE_BASE_URL) page.setDefaultNavigationTimeout(120000);
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 const clean = value => value.replace(/\/$/, '');
@@ -44,38 +45,54 @@ const open = async route => {
   await page.goto(base + route);
   await page.waitForLoadState('networkidle');
 };
+// Seek real compositor animations to known times, so a busy CI worker cannot
+// skip every intermediate frame between two polling samples.
+const pauseTransitions = () => page.evaluate(() => {
+  window.__held = [];
+  window.__originalAnimate = Element.prototype.animate;
+  Element.prototype.animate = function (...args) {
+    const animation = window.__originalAnimate.apply(this, args);
+    if (this.classList.contains('settings-navigation-surface')) {
+      animation.pause(); animation.currentTime = 0; window.__held.push(animation);
+    }
+    return animation;
+  };
+});
+const sampleTransition = async time => {
+  await page.waitForFunction(() => window.__held.length === 2);
+  return page.evaluate(async time => {
+    window.__held.forEach(animation => { animation.currentTime = time; });
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    return [...document.querySelectorAll('[data-settings-layer]')].map(node => ({ path: node.dataset.settingsLayer, x: node.getBoundingClientRect().x, inert: node.inert }));
+  }, time);
+};
+const resumeTransitions = () => page.evaluate(() => {
+  Element.prototype.animate = window.__originalAnimate;
+  window.__held.forEach(animation => animation.play());
+});
 try {
   await open('/settings/');
   await idle('/settings', 'Settings');
   await page.evaluate(() => {
     window.__host = document.querySelector('.settings-navigation-host');
     window.__dock = document.querySelector('.mobile-chin-dock');
-    window.__frames = [];
-    const sample = () => {
-      const layers = [...document.querySelectorAll('[data-settings-layer]')];
-      window.__frames.push(layers.map(node => ({ path: node.dataset.settingsLayer, x: node.getBoundingClientRect().x, inert: node.inert })));
-      window.__sampling = requestAnimationFrame(sample);
-    };
-    sample();
   });
+  await pauseTransitions();
   await page.getByRole('link', { name: /Preferences/ }).click();
+  const frames = [await sampleTransition(75), await sampleTransition(150)];
+  await page.screenshot({ path: path.join(output, 'push-midpoint.png') });
+  await resumeTransitions();
   await idle('/settings/preferences', 'Preferences');
-  const frames = await page.evaluate(() => { cancelAnimationFrame(window.__sampling); return window.__frames; });
   const mid = frames.filter(frame => frame.length === 2 && frame[1].x > 1 && frame[1].x < 389);
   assert.ok(mid.length > 1, 'Push actually renders intermediate transformed positions');
   assert.ok(mid.every(frame => frame[0].x < 0 && frame.every(layer => layer.inert)), 'Outgoing parallax and inert layers');
   assert.ok(await page.evaluate(() => window.__host === document.querySelector('.settings-navigation-host') && window.__dock === document.querySelector('.mobile-chin-dock')), 'Host and dock DOM identities persist');
   await page.screenshot({ path: path.join(output, 'preferences-settled.png') });
-  await page.evaluate(() => {
-    window.__frames = [];
-    const sample = () => {
-      window.__frames.push([...document.querySelectorAll('[data-settings-layer]')].map(node => ({ path: node.dataset.settingsLayer, x: node.getBoundingClientRect().x })));
-      window.__sampling = requestAnimationFrame(sample);
-    };
-    sample();
-  });
-  await back(); await idle('/settings', 'Settings');
-  const popFrames = await page.evaluate(() => { cancelAnimationFrame(window.__sampling); return window.__frames; });
+  await pauseTransitions();
+  await back();
+  const popFrames = [await sampleTransition(75), await sampleTransition(150)];
+  await page.screenshot({ path: path.join(output, 'pop-midpoint.png') });
+  await resumeTransitions(); await idle('/settings', 'Settings');
   assert.ok(popFrames.some(frame => frame.length === 2 && frame[0].x > 1 && frame[0].x < 389 && frame[1].x < 0), 'Pop moves current surface right while revealing the parent underneath');
   await page.getByRole('link', { name: /Preferences/ }).click();
   await page.locator('[data-settings-phase="settling"]').waitFor();
@@ -95,7 +112,16 @@ try {
   await back(); await idle('/settings/progress', 'Progress');
   await back(); await idle('/settings', 'Settings');
   await page.setViewportSize({ width: 390, height: 400 });
-  await page.evaluate(() => window.scrollTo(0, 90));
+  const scrollWrites = await page.evaluate(() => {
+    const original = history.replaceState;
+    let writes = 0;
+    history.replaceState = function (...args) { writes++; return original.apply(this, args); };
+    window.scrollTo(0, 90);
+    for (let index = 0; index < 120; index++) window.dispatchEvent(new Event('scroll'));
+    history.replaceState = original;
+    return writes;
+  });
+  assert.equal(scrollWrites, 0, 'Momentum samples never write history per frame (WebKit rate limit)');
   await page.waitForFunction(() => history.state.copticSettingsStack?.y > 0);
   const y = await page.evaluate(() => scrollY);
   await page.getByRole('link', { name: /Preferences/ }).click(); await idle('/settings/preferences', 'Preferences');
