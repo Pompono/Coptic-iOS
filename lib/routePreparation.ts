@@ -8,12 +8,12 @@ export function createRoutePreparation() {
       attempted.add(current.replace(/\/$/, '') || '/');
       return MAIN_ROUTES.find(route => !attempted.has(route.replace(/\/$/, '') || '/'));
     },
-    prepare(route: string, prefetch: (href: string) => void) {
+    async prepare(route: string, prepareCode: (href: string) => void | Promise<unknown>) {
       const key = route.replace(/\/$/, '') || '/';
       if (attempted.has(key)) return;
       attempted.add(key);
       // Failure is opportunistic: normal navigation remains responsible for retry.
-      try { prefetch(route); } catch { /* Never block the visible page. */ }
+      try { await prepareCode(route); } catch { /* Never block the visible page. */ }
     },
   };
 }

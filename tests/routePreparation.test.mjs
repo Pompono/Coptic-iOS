@@ -31,3 +31,12 @@ test('a deep-link launch still prepares Home with a bounded budget', () => {
   while ((route = preparation.next('/settings/preferences/'))) preparation.prepare(route, href => calls.push(href));
   assert.deepEqual(calls, MAIN_ROUTES);
 });
+
+test('rejected module downloads are caught without duplicate speculative retries', async () => {
+  const preparation = createRoutePreparation();
+  let calls = 0;
+  const fail = async () => { calls++; throw new Error('Document navigation aborted chunk'); };
+  await preparation.prepare('/settings/', fail);
+  await preparation.prepare('/settings/', fail);
+  assert.equal(calls, 1);
+});

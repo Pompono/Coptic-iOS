@@ -68,14 +68,15 @@ try {
     await ctx.close();
   }
 
-  const ctx = await context(), page = await ctx.newPage(), prepared = new Set();
+  const ctx = await context(), page = await ctx.newPage(), speculative = [];
   page.on('request', request => {
-    const url = new URL(request.url());
-    if (request.headers()['next-router-prefetch']) prepared.add(clean(url.pathname.replace(/\/(?:index|__next\.[^/]+)\.txt$/, '')));
+    if (request.headers()['next-router-prefetch']) speculative.push(request.url());
   });
   console.log('Bounded warmup and repeat navigation');
   await page.goto(base, { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(6000);
+  await page.waitForFunction(() => performance.getEntriesByType('mark').filter(mark => mark.name.startsWith('coptic-route-ready:')).length === 4);
+  const prepared = new Set(await page.evaluate(() => performance.getEntriesByType('mark').filter(mark => mark.name.startsWith('coptic-route-ready:')).map(mark => mark.name.slice('coptic-route-ready:'.length).replace(/\/$/, '') || '/')));
+  assert.deepEqual(speculative, [], 'No speculative RSC fetches that WebKit can abort on reload');
   for (const route of ['/settings', '/learn', '/dictionary', '/translator']) assert(prepared.has(route), `Prepared ${route}: ${[...prepared]}`);
   assert(![...prepared].some(route => /\/learn\/.+/.test(route)), 'No lesson catalogue speculation');
   // Route preparation must not mount dictionary workers or start translation.
