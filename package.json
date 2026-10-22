@@ -17,6 +17,7 @@
     "test:translation-assets": "node scripts/check-translation-assets.mjs",
     "test:mobile": "node scripts/mobile-smoke.mjs",
     "test:settings-navigation": "node scripts/settings-navigation-smoke.mjs",
+    "test:routes": "node scripts/route-preparation-smoke.mjs",
     "prebuild": "node scripts/local-translation/copy-runtime.mjs && node scripts/scanner/prepare.mjs",
     "postbuild": "node scripts/settle-static-html.mjs",
     "test:backup": "node scripts/progress-backup-smoke.mjs"

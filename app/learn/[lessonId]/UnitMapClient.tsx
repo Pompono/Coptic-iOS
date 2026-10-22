@@ -1,13 +1,8 @@
 "use client";
 
-import dynamic from 'next/dynamic';
-
-// The interactive map restores local progress and measures its SVG/popups on
-// the device. Do not hydrate an exported snapshot of a different progress state.
-const UnitProgressClient = dynamic(() => import('./UnitProgressClient'), {
-  ssr: false,
-  loading: () => <main style={{ padding: 24 }}>Loading your progress…</main>,
-});
+// The same component already renders /learn. Its layout effect restores local
+// progress before client paint; a second client-only chunk adds no protection.
+import UnitProgressClient from './UnitProgressClient';
 
 export default function UnitMapClient({ focusLessonId }: { focusLessonId: string }) {
   return <UnitProgressClient focusLessonId={focusLessonId} />;

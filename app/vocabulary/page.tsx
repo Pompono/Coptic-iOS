@@ -1,5 +1,6 @@
 "use client";
 import AudioReplay from "../AudioReplay";
+import DelayedStatus from '../DelayedStatus';
 import PageHeader, { PageBackLink } from "../PageHeader";
 import { useEffect, useMemo, useState } from 'react';
 import Link from '@/lib/AppLink';
@@ -57,7 +58,7 @@ export default function VocabularyPage() {
     <PageBackLink href="/read/">Read Coptic</PageBackLink>
     <PageHeader title="Vocabulary & review" icon="review"/>
     {error && <p className={styles.error} role="alert">{error}</p>}
-    {!ready ? <p role="status">Loading saved words…</p> : <>
+    {!ready ? <DelayedStatus>Loading saved words…</DelayedStatus> : <>
       <p className={styles.muted}>{cards.length} saved · {due.length} due · {reviewed} reviewed this session</p>
       {!cards.length && <div className={styles.panel}><h2>Start with a word</h2><p>Open a passage, tap a word, and save its dictionary meaning.</p><Link className={styles.link} href="/read/">Open the reader →</Link></div>}
       {current ? <section className={styles.panel} aria-label="Vocabulary review">

@@ -79,6 +79,19 @@ jobs:
       - run: npm run test:translation-assets
       - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:mobile
+      - run: npm run test:routes
+        env:
+          ROUTE_ARTIFACTS: .codex-temp/route-preparation/chromium
+      - run: npm run test:routes
+        env:
+          ROUTE_BROWSER: webkit
+          ROUTE_ARTIFACTS: .codex-temp/route-preparation/webkit
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cold-route-navigation-video-and-frames
+          path: .codex-temp/route-preparation
+          retention-days: 30
       - run: node scripts/settings-redesign-smoke.mjs
       - run: npm run test:settings-navigation
         env:

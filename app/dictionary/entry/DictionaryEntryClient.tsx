@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { isBohairicOnlyEnabled } from "@/app/BohairicPreference";
 import { crossReferences, indexSearchEntry, normalizeSearch } from "@/lib/dictionary/search.mjs";
 import SaveWord from "@/app/SaveWord";
+import DelayedStatus from '@/app/DelayedStatus';
 import { resolveLessonAudio } from "@/lib/lessonAudio";
 
 type BohExample = { sentence: string; translation: string; source?: string };
@@ -172,7 +173,7 @@ export default function DictionaryEntryClient({ lemma }: { lemma: string }) {
         <h1 className="coptic-text mt-7 text-4xl font-semibold tracking-tight">{lemma}</h1>
 
         {state === "loading" ? (
-          <p className="mt-4 text-[var(--text-muted)]">Loading…</p>
+          <DelayedStatus>Finding this word in the bundled dictionary…</DelayedStatus>
         ) : state === "error" ? (
           <p role="alert" className="mt-4 text-[var(--lesson-choice-wrong-text)]">Failed to load dictionary files. <button type="button" onClick={() => setLoadAttempt(n => n + 1)} className="ml-2 min-h-11 underline">Retry</button></p>
         ) : matches.length === 0 ? (
