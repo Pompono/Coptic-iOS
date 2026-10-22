@@ -15,7 +15,7 @@ const server = process.env.SETTINGS_SMOKE_BASE_URL ? null : http.createServer(as
     if ((await stat(file)).isDirectory()) file = path.join(file, 'index.html');
     const content = await readFile(file);
     const extension = path.extname(file);
-    const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.ttf': 'font/ttf' };
+    const types = { '.txt': 'text/plain', '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.ttf': 'font/ttf' };
     response.writeHead(200, { 'Content-Type': types[extension] ?? 'application/octet-stream' });
     response.end(content);
   } catch { response.writeHead(404); response.end('Not found'); }
@@ -29,7 +29,10 @@ try {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
   page.setDefaultTimeout(15000);
   const normalizePath = path => path.replace(/\/$/u, '') || '/';
-  const waitForPath = path => page.waitForURL(url => normalizePath(url.pathname) === normalizePath(path));
+  const waitForPath = async path => {
+    await page.waitForURL(url => normalizePath(url.pathname) === normalizePath(path));
+    if (path.startsWith('/settings')) await page.locator('.settings-navigation-host[data-settings-phase="idle"]').waitFor();
+  };
   const assertSingleSettingsSurface = async expectedTitle => {
     assert.equal(await page.locator('.settings-page').count(), 1, `${expectedTitle} has exactly one mounted Settings surface`);
     assert.equal(await page.locator('h1').count(), 1, `${expectedTitle} has exactly one visible page heading`);
@@ -51,6 +54,7 @@ try {
     assert.equal(response.status(), 200, route);
     await page.getByRole('heading', { name: title, exact: true }).first().waitFor();
     await page.waitForLoadState('networkidle');
+    if (route.startsWith('/settings')) await page.waitForFunction(() => document.querySelectorAll('.settings-navigation-host').length === 1);
     assert.equal(await page.locator('h1').count(), 1, `${route} has one page title`);
     if (route === '/settings/') {
       for (const category of ['Preferences', 'Progress']) await page.getByRole('link', { name: new RegExp(category, 'u') }).waitFor();
@@ -95,8 +99,8 @@ try {
         preferences.click();
         progress.click();
       });
-      await waitForPath('/settings/progress');
-      await assertSingleSettingsSurface('Progress');
+      await waitForPath('/settings/preferences');
+      await assertSingleSettingsSurface('Preferences');
       assert.equal(await page.locator('.settings-navigation__row').count(), 0, 'The outgoing Settings cards are not retained beneath Progress');
       await page.getByRole('main').getByRole('link', { name: 'Settings', exact: true }).click();
       await waitForPath('/settings');
@@ -176,9 +180,11 @@ try {
       await fonts.selectOption('unicode');
       assert.equal(await page.evaluate(() => localStorage.getItem('coptic-font-mode')), 'unicode');
       await page.reload();
+      await page.waitForFunction(() => document.querySelector('#font-choice')?.value === 'unicode');
       assert.equal(await page.getByLabel('Coptic font').inputValue(), 'unicode', 'saved font selection remains selected');
       await page.getByLabel('Coptic font').selectOption('avva');
       await page.reload();
+      await page.waitForFunction(() => document.querySelector('#font-choice')?.value === 'avva');
       assert.equal(await page.getByLabel('Coptic font').inputValue(), 'avva', 'screenshot shows the Modern default after persistence coverage');
     }
     if (route === '/settings/account/?mode=settings') {
@@ -219,3 +225,4 @@ try {
   await browser?.close();
   if (server) await new Promise(resolve => server.close(resolve));
 }
+

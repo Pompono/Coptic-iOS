@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+
 import type { ReactNode } from 'react';
 import PageHeader, { PageBackLink } from '../PageHeader';
 import ProgressSync from './ProgressSync';
@@ -27,11 +27,10 @@ function LearningSettings() {
   </div></section></Shell>;
 }
 
-export default function SettingsSubpage() {
-  const pathname = usePathname(); const section = pathname.split('/').filter(Boolean).at(-1) ?? '';
+export default function SettingsSubpage({ section, preview = false }: { section: string; preview?: boolean }) {
   if (section === 'account') return <AccountPage/>;
   if (section === 'learning' || section === 'preferences') return <LearningSettings/>;
-  if (section === 'progress') return <Shell title="Progress"><ProgressSync/><ProgressBackup/></Shell>;
+  if (section === 'progress') return <Shell title="Progress"><ProgressSync active={!preview}/><ProgressBackup/></Shell>;
   if (section === 'recovery') return <Shell title="Recover progress" backHref="/settings/progress/" backLabel="Progress"><ProgressBackup focused/></Shell>;
   if (section === 'developer') return <DeveloperSettings/>;
   return <Shell title="Settings"><p>That settings page is unavailable.</p></Shell>;
@@ -42,3 +41,4 @@ function DeveloperSettings() {
   if (process.env.NODE_ENV !== 'development') return <Shell title="Developer"><p>This page is available only in development builds.</p></Shell>;
   return <Shell title="Developer"><section className="settings-group settings-group--content"><h2>Development tools</h2><p>Destructive tools require confirmation. Recovery copies are retained by progress storage.</p><button className="ui-secondary" type="button" onClick={() => { if (!window.confirm('Reset all lesson progress, XP, and streak data on this device?')) return; try { const records = makeBackup().records; const retained = Object.fromEntries(Object.entries(records).filter(([key]) => key === 'coptic-vocabulary:v1' || key === 'coptic-reader:v1')); replaceRecords(retained); setMessage('Lesson progress reset. A recovery copy is available in Progress.'); } catch (error) { setMessage(error instanceof Error ? error.message : 'Reset failed.'); } }}>Reset lesson progress</button>{message && <p role="status">{message}</p>}</section></Shell>;
 }
+
