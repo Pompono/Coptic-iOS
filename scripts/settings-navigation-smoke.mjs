@@ -49,10 +49,22 @@ const open = async route => {
 // skip every intermediate frame between two polling samples.
 const pauseTransitions = () => page.evaluate(() => {
   window.__held = [];
+  window.__prematureFinish = [];
   window.__originalAnimate = Element.prototype.animate;
   Element.prototype.animate = function (...args) {
     const animation = window.__originalAnimate.apply(this, args);
     if (this.classList.contains('settings-navigation-surface')) {
+      const node = this;
+      const cancel = animation.cancel.bind(animation);
+      animation.cancel = () => {
+        const finished = animation.playState === 'finished' && node.isConnected;
+        const before = node.getBoundingClientRect().x;
+        cancel();
+        const jump = Math.abs(node.getBoundingClientRect().x - before);
+        if (finished && (node.dataset.layerRole !== 'current' || jump > .1)) {
+          window.__prematureFinish.push({ role: node.dataset.layerRole, jump });
+        }
+      };
       animation.pause(); animation.currentTime = 0; window.__held.push(animation);
     }
     return animation;
@@ -70,7 +82,64 @@ const resumeTransitions = () => page.evaluate(() => {
   Element.prototype.animate = window.__originalAnimate;
   window.__held.forEach(animation => animation.play());
 });
+const inspectPaint = () => page.evaluate(() => {
+  const host = document.querySelector('.settings-navigation-host');
+  const surfaces = [...host.querySelectorAll('[data-settings-layer]')];
+  const front = surfaces.reduce((a, b) => +getComputedStyle(a).zIndex > +getComputedStyle(b).zIndex ? a : b);
+  const heading = front.querySelector('h1');
+  const bounds = heading.getBoundingClientRect();
+  let clipped = false;
+  for (let ancestor = heading.parentElement; ancestor && ancestor !== document.body; ancestor = ancestor.parentElement) {
+    if (getComputedStyle(ancestor).overflowY !== 'visible') {
+      const clip = ancestor.getBoundingClientRect();
+      clipped ||= bounds.top < clip.top - 1 || bounds.bottom > clip.bottom + 1;
+    }
+  }
+  return {
+    clipped, overflowY: getComputedStyle(host).overflowY,
+    headings: surfaces.map(surface => {
+      const title = surface.querySelector('h1').getBoundingClientRect();
+      const layer = surface.getBoundingClientRect();
+      const round = value => Math.round(value * 100) / 100;
+      return { y: round(title.y), height: round(title.height), offset: round(title.x - layer.x), width: round(title.width), background: getComputedStyle(surface).backgroundColor };
+    }),
+    dockY: document.querySelector('.mobile-chin-dock').getBoundingClientRect().y,
+  };
+});
 try {
+  // Exported documents must contain the real page before any hydration script
+  // executes. A hidden React streaming segment is not a visible initial page.
+  const unhydrated = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  const initial = await unhydrated.newPage();
+  for (const [route, title] of [['/settings/', 'Settings'], ['/settings/preferences/', 'Preferences']]) {
+    await initial.goto(base + route);
+    await initial.getByRole('heading', { name: title, exact: true }).waitFor();
+    assert.equal(await initial.getByText('Opening…', { exact: true }).isVisible(), false);
+  }
+  await initial.screenshot({ path: path.join(output, 'before-hydration.png') });
+  await unhydrated.close();
+  // A cold tab entry must keep its real source visible until the Settings
+  // layout code is ready, rather than replacing it with the root skeleton.
+  await open('/');
+  let releaseSettings;
+  const settingsGate = new Promise(resolve => { releaseSettings = resolve; });
+  let settingsChunkRequested = false;
+  await page.route('**/_next/static/chunks/app/settings/**', async route => {
+    settingsChunkRequested = true;
+    await settingsGate; await route.continue();
+  });
+  const sourceTitle = await page.locator('h1').textContent();
+  await page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: 'Settings', exact: true }).click();
+  await page.waitForTimeout(700);
+  assert.ok(settingsChunkRequested, 'Cold entry actually waits on Settings layout code');
+  await page.screenshot({ path: path.join(output, 'cold-entry-pending.png') });
+  const pendingTitle = await page.locator('h1').textContent({ timeout: 1000 }).catch(() => null);
+  const openingVisible = await page.getByText('Opening…', { exact: true }).isVisible();
+  releaseSettings();
+  await idle('/settings', 'Settings');
+  await page.unroute('**/_next/static/chunks/app/settings/**');
+  assert.equal(openingVisible, false, 'Cold Settings entry never exposes the generic loading placeholder');
+  assert.equal(pendingTitle, sourceTitle, 'The real source remains coherent until Settings is ready');
   await open('/settings/');
   await idle('/settings', 'Settings');
   await page.evaluate(() => {
@@ -83,6 +152,7 @@ try {
   await page.screenshot({ path: path.join(output, 'push-midpoint.png') });
   await resumeTransitions();
   await idle('/settings/preferences', 'Preferences');
+  assert.deepEqual(await page.evaluate(() => window.__prematureFinish), [], 'Finished animation is retained until React commits the settled surface');
   const mid = frames.filter(frame => frame.length === 2 && frame[1].x > 1 && frame[1].x < 389);
   assert.ok(mid.length > 1, 'Push actually renders intermediate transformed positions');
   assert.ok(mid.every(frame => frame[0].x < 0 && frame.every(layer => layer.inert)), 'Outgoing parallax and inert layers');
@@ -93,7 +163,33 @@ try {
   const popFrames = [await sampleTransition(75), await sampleTransition(150)];
   await page.screenshot({ path: path.join(output, 'pop-midpoint.png') });
   await resumeTransitions(); await idle('/settings', 'Settings');
+  assert.deepEqual(await page.evaluate(() => window.__prematureFinish), [], 'Pop hands off without exposing its starting frame');
   assert.ok(popFrames.some(frame => frame.length === 2 && frame[0].x > 1 && frame[0].x < 389 && frame[1].x < 0), 'Pop moves current surface right while revealing the parent underneath');
+  // Filmstrips include start/end boundaries, not only a convenient midpoint.
+  // Geometry and ancestor clips catch vertical title clipping and layout changes;
+  // the PNG frames also expose compositor defects that DOM rectangles cannot.
+  for (let cycle = 0; cycle < 3; cycle++) {
+    for (const direction of ['push', 'pop']) {
+      await pauseTransitions();
+      if (direction === 'push') await page.getByRole('link', { name: /Preferences/ }).click();
+      else await back();
+      let firstPaint;
+      for (const time of [0, 30, 75, 150, 225, 299]) {
+        await sampleTransition(time);
+        const paint = await inspectPaint();
+        firstPaint ??= paint;
+        assert.equal(paint.overflowY, 'visible', 'Horizontal containment must not vertically clip page headings');
+        assert.equal(paint.clipped, false, 'Foreground title has no vertical ancestor clip');
+        assert.equal(paint.dockY, firstPaint.dockY, 'Dock stays fixed throughout the filmstrip');
+        assert.deepEqual(paint.headings, firstPaint.headings, 'Only horizontal surface transforms change; headings do not reflow or jump vertically');
+        if (cycle === 0) await page.screenshot({ path: path.join(output, `${direction}-${time}.png`) });
+      }
+      await resumeTransitions();
+      await idle(direction === 'push' ? '/settings/preferences' : '/settings', direction === 'push' ? 'Preferences' : 'Settings');
+      assert.deepEqual(await page.evaluate(() => window.__prematureFinish), []);
+      if (cycle === 0) await page.screenshot({ path: path.join(output, `${direction}-settled.png`) });
+    }
+  }
   await page.getByRole('link', { name: /Preferences/ }).click();
   await page.locator('[data-settings-phase="settling"]').waitFor();
   await page.goBack(); await idle('/settings', 'Settings');

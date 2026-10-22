@@ -45,7 +45,9 @@ export default function SettingsNavigationHost() {
     animations.forEach(animation => animation.cancel());
   }
   function show(page: Page, focus = false) {
-    cancelAnimations();
+    // Keep the compositor's final frame until React commits the settled page.
+    // The layout-effect cleanup cancels animations after the DOM handoff;
+    // cancelling here exposes the two surfaces' starting inline transforms.
     state.current = page; state.scene = null; state.restore = page.y; state.scroll = page.y; state.drag = null;
     state.focus = focus;
     setCurrent(page); setScene(null);
@@ -66,7 +68,7 @@ export default function SettingsNavigationHost() {
     show(value.end === 1 ? value.to : value.from, value.end === 1);
   }
   function begin(value: Scene) {
-    cancelAnimations(); state.scene = value; setScene(value);
+    state.scene = value; setScene(value);
   }
   function navigate(href: string, direction: 'forward' | 'back', gesture = false) {
     const destination = normalizeSettingsPath(new URL(href, window.location.href).pathname);

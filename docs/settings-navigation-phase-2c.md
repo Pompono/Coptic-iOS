@@ -134,7 +134,42 @@ remains available. Slow routes retain the source until App Router commits;
 an 8-second route watchdog releases the lock and disables subsequent motion.
 No DOM snapshots, page cloning, body overlays or mutation observers are used.
 
-## Physical iPhone acceptance (not yet performed)
+## Physical iPhone feedback and focused visual polish
+
+The user tested the first Phase 2C IPA on a physical iPhone and reported very
+good push/pop and interactive swipe tracking, cancellation and responsiveness.
+The remaining reports were an initial “Opening…” skeleton and brief clipped or
+partial transition frames. The interaction design, timing, thresholds, history
+and persistent React stack are retained.
+
+Two defects were reproduced against the previous production export in WebKit:
+
+1. Holding the cold Settings layout JavaScript request exposed the root
+   `app/loading.tsx` fallback. The exported Settings HTML also placed its real
+   host inside a hidden React streaming segment behind that fallback. The root
+   boundary intercepted the entire Settings layout, before its own readiness
+   handling could run. Loading boundaries now belong to the other top-level
+   routes, which keep their existing fallback. Settings entry retains the real
+   previous screen until ready, and its static document contains visible page
+   content before hydration. No loading state is falsely marked complete.
+2. `show()` cancelled filled Web Animations before React committed the settled
+   surface. The still-mounted source/destination immediately reverted to their
+   starting inline transforms. A regression probe recorded both `from` and `to`
+   surfaces being cancelled prematurely. Cleanup now occurs in the existing
+   layout-effect commit lifecycle, retaining the endpoint until the real page
+   handoff. Scene replacement follows the same rule. No compositor CSS guesses,
+   card spacing changes or new overlays were needed.
+
+New regression coverage holds cold layout loading, checks exported pages with
+JavaScript disabled, verifies the completion handoff, and records repeated
+push/pop frames at 0, 30, 75, 150, 225 and 299 ms plus settled frames. It checks
+heading geometry and ancestor clipping, fixed dock position and unique surfaces.
+The existing scroll, light/dark, history, gesture cancel/commit and form-state
+checks remain. These checks identify specific lifecycle defects; without the
+original recording, they cannot attribute every reported physical paint artifact.
+The refreshed IPA still requires physical acceptance for visual continuity.
+
+## Physical iPhone follow-up acceptance
 
 Install the unsigned IPA using the existing signing/sideloading workflow. Test
 on a physical iPhone in light/dark mode and with iOS Reduce Motion both ways.
