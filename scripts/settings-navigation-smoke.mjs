@@ -226,6 +226,7 @@ try {
   await idle('/settings', 'Settings');
   await open('/settings/account/?mode=sign-in'); await idle('/settings/account', 'Account');
   const email = page.getByRole('textbox', { name: 'Email', exact: true });
+  if (process.env.SETTINGS_EXPECT_AUTH) await email.waitFor({ state: 'visible' });
   if (await email.count()) {
     await email.fill('navigation-only@example.invalid');
     await page.getByLabel('Password', { exact: true }).fill('unsent-test-draft');
