@@ -53,10 +53,11 @@ try {
   // Each first tap starts with an empty HTTP/router cache. Do not wait for idle
   // before tapping: the first screen must survive incomplete preparation.
   for (const name of tabs) {
+    console.log(`Cold first entry: ${name}`);
     const ctx = await context({ colorScheme: name === 'Translator' ? 'dark' : 'light', reducedMotion: name === 'Learn' ? 'reduce' : 'no-preference' });
     const page = await ctx.newPage(), errors = [];
     page.on('pageerror', error => errors.push(error.message));
-    await page.goto(base + (name === 'Home' ? '/dictionary/' : '/'));
+    await page.goto(base + (name === 'Home' ? '/dictionary/' : '/'), { waitUntil: 'domcontentloaded' });
     await page.locator('main h1').first().waitFor();
     await tab(page, name);
     await page.screenshot({ path: path.join(output, `cold-${name}.png`) });
@@ -72,7 +73,8 @@ try {
     const url = new URL(request.url());
     if (request.headers()['next-router-prefetch']) prepared.add(clean(url.pathname.replace(/\/(?:index|__next\.[^/]+)\.txt$/, '')));
   });
-  await page.goto(base);
+  console.log('Bounded warmup and repeat navigation');
+  await page.goto(base, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(6000);
   for (const route of ['/settings', '/learn', '/dictionary', '/translator']) assert(prepared.has(route), `Prepared ${route}: ${[...prepared]}`);
   assert(![...prepared].some(route => /\/learn\/.+/.test(route)), 'No lesson catalogue speculation');
@@ -84,7 +86,8 @@ try {
 
   const slow = await context(), slowPage = await slow.newPage();
   await slow.route('**/learn/**/*.txt*', async route => { await new Promise(resolve => setTimeout(resolve, 1200)); await route.continue(); });
-  await slowPage.goto(base);
+  console.log('Slow route retains the current screen');
+  await slowPage.goto(base, { waitUntil: 'domcontentloaded' });
   await slowPage.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: 'Learn', exact: true }).click();
   await slowPage.waitForTimeout(250);
   await slowPage.getByRole('heading', { name: 'CoptLingo', exact: true }).waitFor({ timeout: 500 });
@@ -96,7 +99,8 @@ try {
   // Missing local data retains the real dictionary controls and a retry action.
   const failed = await context(), failedPage = await failed.newPage();
   await failed.route('**/bohairic_dictionary.json', route => route.fulfill({ status: 404, body: 'Missing asset' }));
-  await failedPage.goto(base + '/dictionary/entry/?lemma=test');
+  console.log('Missing local dictionary resource can retry');
+  await failedPage.goto(base + '/dictionary/entry/?lemma=test', { waitUntil: 'domcontentloaded' });
   await failedPage.getByRole('alert').filter({ hasText: 'Failed to load dictionary' }).waitFor();
   await failedPage.getByRole('button', { name: 'Retry', exact: true }).click();
   await failedPage.getByRole('alert').filter({ hasText: 'Failed to load dictionary' }).waitFor();
