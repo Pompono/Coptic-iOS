@@ -181,7 +181,17 @@ try {
         assert.equal(paint.overflowY, 'visible', 'Horizontal containment must not vertically clip page headings');
         assert.equal(paint.clipped, false, 'Foreground title has no vertical ancestor clip');
         assert.equal(paint.dockY, firstPaint.dockY, 'Dock stays fixed throughout the filmstrip');
-        assert.deepEqual(paint.headings, firstPaint.headings, 'Only horizontal surface transforms change; headings do not reflow or jump vertically');
+        assert.equal(paint.headings.length, firstPaint.headings.length);
+        for (const [index, heading] of paint.headings.entries()) {
+          const initialHeading = firstPaint.headings[index];
+          assert.equal(heading.background, initialHeading.background);
+          // Transformed DOMRects can differ by a floating-point layout unit
+          // across engines (e.g. 215.125 rounds either way). Still reject even
+          // a tenth of a CSS pixel of reflow or vertical movement.
+          for (const key of ['y', 'height', 'offset', 'width']) {
+            assert.ok(Math.abs(heading[key] - initialHeading[key]) < .05, `Heading ${key} stays stable during ${direction}: ${initialHeading[key]} -> ${heading[key]}`);
+          }
+        }
         if (cycle === 0) await page.screenshot({ path: path.join(output, `${direction}-${time}.png`) });
       }
       await resumeTransitions();
