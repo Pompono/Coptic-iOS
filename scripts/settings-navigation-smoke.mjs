@@ -41,6 +41,14 @@ const idle = async (route, title) => {
   assert.equal(await page.locator('[data-settings-snapshot]').count(), 0);
 };
 const back = () => page.locator('.page-back').click();
+const settingsTab = () => page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: 'Settings', exact: true });
+const focusedHeading = async () => {
+  const focus = await page.locator('[data-layer-role="current"] h1').evaluate(node => ({
+    active: document.activeElement === node, tabIndex: node.tabIndex,
+    outline: getComputedStyle(node).outlineStyle, inactive: Boolean(node.closest('[inert]')),
+  }));
+  assert.deepEqual(focus, { active: true, tabIndex: -1, outline: 'none', inactive: false }, 'Settled heading keeps accessible focus without a visible outline');
+};
 const open = async route => {
   await page.goto(base + route);
   await page.waitForLoadState('networkidle');
@@ -152,6 +160,7 @@ try {
   await page.screenshot({ path: path.join(output, 'push-midpoint.png') });
   await resumeTransitions();
   await idle('/settings/preferences', 'Preferences');
+  await focusedHeading();
   assert.deepEqual(await page.evaluate(() => window.__prematureFinish), [], 'Finished animation is retained until React commits the settled surface');
   const mid = frames.filter(frame => frame.length === 2 && frame[1].x > 1 && frame[1].x < 389);
   assert.ok(mid.length > 1, 'Push actually renders intermediate transformed positions');
@@ -297,6 +306,7 @@ try {
   await touch('touchStart'); await touch('touchMove', 80); await pause(40); await touch('touchMove', 240);
   await pause(140); await touch('touchEnd'); await idle('/settings', 'Settings');
   assert.equal(await page.evaluate(() => window.__pops), 1, 'Distance commit traverses history exactly once');
+  await focusedHeading();
   await touch('touchStart'); await touch('touchMove', 240); await touch('touchEnd'); await idle('/settings', 'Settings');
   assert.equal(await page.evaluate(() => window.__pops), 1, 'Settings root never swipes back');
   await page.goForward(); await idle('/settings/preferences', 'Preferences');
@@ -351,6 +361,61 @@ try {
     assert.equal(process.env.SETTINGS_EXPECT_AUTH || '', '', 'Configured build must expose actual account form coverage');
     console.log('Account form coverage unavailable in this unconfigured build.');
   }
+  for (const theme of ['light', 'dark']) {
+    await open('/settings/'); await idle('/settings', 'Settings');
+    await page.evaluate(theme => { document.documentElement.dataset.theme = theme; }, theme);
+    await page.getByRole('link', { name: /Preferences/ }).click();
+    await idle('/settings/preferences', 'Preferences'); await focusedHeading();
+    await page.screenshot({ path: path.join(output, `heading-focus-${theme}.png`) });
+    await page.keyboard.press('Tab');
+    assert.ok(await page.evaluate(() => {
+      const node = document.activeElement;
+      return node.matches('a,button,input,select,textarea') && getComputedStyle(node).outlineStyle !== 'none' && parseFloat(getComputedStyle(node).outlineWidth) > 0;
+    }), 'Interactive keyboard focus indicators remain visible');
+    await back(); await idle('/settings', 'Settings'); await focusedHeading();
+  }
+  await open('/settings/'); await idle('/settings', 'Settings');
+  const rootIndex = await page.evaluate(() => history.state.copticSettingsStack.index);
+  for (const [route, title] of [['preferences', 'Preferences'], ['progress', 'Progress'], ['account', 'Account']]) {
+    if (route === 'account') await page.getByRole('button', { name: /Sign In \/ Create Account/ }).click();
+    else await page.getByRole('link', { name: title, exact: true }).click();
+    await idle(`/settings/${route}`, title); await focusedHeading();
+    const lengthBefore = await page.evaluate(() => history.length);
+    const dockBefore = await page.locator('.mobile-chin-dock').boundingBox();
+    await pauseTransitions();
+    await settingsTab().evaluate(node => { node.click(); node.click(); node.click(); });
+    const tabFrame = await sampleTransition(150);
+    await page.screenshot({ path: path.join(output, `root-tab-pop-${route}.png`) });
+    assert.ok(tabFrame[0].x > 1 && tabFrame[1].x < 0, 'Bottom Settings tab uses the same right-exiting pop as header Back');
+    assert.equal(await page.evaluate(() => document.activeElement?.matches('h1') ?? false), false, 'No heading receives focus during the transition');
+    assert.deepEqual(await page.locator('.mobile-chin-dock').boundingBox(), dockBefore);
+    await resumeTransitions(); await idle('/settings', 'Settings'); await focusedHeading();
+    assert.equal(await page.evaluate(() => history.length), lengthBefore, 'Root-tab return never pushes another entry');
+    assert.equal(await page.evaluate(() => history.state.copticSettingsStack.index), rootIndex);
+  }
+  await page.getByRole('link', { name: 'Progress', exact: true }).click(); await idle('/settings/progress', 'Progress');
+  await page.getByRole('button', { name: /Recover progress/ }).click(); await idle('/settings/recovery', 'Recover progress');
+  const nestedLength = await page.evaluate(() => history.length);
+  await settingsTab().click(); await idle('/settings', 'Settings'); await focusedHeading();
+  assert.equal(await page.evaluate(() => history.state.copticSettingsStack.index), rootIndex, 'Nested root return traverses all known ancestors');
+  assert.equal(await page.evaluate(() => history.length), nestedLength);
+  await page.goForward(); await idle('/settings/progress', 'Progress');
+  await page.goForward(); await idle('/settings/recovery', 'Recover progress');
+  await open('/');
+  await open('/settings/recovery/'); await idle('/settings/recovery', 'Recover progress');
+  assert.deepEqual(await page.evaluate(() => history.state.copticSettingsStack.trail), []);
+  const deepRootLength = await page.evaluate(() => history.length);
+  await pauseTransitions(); await settingsTab().click();
+  const directPop = await sampleTransition(150);
+  assert.ok(directPop[0].x > 1 && directPop[1].x < 0, 'Unknown deep-link history still uses pop motion');
+  await resumeTransitions(); await idle('/settings', 'Settings');
+  assert.equal(await page.evaluate(() => history.length), deepRootLength, 'Unknown parent replaces instead of traversing unrelated history');
+  const rootState = await page.evaluate(() => JSON.stringify(history.state));
+  await settingsTab().evaluate(node => { node.click(); node.click(); });
+  await page.waitForTimeout(350); await idle('/settings', 'Settings');
+  assert.equal(await page.evaluate(() => JSON.stringify(history.state)), rootState, 'Selected root tab is a no-op');
+  assert.equal(await page.evaluate(() => document.getAnimations().length), 0);
+  console.log('PASS: clean accessible heading focus, keyboard rings, root-tab pop direction, nested traversal, direct-link replace and repeated-tap safety.');
   await open('/settings/'); await idle('/settings', 'Settings');
   let releaseRoute;
   const gate = new Promise(resolve => { releaseRoute = resolve; });

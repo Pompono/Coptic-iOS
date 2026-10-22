@@ -169,6 +169,27 @@ checks remain. These checks identify specific lifecycle defects; without the
 original recording, they cannot attribute every reported physical paint artifact.
 The refreshed IPA still requires physical acceptance for visual continuity.
 
+## Final heading-focus and Settings-tab corrections
+
+Further physical testing confirmed excellent motion and layout. Two narrowly
+scoped corrections preserve that implementation:
+
+- WebKit reproduced an `auto` outline on the programmatically focused title.
+  Only Settings `h1[tabindex="-1"]:focus` loses its outline; the actual focused
+  heading, screen-reader target and interactive keyboard focus rings remain.
+  The focus query explicitly selects the settled current surface.
+- AppLink classifies a return from a Settings child to `/settings` as Back.
+  The existing host traverses to the closest recorded matching ancestor (one
+  browser traversal, including nested returns); without a known ancestor it
+  replaces the direct entry. The selected root tab does nothing. Entries from
+  other tabs still use their existing forward routing.
+
+Browser regressions check heading focus and interactive focus rings in both
+themes, bottom-tab pop frames from Preferences/Progress/Account, a nested
+Recovery-to-root traversal and Forward history, direct-entry replacement,
+rapid taps and the stationary dock. Existing swipe tests are unchanged apart
+from also checking the committed destination's heading focus.
+
 ## Physical iPhone follow-up acceptance
 
 Install the unsigned IPA using the existing signing/sideloading workflow. Test

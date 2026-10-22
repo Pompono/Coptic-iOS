@@ -77,8 +77,11 @@ export default function SettingsNavigationHost() {
     const source = { path: state.current.path, y: Math.max(0, window.scrollY) };
     state.scroll = source.y;
     saveHistory({ ...history, y: source.y });
-    const previous = history.trail.at(-1);
-    const back = direction === 'back' && previous?.path === destination;
+    // A root-tab return may skip several known Settings ancestors. Only
+    // traverse entries recorded by this host; direct links still replace.
+    const ancestor = direction === 'back' ? history.trail.map(page => page.path).lastIndexOf(destination) : -1;
+    const back = ancestor >= 0;
+    const distance = history.trail.length - ancestor;
     const nextHistory = back ? null : {
       path: destination, y: 0, session: history.session, index: direction === 'forward' ? history.index + 1 : 0,
       trail: direction === 'forward' ? [...history.trail, source].slice(-32) : [],
@@ -90,7 +93,8 @@ export default function SettingsNavigationHost() {
       state.pending = null; state.disabled = true; refresh(value => value + 1);
       if (state.scene) show(state.scene.from);
     }, 8000);
-    if (back) router.back();
+    if (back && distance === 1) router.back();
+    else if (back) window.history.go(-distance);
     else if (direction === 'back') router.replace(href, { scroll: false });
     else router.push(href, { scroll: false });
   }
@@ -269,7 +273,7 @@ export default function SettingsNavigationHost() {
     }
     if (state.focus && !scene && !state.leaving) {
       state.focus = false;
-      const heading = host.current?.querySelector<HTMLElement>('h1');
+      const heading = host.current?.querySelector<HTMLElement>('[data-layer-role="current"] h1');
       heading?.setAttribute('tabindex', '-1'); heading?.focus({ preventScroll: true });
     }
     if (!scene || scene.kind !== 'settling') return;

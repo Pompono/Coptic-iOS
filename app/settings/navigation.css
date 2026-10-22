@@ -3,6 +3,9 @@
 .settings-navigation-surface { width:100%; background:var(--bg-color); min-height:var(--page-content-height); }
 .settings-navigation-host:not([data-settings-phase=idle]) .settings-navigation-surface { will-change:transform; }
 .settings-navigation-surface[inert] { pointer-events:none; user-select:none; -webkit-user-select:none; }
+/* Route-announcement focus belongs to a noninteractive title. Keep the focus
+   target for assistive technology without WebKit's rectangular focus ring. */
+.settings-navigation-surface h1[tabindex="-1"]:focus { outline:none; }
 @media (prefers-reduced-motion:reduce) {
   .settings-navigation-surface { will-change:auto!important; }
 }
