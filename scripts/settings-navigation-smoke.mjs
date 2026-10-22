@@ -378,7 +378,7 @@ try {
   const rootIndex = await page.evaluate(() => history.state.copticSettingsStack.index);
   for (const [route, title] of [['preferences', 'Preferences'], ['progress', 'Progress'], ['account', 'Account']]) {
     if (route === 'account') await page.getByRole('button', { name: /Sign In \/ Create Account/ }).click();
-    else await page.getByRole('link', { name: title, exact: true }).click();
+    else await page.getByRole('link', { name: new RegExp(title) }).click();
     await idle(`/settings/${route}`, title); await focusedHeading();
     const lengthBefore = await page.evaluate(() => history.length);
     const dockBefore = await page.locator('.mobile-chin-dock').boundingBox();
@@ -393,7 +393,7 @@ try {
     assert.equal(await page.evaluate(() => history.length), lengthBefore, 'Root-tab return never pushes another entry');
     assert.equal(await page.evaluate(() => history.state.copticSettingsStack.index), rootIndex);
   }
-  await page.getByRole('link', { name: 'Progress', exact: true }).click(); await idle('/settings/progress', 'Progress');
+  await page.getByRole('link', { name: /Progress/ }).click(); await idle('/settings/progress', 'Progress');
   await page.getByRole('button', { name: /Recover progress/ }).click(); await idle('/settings/recovery', 'Recover progress');
   const nestedLength = await page.evaluate(() => history.length);
   await settingsTab().click(); await idle('/settings', 'Settings'); await focusedHeading();
