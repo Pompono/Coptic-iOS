@@ -1,6 +1,5 @@
 // CI-only fixture: copied into the disposable Debug simulator app by build.yml.
 (() => {
-  if (location.pathname !== '/settings/recovery/') { const previous = location.href; location.href = '/settings/recovery/'; return { status: 'waiting', reason: `Navigating from ${previous}` }; }
   if (!window.__nativeBackupApi) {
     if (!document.getElementById('native-backup-api')) {
       const script = document.createElement('script');
@@ -11,8 +10,11 @@
     return window.__nativeBackupSmoke || { status: 'waiting', reason: `Loading backup API at ${location.href}` };
   }
   const api = window.__nativeBackupApi;
-  const buttons = () => [...document.querySelectorAll('button')];
-  const button = text => buttons().find(item => item.textContent.trim() === text && !item.disabled);
+  const label = element => { const copy = element.cloneNode(true); copy.querySelectorAll('[aria-hidden="true"]').forEach(item => item.remove()); return copy.textContent.trim(); };
+  const buttons = () => [...document.querySelectorAll('button')].filter(item => !item.closest('[inert]'));
+  const button = text => buttons().find(item => label(item) === text && !item.disabled);
+  const linkTo = path => [...document.querySelectorAll('a')].find(link => !link.closest('[inert]') && new URL(link.href).pathname.replace(/\/$/, '') === path);
+  const hydrated = element => element && Object.keys(element).some(key => key.startsWith('__reactProps'));
   const text = 'ⲡⲓⲱ\u0305ⲓⲕ\u0301';
   const records = {
     'coptic-progress': JSON.stringify({ xp: 40, streak: 2, lastCompletedDate: '2026-01-01', completedLessons: ['legacy-lesson'] }),
@@ -36,8 +38,20 @@
     if (!matches(restored)) return { status: 'failed', message: 'Restored records changed across relaunch' };
     return { status: 'passed' };
   }
+  if (window.__nativeBackupSmoke) return window.__nativeBackupSmoke;
+  // Capacitor's SPA router serves root index.html for extensionless document
+  // requests. Reach the real Recovery surface through hydrated app navigation,
+  // just as a user does, rather than hard-loading a nested static document.
+  if (!button('Recover')) {
+    const path = location.pathname.replace(/\/$/, '') || '/';
+    const target = path === '/settings' ? linkTo('/settings/progress')
+      : path === '/settings/progress' ? button('Recover progress')
+        : path === '/settings/recovery' ? null : linkTo('/settings');
+    if (hydrated(target)) target.click();
+    return { status: 'waiting', reason: `Navigating to recovery from ${path}` };
+  }
   // Wait for the current recovery page's effect and real React handler.
-  if (!button('Recover') || !Object.keys(button('Recover')).some(key => key.startsWith('__reactProps'))) return { status: 'waiting', reason: `Recovery UI at ${location.href}; phase=${phase}; buttons=${buttons().map(item => item.textContent.trim()).join('|')}; text=${document.body.textContent.slice(0, 400)}` };
+  if (!hydrated(button('Recover'))) return { status: 'waiting', reason: 'Recovery control hydration' };
   if (!window.__nativeBackupSmoke) {
     window.__nativeBackupSmoke = { status: 'running' };
     (async () => {

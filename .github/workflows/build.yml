@@ -110,6 +110,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
       - run: npm run test:backup
+      - run: node scripts/build-native-backup-smoke.mjs && node scripts/native-fixture-smoke.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: bundled-web-app
