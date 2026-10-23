@@ -34,10 +34,13 @@ SIMCTL_CHILD_COPTIC_NATIVE_AUDIO_SMOKE=1 SIMCTL_CHILD_COPTIC_NATIVE_BACKUP_SMOKE
 launch_pid=$!
 for attempt in $(seq 1 180); do
   if python3 -c 'from pathlib import Path; import sys; p=Path("/tmp/coptic-native-stdout.log"); sys.exit(0 if p.exists() and "COPTIC_SCROLL_BOUNDS_READY" in p.read_text() and "COPTIC_NATIVE_AUDIO_DECODE_READY" in p.read_text() and "COPTIC_NATIVE_AUDIO_BRIDGE_READY" in p.read_text() and "COPTIC_NATIVE_BACKUP_READY" in p.read_text() and "COPTIC_NATIVE_AUTH_STORAGE_READY" in p.read_text() else 1)'; then
-    echo 'PASS: native backup JSON/Unicode, real share-sheet cancellation, import preview/cancel/reject/restore and automatic reload persistence.'
+    echo 'PASS: native backup JSON/Unicode, real share-sheet cancellation, backup validation, recovery UI cancel/restore and reload persistence.'
     echo 'PASS: Capacitor native Keychain storage reads, writes, and removes an auth-session-shaped value.'
     echo 'PASS: native iOS app launched, configured scrolling, and decoded and played pronunciation and feedback recordings through the actual Capacitor/AVAudioPlayer bridge.'
     exit 0
+  fi
+  if grep -Eq 'COPTIC_NATIVE_(AUDIO_BRIDGE|BACKUP)_ERROR' /tmp/coptic-native-stdout.log; then
+    break
   fi
   if ! kill -0 "$launch_pid" 2>/dev/null; then
     echo '::error::Simulator console exited before all startup checks completed.'
