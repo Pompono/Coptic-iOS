@@ -135,6 +135,8 @@ jobs:
       - run: xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/coptic-derived CODE_SIGNING_ALLOWED=NO build
       - run: python3 scripts/verify-native-backup.py /tmp/coptic-derived/Build/Products/Debug-iphonesimulator/App.app
       - run: bash scripts/native-startup-smoke.sh 2>&1 | tee /tmp/coptic-native-startup.log
+        # Explicit bash enables pipefail so tee cannot hide a simulator failure.
+        shell: bash
         id: native_startup
         timeout-minutes: 18
       - run: xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphoneos -destination 'generic/platform=iOS' -configuration Release -derivedDataPath /tmp/coptic-iphone-derived CODE_SIGNING_ALLOWED=NO build
