@@ -1,6 +1,6 @@
 // CI-only fixture: copied into the disposable Debug simulator app by build.yml.
 (() => {
-  if (location.pathname !== '/settings/recovery/') { location.href = '/settings/recovery/'; return { status: 'waiting' }; }
+  if (location.pathname !== '/settings/recovery/') { const previous = location.href; location.href = '/settings/recovery/'; return { status: 'waiting', reason: `Navigating from ${previous}` }; }
   if (!window.__nativeBackupApi) {
     if (!document.getElementById('native-backup-api')) {
       const script = document.createElement('script');
@@ -8,7 +8,7 @@
       script.onerror = () => { window.__nativeBackupSmoke = { status: 'failed', message: 'CI backup API bundle failed to load' }; };
       document.head.appendChild(script);
     }
-    return window.__nativeBackupSmoke || { status: 'waiting' };
+    return window.__nativeBackupSmoke || { status: 'waiting', reason: `Loading backup API at ${location.href}` };
   }
   const api = window.__nativeBackupApi;
   const buttons = () => [...document.querySelectorAll('button')];
@@ -30,14 +30,14 @@
     localStorage.setItem(api.RECOVERY_KEY, JSON.stringify({ version: 1, savedAt: new Date().toISOString(), records: restored }));
     sessionStorage.setItem('native-backup-phase', 'seeded');
     location.reload();
-    return { status: 'waiting' };
+    return { status: 'waiting', reason: 'Reloading seeded recovery records' };
   }
   if (phase === 'restoring' && !window.__backupAwaitingReload) {
     if (!matches(restored)) return { status: 'failed', message: 'Restored records changed across relaunch' };
     return { status: 'passed' };
   }
   // Wait for the current recovery page's effect and real React handler.
-  if (!button('Recover') || !Object.keys(button('Recover')).some(key => key.startsWith('__reactProps'))) return { status: 'waiting' };
+  if (!button('Recover') || !Object.keys(button('Recover')).some(key => key.startsWith('__reactProps'))) return { status: 'waiting', reason: `Recovery UI at ${location.href}; phase=${phase}; buttons=${buttons().map(item => item.textContent.trim()).join('|')}; text=${document.body.textContent.slice(0, 400)}` };
   if (!window.__nativeBackupSmoke) {
     window.__nativeBackupSmoke = { status: 'running' };
     (async () => {
