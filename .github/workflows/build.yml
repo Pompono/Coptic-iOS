@@ -134,8 +134,7 @@ jobs:
       - run: npm run ios:sync
       - run: node scripts/build-native-backup-smoke.mjs
       - run: cp scripts/native-backup-smoke.js ios/App/App/public/native-backup-smoke.js
-      - run: xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/coptic-derived CODE_SIGNING_ALLOWED=NO build
-      - run: python3 scripts/sign-native-smoke.py /tmp/coptic-derived/Build/Products/Debug-iphonesimulator/App.app
+      - run: python3 scripts/build-native-simulator.py
       - run: python3 scripts/verify-native-backup.py /tmp/coptic-derived/Build/Products/Debug-iphonesimulator/App.app
       - run: bash scripts/native-startup-smoke.sh 2>&1 | tee /tmp/coptic-native-startup.log
         # Explicit bash enables pipefail so tee cannot hide a simulator failure.
