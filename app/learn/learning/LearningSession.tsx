@@ -1,5 +1,6 @@
 "use client";
 import AudioReplay from "@/app/AudioReplay";
+import DelayedStatus from '@/app/DelayedStatus';
 import {lessonActionPressHandlers} from '@/lib/inputFocus';
 import AppIcon from "@/app/AppIcon";
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -97,7 +98,10 @@ export function LearningSession({ lesson, step, children, newLesson = false }: {
     catch { setError('Could not save lesson completion. Please try again.'); }
   };
   return <SessionContext.Provider value={{record,finish,progress,error}}>
-    {phase === 'loading' ? <main className={styles.screen}><p>Preparing your lesson…</p></main>
+    {phase === 'loading' ? <main className={styles.introScreen}><div className={styles.introBody} data-lesson-scroll>
+        <div className={styles.top}><Link href={`/learn/${lesson.id}/`}><AppIcon name="close" size={16}/>Close lesson</Link><span>Lesson guide</span></div>
+        <h1>{step.title}</h1><p>{lessonNote(step)}</p><DelayedStatus>Preparing saved review items…</DelayedStatus>
+      </div></main>
       : phase === 'guide' ? <main className={styles.introScreen}>
         <div ref={guideContent} className={styles.introBody} data-lesson-scroll>
           <div className={styles.top}><Link href={`/learn/${lesson.id}/`}><AppIcon name="close" size={16}/>Close lesson</Link><span>Lesson guide</span></div>

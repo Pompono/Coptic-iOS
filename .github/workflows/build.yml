@@ -79,6 +79,19 @@ jobs:
       - run: npm run test:translation-assets
       - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:mobile
+      - run: npm run test:routes
+        env:
+          ROUTE_ARTIFACTS: .codex-temp/route-preparation/chromium
+      - run: npm run test:routes
+        env:
+          ROUTE_BROWSER: webkit
+          ROUTE_ARTIFACTS: .codex-temp/route-preparation/webkit
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cold-route-navigation-video-and-frames
+          path: .codex-temp/route-preparation
+          retention-days: 30
       - run: node scripts/settings-redesign-smoke.mjs
       - run: npm run test:settings-navigation
         env:
@@ -97,6 +110,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
       - run: npm run test:backup
+      - run: node scripts/build-native-backup-smoke.mjs && node scripts/native-fixture-smoke.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: bundled-web-app
@@ -118,12 +132,16 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run ios:sync
+      - run: node scripts/build-native-backup-smoke.mjs
       - run: cp scripts/native-backup-smoke.js ios/App/App/public/native-backup-smoke.js
-      - run: xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/coptic-derived CODE_SIGNING_ALLOWED=NO build
+      - run: python3 scripts/build-native-simulator.py
       - run: python3 scripts/verify-native-backup.py /tmp/coptic-derived/Build/Products/Debug-iphonesimulator/App.app
       - run: bash scripts/native-startup-smoke.sh 2>&1 | tee /tmp/coptic-native-startup.log
+        # Explicit bash enables pipefail so tee cannot hide a simulator failure.
+        shell: bash
         id: native_startup
-        timeout-minutes: 18
+        timeout-minutes: 22
+      - run: rm ios/App/App/public/native-backup-smoke.js ios/App/App/public/native-backup-api.js
       - run: xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphoneos -destination 'generic/platform=iOS' -configuration Release -derivedDataPath /tmp/coptic-iphone-derived CODE_SIGNING_ALLOWED=NO build
       - run: |
           mkdir -p /tmp/coptic-ipa/Payload
@@ -145,6 +163,7 @@ jobs:
             /tmp/coptic-native-stderr.log
             /tmp/coptic-native-boot.log
             /tmp/coptic-native-startup.log
+            /tmp/coptic-native-system.log
           if-no-files-found: warn
   backend:
     runs-on: ubuntu-latest

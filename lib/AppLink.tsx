@@ -6,8 +6,9 @@ import { useRouter } from 'next/navigation';
 import { prepareNavigationScroll } from './navigationScroll';
 import { consumeSettingsBack, leaveSettingsNavigation, navigateSettings, rememberSettingsPush, requestSettingsNavigation } from './settingsNavigation';
 
-// All pages are bundled locally. Speculative fetches add work and can be
-// aborted by WebKit during document navigation; fetch pages when requested.
+// Keep viewport-wide speculation disabled: WebKit can abort it during document
+// navigation, and lesson lists contain hundreds of links. RoutePreparation
+// budgets only the five main destinations after the first visible paint.
 const AppLink = forwardRef<HTMLAnchorElement, ComponentProps<typeof NextLink>>(
   (props, ref) => {
     const router = useRouter();

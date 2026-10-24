@@ -15,21 +15,42 @@ PYTHON
 }
 runtime=$(bounded 30 xcrun simctl list runtimes --json | python3 -c 'import json,sys; r=[x for x in json.load(sys.stdin)["runtimes"] if x.get("isAvailable") and ".iOS-" in x["identifier"]]; print(r[-1]["identifier"])')
 device=$(bounded 60 xcrun simctl create CopticStartupSmoke com.apple.CoreSimulator.SimDeviceType.iPhone-16 "$runtime")
-cleanup() { bounded 10 xcrun simctl shutdown "$device" >/dev/null 2>&1 || true; bounded 10 xcrun simctl delete "$device" >/dev/null 2>&1 || true; }
-trap cleanup EXIT
+launch_pid=''
+cleanup() {
+  if [ "$1" -ne 0 ]; then
+    # Console output is empty when SpringBoard rejects launch. Preserve the
+    # native reason before deleting this disposable simulator.
+    bounded 30 xcrun simctl spawn "$device" log show --last 5m --style compact --predicate 'process == "App" OR process == "amfid" OR eventMessage CONTAINS "com.pompono.coptic"' > /tmp/coptic-native-system.log 2>&1 || true
+    tail -n 100 /tmp/coptic-native-system.log
+  fi
+  if [ -n "$launch_pid" ]; then kill "$launch_pid" >/dev/null 2>&1 || true; fi
+  bounded 10 xcrun simctl shutdown "$device" >/dev/null 2>&1 || true
+  bounded 10 xcrun simctl delete "$device" >/dev/null 2>&1 || true
+}
+trap 'cleanup $?' EXIT
 bounded 30 xcrun simctl boot "$device"
 bounded 15 open -a Simulator --args -CurrentDeviceUDID "$device" || true
 bounded 600 xcrun simctl bootstatus "$device" -b 2>&1 | tee /tmp/coptic-native-boot.log
 bounded 180 xcrun simctl install "$device" /tmp/coptic-derived/Build/Products/Debug-iphonesimulator/App.app
-# Await launch before starting the bridge-check clock. A cold simulator can
-# spend most of the launch timeout starting services before the app runs.
-SIMCTL_CHILD_COPTIC_NATIVE_AUDIO_SMOKE=1 SIMCTL_CHILD_COPTIC_NATIVE_BACKUP_SMOKE=1 bounded 120 xcrun simctl launch --terminate-running-process --stdout=/tmp/coptic-native-stdout.log --stderr=/tmp/coptic-native-stderr.log "$device" com.pompono.coptic
-for attempt in $(seq 1 120); do
+# Capture the console through host shell redirection. Xcode 26 can return an
+# app PID without creating the files passed through --stdout/--stderr, which
+# previously made every marker check fail without usable app diagnostics.
+# The combined six-minute budget includes cold launch services and app checks.
+SIMCTL_CHILD_COPTIC_NATIVE_AUDIO_SMOKE=1 SIMCTL_CHILD_COPTIC_NATIVE_BACKUP_SMOKE=1 xcrun simctl launch --terminate-running-process --console-pty "$device" com.pompono.coptic > /tmp/coptic-native-stdout.log 2> /tmp/coptic-native-stderr.log &
+launch_pid=$!
+for attempt in $(seq 1 180); do
   if python3 -c 'from pathlib import Path; import sys; p=Path("/tmp/coptic-native-stdout.log"); sys.exit(0 if p.exists() and "COPTIC_SCROLL_BOUNDS_READY" in p.read_text() and "COPTIC_NATIVE_AUDIO_DECODE_READY" in p.read_text() and "COPTIC_NATIVE_AUDIO_BRIDGE_READY" in p.read_text() and "COPTIC_NATIVE_BACKUP_READY" in p.read_text() and "COPTIC_NATIVE_AUTH_STORAGE_READY" in p.read_text() else 1)'; then
-    echo 'PASS: native backup JSON/Unicode, real share-sheet cancellation, import preview/cancel/reject/restore and automatic reload persistence.'
+    echo 'PASS: native backup JSON/Unicode, real share-sheet cancellation, backup validation, recovery UI cancel/restore and reload persistence.'
     echo 'PASS: Capacitor native Keychain storage reads, writes, and removes an auth-session-shaped value.'
     echo 'PASS: native iOS app launched, configured scrolling, and decoded and played pronunciation and feedback recordings through the actual Capacitor/AVAudioPlayer bridge.'
     exit 0
+  fi
+  if grep -Eq 'COPTIC_NATIVE_(AUDIO_BRIDGE|BACKUP)_ERROR' /tmp/coptic-native-stdout.log; then
+    break
+  fi
+  if ! kill -0 "$launch_pid" 2>/dev/null; then
+    echo '::error::Simulator console exited before all startup checks completed.'
+    break
   fi
   sleep 2
 done

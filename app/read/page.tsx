@@ -3,6 +3,7 @@ import { readRecord, writeRecord } from "@/lib/progressStorage";
 import AudioReplay from "../AudioReplay";
 import PageHeader, { PageBackLink } from "../PageHeader";
 import AppIcon from "../AppIcon";
+import DelayedStatus from '../DelayedStatus';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from '@/lib/AppLink';
 import SaveWord from '@/app/SaveWord';
@@ -97,7 +98,7 @@ export default function ReaderPage() {
       </div>}
       {passage && <><button aria-expanded={showMeaning} onClick={() => setShowMeaning(!showMeaning)}>{showMeaning ? 'Hide phrase meanings' : 'Show phrase meanings'}</button>
         {showMeaning && <p>{passage.translation}</p>}<p className={styles.source}>{passage.source}</p></>}
-      {loading && <p role="status">Loading the bundled dictionary…</p>}
+      {loading && <DelayedStatus>Loading the bundled dictionary…</DelayedStatus>}
     </section>
     <div ref={detail}>
       {selected && result && <section aria-label="Word explanation">
