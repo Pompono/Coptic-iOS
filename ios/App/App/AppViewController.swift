@@ -157,6 +157,10 @@ class AppViewController: CAPBridgeViewController {
                 if attempt > 440 { print("COPTIC_NATIVE_BACKUP_ERROR: \(error.localizedDescription)") }
             }
             if let state = result as? [String: Any], let status = state["status"] as? String {
+                if attempt % 50 == 0 {
+                    print("COPTIC_NATIVE_BACKUP_STATE: \(state)")
+                    fflush(stdout)
+                }
                 if status == "passed" && self.backupShareObserved {
                     print("COPTIC_NATIVE_BACKUP_READY")
                     print("COPTIC_NATIVE_AUTH_STORAGE_READY")

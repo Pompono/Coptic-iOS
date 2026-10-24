@@ -38,7 +38,9 @@ export async function finishTransfer(page,set,{newLesson=false,verifyKeyboardLay
   }
   if(kind===0){
    const joined=!item.word.includes(' '),words=joined?item.word.startsWith('ⲡⲓ')?['ⲡⲓ',item.word.slice(2)]:Array.from(item.word):item.word.split(' ');
-   for(const word of words)await page.getByRole('group',{name:'Available phrase pieces',exact:true}).getByRole('button',{name:word,exact:true}).all().then(async buttons=>{ for(const button of buttons)if(await button.isEnabled()){await button.click();break;} });
+   // Continue commits the next question asynchronously. A snapshot via all()
+   // can be empty and silently skip an answer; wait for each enabled piece.
+   for(const word of words)await page.getByRole('group',{name:'Available phrase pieces',exact:true}).getByRole('button',{name:word,exact:true}).and(page.locator('button:enabled')).first().click();
   }else if(kind===1){const chars=Array.from(item.word);await page.getByLabel('Missing letter',{exact:true}).fill(chars[Math.max(0,chars.length-2)]);}
   else await page.getByLabel('Your answer',{exact:true}).fill(item.meaning.replace(/^Sound: /,''));
   await page.evaluate(()=>{window.__transferSound=false;window.addEventListener('coptic-audio-played',()=>window.__transferSound=true,{once:true});});

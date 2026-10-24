@@ -13,6 +13,7 @@ import ProgressStorageNotice from "./ProgressStorageNotice";
 import AppViewport from './AppViewport';
 import AuthProvider from './AuthProvider';
 import ProgressSyncLifecycle from './ProgressSyncLifecycle';
+import RoutePreparation from './RoutePreparation';
 
 export const metadata: Metadata = {
   title: "CoptLingo",
@@ -36,6 +37,7 @@ export default function RootLayout({
       <body>
         <AuthProvider>
           <ProgressSyncLifecycle />
+          <RoutePreparation />
           <div className="status-bar-backdrop" aria-hidden="true" />
           <AudioUnlock />
           <NativeExperience />

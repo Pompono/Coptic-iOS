@@ -1,6 +1,7 @@
 "use client";
 import {searchBrowseDictionary, peekBrowseDictionary, type BrowseEntry} from "@/lib/dictionary/browseClient";
 import PageHeader from "../PageHeader";
+import DelayedStatus from '../DelayedStatus';
 import { applyCopticCase, COPTIC_KEYBOARD_LAYOUTS, CopticKeyboardGrid, isCopticKey, isCopticSpecialKey, updateInputAtSelection, type CopticKey, type CopticKeyboardMode, type CopticShiftMode } from "../CopticKeyboard";
 
 import AppIcon from "../AppIcon";
@@ -456,7 +457,7 @@ export default function DictionaryPage() {
         </div>
 
         <div className="dictionary-results" role="region" aria-label="Dictionary entries" aria-busy={loadState==='loading'} data-state={loadState}>
-          {loadState==='loading'&&visibleResults.length===0&&<div className="dictionary-loading" role="status" aria-label="Loading dictionary"><span className="sr-only">Loading dictionary…</span>{[0,1,2].map(n=><div key={n} className="dictionary-placeholder" aria-hidden="true"><i/><i/><i/></div>)}</div>}
+          {loadState==='loading'&&visibleResults.length===0&&<DelayedStatus>Searching the bundled dictionary…</DelayedStatus>}
           {visibleResults.map((e, idx) => (
             <div
               key={resultKey+`-${e.dialect}-${e.lemma}-${e.pos}-${idx}`}
