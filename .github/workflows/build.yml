@@ -164,6 +164,7 @@ jobs:
             /tmp/coptic-native-stderr.log
             /tmp/coptic-native-boot.log
             /tmp/coptic-native-startup.log
+            /tmp/coptic-native-system.log
           if-no-files-found: warn
   backend:
     runs-on: ubuntu-latest

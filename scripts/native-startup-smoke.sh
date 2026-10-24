@@ -17,11 +17,17 @@ runtime=$(bounded 30 xcrun simctl list runtimes --json | python3 -c 'import json
 device=$(bounded 60 xcrun simctl create CopticStartupSmoke com.apple.CoreSimulator.SimDeviceType.iPhone-16 "$runtime")
 launch_pid=''
 cleanup() {
+  if [ "$1" -ne 0 ]; then
+    # Console output is empty when SpringBoard rejects launch. Preserve the
+    # native reason before deleting this disposable simulator.
+    bounded 30 xcrun simctl spawn "$device" log show --last 5m --style compact --predicate 'process == "App" OR process == "amfid" OR eventMessage CONTAINS "com.pompono.coptic"' > /tmp/coptic-native-system.log 2>&1 || true
+    tail -n 100 /tmp/coptic-native-system.log
+  fi
   if [ -n "$launch_pid" ]; then kill "$launch_pid" >/dev/null 2>&1 || true; fi
   bounded 10 xcrun simctl shutdown "$device" >/dev/null 2>&1 || true
   bounded 10 xcrun simctl delete "$device" >/dev/null 2>&1 || true
 }
-trap cleanup EXIT
+trap 'cleanup $?' EXIT
 bounded 30 xcrun simctl boot "$device"
 bounded 15 open -a Simulator --args -CurrentDeviceUDID "$device" || true
 bounded 600 xcrun simctl bootstatus "$device" -b 2>&1 | tee /tmp/coptic-native-boot.log

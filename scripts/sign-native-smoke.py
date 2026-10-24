@@ -22,4 +22,5 @@ with tempfile.TemporaryDirectory(prefix='coptic-smoke-signing-') as temporary:
         }, output)
     subprocess.run(['codesign', '--force', '--sign', '-', '--entitlements', str(entitlements), str(app)], check=True)
     subprocess.run(['codesign', '--verify', str(app)], check=True)
+    subprocess.run(['codesign', '--display', '--entitlements', '-', '--verbose=2', str(app)], check=True)
 print('PASS: disposable simulator app has a local signature and Keychain access group; device build remains unsigned.')
