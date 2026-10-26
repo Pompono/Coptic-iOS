@@ -5,9 +5,17 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { createAuthStorage, browserAuthStorage } from './storage';
 import { isAuthConfigured } from './redirect';
 import { createPasswordRecoveryContext, type PasswordRecoveryContext } from './recovery';
+import { createDeletionState, deletionAwareAuthStorage, DELETION_PENDING_KEY, type DeletionState } from './deletionState';
 
 let clientPromise: Promise<SupabaseClient> | undefined;
 let passwordRecoveryContext: PasswordRecoveryContext | undefined;
+let deletionState: DeletionState | undefined;
+
+export async function getDeletionState(): Promise<DeletionState> {
+  await getSupabaseClient();
+  if (!deletionState) throw new Error('Secure account deletion storage is unavailable.');
+  return deletionState;
+}
 
 export const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 export const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '';
@@ -57,13 +65,15 @@ async function makeClient(): Promise<SupabaseClient> {
     browserAuthStorage(),
   );
   passwordRecoveryContext = createPasswordRecoveryContext(storage);
+  deletionState = createDeletionState(storage, window.localStorage);
+  if (await deletionState.read()) window.localStorage.setItem(DELETION_PENDING_KEY, 'pending');
   return createClient(supabaseUrl, supabasePublishableKey, {
     auth: {
       flowType: 'pkce',
       detectSessionInUrl: false,
       persistSession: true,
       autoRefreshToken: !isNative,
-      storage,
+      storage: deletionAwareAuthStorage(storage, deletionState),
     },
   });
 }

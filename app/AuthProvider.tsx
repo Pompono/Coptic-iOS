@@ -5,7 +5,8 @@ import { Capacitor } from '@capacitor/core';
 import type { Session } from '@supabase/supabase-js';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { getAuthConfigurationError, getPasswordRecoveryContext, getSupabaseClient, supabaseAuthConfigured } from '@/lib/auth/client';
+import { getAuthConfigurationError, getDeletionState, getPasswordRecoveryContext, getSupabaseClient, supabaseAuthConfigured } from '@/lib/auth/client';
+import { checkAccountDeletion } from '@/lib/auth/deletion';
 import { getAuthRedirectUrl, isAuthCallbackPath } from '@/lib/auth/redirect';
 import { bindNativeAuthLifecycle } from '@/lib/auth/lifecycle';
 import { createAuthCallbackProcessor } from '@/lib/auth/callback';
@@ -38,6 +39,18 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState('');
   const [recoveryPending, setRecoveryPending] = useState(false);
   const serviceRef = useRef<ReturnType<typeof createAuthService> | null>(null);
+  const sessionGeneration = useRef(0);
+  const acceptSession = useCallback(async (candidate: Session | null) => {
+    const generation = ++sessionGeneration.current;
+    const allowed = !candidate || await (await getDeletionState()).allows(candidate.user.id);
+    if (generation === sessionGeneration.current) setSession(allowed ? candidate : null);
+  }, []);
+
+  useEffect(() => {
+    const deleted = () => { sessionGeneration.current++; setSession(null); setRecoveryPending(false); };
+    window.addEventListener('coptic-account-deleted', deleted);
+    return () => window.removeEventListener('coptic-account-deleted', deleted);
+  }, []);
 
   const clearError = useCallback(() => setError(''), []);
   const clearRecoveryPending = useCallback(() => setRecoveryPending(false), []);
@@ -60,7 +73,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         serviceRef.current = service;
       }
       const restored = await service.restoreSession();
-      setSession(restored as Session | null);
+      await acceptSession(restored as Session | null);
       const hasRecoveryContext = await service.isPasswordRecoveryAuthorized(restored?.user.id);
       const isRecoveryAuthorized = Boolean(restored && hasRecoveryContext);
       setRecoveryPending(isRecoveryAuthorized);
@@ -70,7 +83,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [router, acceptSession]);
 
   useEffect(() => {
     if (!supabaseAuthConfigured) return;
@@ -88,7 +101,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       onComplete: (restored, isPasswordRecovery) => {
         if (disposed) return;
         setError('');
-        setSession(restored as Session);
+        void acceptSession(restored as Session);
         setRecoveryPending(isPasswordRecovery);
         router.replace('/account/');
       },
@@ -115,7 +128,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         });
         const { data } = client.auth.onAuthStateChange((event, nextSession) => {
           if (disposed) return;
-          setSession(nextSession);
+          void acceptSession(nextSession).catch(() => { if (!disposed) setSession(null); });
           if (event === 'PASSWORD_RECOVERY') {
             const service = serviceRef.current;
             if (service && nextSession?.user.id) {
@@ -147,10 +160,13 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
           await handleCallback(window.location.href);
         }
 
+        // Resolve an interrupted deletion before restoring cached credentials.
+        // Offline/unknown outcomes keep the durable sync fence and receipt intact.
+        await checkAccountDeletion().catch(() => undefined);
         const { data: restored, error: restoreError } = await client.auth.getSession();
         if (restoreError) throw restoreError;
         if (!disposed) {
-          setSession(restored.session);
+          await acceptSession(restored.session);
           const service = serviceRef.current;
           const hasRecoveryContext = service
             ? await service.isPasswordRecoveryAuthorized(restored.session?.user.id)
@@ -172,7 +188,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       void appUrlListener?.remove();
       void removeAppStateListener?.();
     };
-  }, [router]);
+  }, [router, acceptSession]);
 
   const value = useMemo<AuthContextValue>(() => ({
     configured: supabaseAuthConfigured,

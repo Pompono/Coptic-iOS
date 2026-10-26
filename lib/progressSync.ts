@@ -1,5 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { parseBackup, replaceRecordsForCloudSync, type Records } from './progressStorage';
+import { deletionSyncBlocked } from './auth/deletionState';
+
+function requireSyncAvailable() {
+  if (typeof localStorage !== 'undefined' && deletionSyncBlocked()) throw new Error('Account deletion is pending. Cloud sync is paused.');
+}
 
 export const PROGRESS_SYNC_OPT_IN_KEY = 'coptic-progress-sync-enabled:v1';
 const SYNC_BASE_PREFIX = 'coptic-progress-sync-base:v1:';
@@ -91,10 +96,12 @@ export function readSyncBase(userId: string): SyncBase | null {
 }
 
 export function saveSyncBase(userId: string, revision: number, records: Records) {
+  requireSyncAvailable();
   localStorage.setItem(`${SYNC_BASE_PREFIX}${userId}`, JSON.stringify({ version: 1, revision, records: checkedRecords(records) }));
 }
 
 export async function fetchProgressSnapshot(client: SupabaseClient, userId: string, signal?: AbortSignal): Promise<ProgressSnapshot | null> {
+  requireSyncAvailable();
   let query = client.from('progress_sync_snapshots').select('revision, records, updated_at').eq('user_id', userId);
   if (signal) query = query.abortSignal(signal);
   const { data, error } = await query.maybeSingle();
@@ -115,6 +122,7 @@ export async function writeProgressSnapshot(
   records: Records,
   signal?: AbortSignal,
 ): Promise<ProgressSnapshot | { conflict: true; snapshot: ProgressSnapshot | null }> {
+  requireSyncAvailable();
   let query = client.rpc('save_progress_snapshot', {
     p_expected_revision: expectedRevision,
     p_records: checkedRecords(records),
@@ -137,6 +145,7 @@ export async function writeProgressSnapshot(
 }
 
 export function installCloudProgress(records: Records) {
+  requireSyncAvailable();
   replaceRecordsForCloudSync(checkedRecords(records));
   window.dispatchEvent(new Event('coptic-learning-change'));
   window.dispatchEvent(new Event('coptic-vocabulary-change'));

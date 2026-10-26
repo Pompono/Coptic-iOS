@@ -6,6 +6,7 @@ import PageHeader, { PageBackLink } from '../PageHeader';
 import { useAuth } from '../AuthProvider';
 import { MINIMUM_PASSWORD_LENGTH } from '@/lib/auth/service';
 import styles from './account.module.css';
+import DeleteAccount from './DeleteAccount';
 
 type Mode = 'sign-in' | 'create' | 'forgot' | 'verification' | 'reset' | 'settings';
 
@@ -23,6 +24,12 @@ export default function AccountPage() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [resendSeconds, setResendSeconds] = useState(0);
+
+  useEffect(() => {
+    const deleted = () => { setMode('sign-in'); setPassword(''); setConfirmPassword(''); setVerificationToken(''); setEmail(''); };
+    window.addEventListener('coptic-account-deleted', deleted);
+    return () => window.removeEventListener('coptic-account-deleted', deleted);
+  }, []);
 
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get('mode');
@@ -228,5 +235,6 @@ export default function AccountPage() {
       {message && <p className={styles.alert} role="status">{message}</p>}
       {configured && error && /offline|connection|service could not be reached/iu.test(error) && <button className={styles.linkButton} type="button" disabled={loading} onClick={() => void retrySession()}>Retry session check</button>}
     </section>
+    <DeleteAccount />
   </main>;
 }

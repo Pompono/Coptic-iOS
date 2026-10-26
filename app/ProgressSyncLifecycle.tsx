@@ -10,17 +10,20 @@ import {
   saveSyncBase, writeProgressSnapshot,
 } from '@/lib/progressSync';
 import { createProgressSyncCoordinator } from '@/lib/progressSyncCoordinator';
+import { deletionSyncBlocked, PROGRESS_REUSE_CONSENT_KEY } from '@/lib/auth/deletionState';
 
 const LAST_USER_KEY = 'coptic-progress-sync-last-user:v1';
 let activeController: AbortController | null = null;
 const coordinator = createProgressSyncCoordinator({
   async currentUser() {
+    if (deletionSyncBlocked()) return null;
     const client = await getSupabaseClient();
     const { data, error } = await client.auth.getSession();
     if (error) throw error;
     return data.session?.user.id ?? null;
   },
   isEnabled(userId) {
+    if (deletionSyncBlocked() || localStorage.getItem(PROGRESS_REUSE_CONSENT_KEY)) return false;
     // Existing users who turned sync off keep that choice until they review
     // and explicitly resume syncing from Settings. New accounts have no base.
     return localStorage.getItem(PROGRESS_SYNC_OPT_IN_KEY) === userId || !readSyncBase(userId);
@@ -45,10 +48,10 @@ export default function ProgressSyncLifecycle() {
     let removeAppState: { remove(): Promise<void> } | undefined;
     let authSubscription: { unsubscribe(): void } | undefined;
     const schedule = () => {
-      if (disposed || !navigator.onLine || document.visibilityState === 'hidden' || location.pathname.startsWith('/settings/progress')) return;
+      if (disposed || deletionSyncBlocked() || !navigator.onLine || document.visibilityState === 'hidden' || location.pathname.startsWith('/settings/progress')) return;
       clearTimeout(timer);
       timer = setTimeout(() => {
-        if (location.pathname.startsWith('/settings/progress')) return;
+        if (deletionSyncBlocked() || location.pathname.startsWith('/settings/progress')) return;
         const controller = activeController && !activeController.signal.aborted
           ? activeController : new AbortController();
         activeController = controller;
@@ -58,7 +61,7 @@ export default function ProgressSyncLifecycle() {
       }, 900);
     };
     window.addEventListener('coptic-progress-change', schedule);
-    const stopCurrentSync = () => { activeController?.abort(); coordinator.cancel(); };
+    const stopCurrentSync = () => { clearTimeout(timer); activeController?.abort(); coordinator.cancel(); };
     window.addEventListener('coptic-progress-sync-optout', stopCurrentSync);
     window.addEventListener('online', schedule);
     window.addEventListener('focus', schedule);
