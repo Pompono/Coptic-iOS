@@ -76,6 +76,15 @@ try {
     await entry.click();
     await page.getByLabel('Current password', { exact: true }).fill('password-for-test');
     await page.getByLabel('Type DELETE to confirm').fill('DELETE');
+    if (scenario === 'success') {
+      await context.setOffline(true);
+      await final.click();
+      await page.getByText('You are offline.', { exact: false }).waitFor();
+      assert.equal(requests, 0, 'offline confirmation never sends deletion');
+      await context.setOffline(false);
+      await page.getByLabel('Current password', { exact: true }).fill('password-for-test');
+      await page.getByLabel('Type DELETE to confirm').fill('DELETE');
+    }
     await final.evaluate(button => { button.click(); button.click(); });
     if (scenario === 'lost-response') {
       await page.getByRole('button', { name: 'Check deletion status' }).waitFor();

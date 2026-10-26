@@ -71,7 +71,7 @@ A separate consent marker survives deletion and sign-in. Automatic synchronizati
 ## Repeatable tests and release gates
 
 - `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`.
-- `deno check supabase/functions/account-deletion/index.ts` checks the deployable Deno entry point independently of the exported Next.js app.
+- `deno check --config supabase/functions/deno.json supabase/functions/account-deletion/index.ts` checks the deployable Deno entry point independently of the exported Next.js app and its Node dependency tree.
 - Node tests exercise the actual request handler with fake backends, including normal user A attempting to delete B, receipt replay, lease duplicates, failed verification, missing/expired/forged auth, cleanup failures, and response loss after commit. Local state tests exercise preserved records/journals, durable revocation, restart and late credential writes.
 - CI's `progress-sync-postgres` job creates disposable PostgreSQL roles/Auth/Storage fixtures, applies all migrations and runs `supabase/tests/account_deletion.sql`. Never run destructive fixture SQL in a deployed project.
 - CI's `deletion-integration` starts an unlinked local Supabase Docker stack, serves the real Edge Function, and runs `scripts/account-deletion-integration.mjs`. The script refuses all URLs except loopback port 54321, creates disposable accounts and objects, and verifies actual hard deletion, object cleanup, snapshot cascade, stale JWT rejection and other-user isolation. It never reads production credentials.

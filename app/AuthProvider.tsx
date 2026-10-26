@@ -101,7 +101,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       onComplete: (restored, isPasswordRecovery) => {
         if (disposed) return;
         setError('');
-        void acceptSession(restored as Session);
+        void acceptSession(restored as Session).catch(() => { if (!disposed) { setSession(null); setError('Secure account state could not be checked. Reopen the app and try again.'); } });
         setRecoveryPending(isPasswordRecovery);
         router.replace('/account/');
       },

@@ -20,4 +20,4 @@
 .accountActions { display: grid; gap: 6px; border-top: 1px solid var(--separator-color); padding-top: 12px; }
 .signOut { color: var(--lesson-choice-wrong-text); }
 .deletion { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border, #d8d8d8); }
-.destructiveButton { background: #a52b31; color: #fff; }
+.button.destructiveButton { background: #a52b31; color: #fff; }

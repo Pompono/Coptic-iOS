@@ -153,3 +153,44 @@ test('late session writes and cached restored credentials cannot reconnect a del
   const next = JSON.stringify({ user: { id: 'user-b' } });
   await guarded.setItem(key, next); assert.equal(await guarded.getItem(key), next);
 });
+
+test('a Keychain write already in flight is removed if deletion commits before the write returns', async () => {
+  const secure = storage(), local = storage();
+  const state = createDeletionState(secure, local);
+  let release, entered;
+  const started = new Promise(resolve => { entered = resolve; });
+  const wait = new Promise(resolve => { release = resolve; });
+  const guarded = deletionAwareAuthStorage({ ...secure, async setItem(key, value) { entered(); await wait; secure.setItem(key, value); } }, state);
+  const writing = guarded.setItem('sb-test-auth-token', JSON.stringify({ user: { id: 'user-a' } }));
+  await started; await state.revoke('user-a'); release(); await writing;
+  assert.equal(secure.getItem('sb-test-auth-token'), null);
+});
+
+test('deletion cancels an in-flight coordinator upload without installing progress or saving old identity', async () => {
+  const { createProgressSyncCoordinator } = await loadTsModule('lib/progressSyncCoordinator.ts');
+  const controller = new AbortController(); const effects = [];
+  let release, entered, enabled = true;
+  const started = new Promise(resolve => { entered = resolve; });
+  const wait = new Promise(resolve => { release = resolve; });
+  const coordinator = createProgressSyncCoordinator({
+    currentUser: async () => 'user-a', isEnabled: () => enabled, lastUser: () => null,
+    base: () => null, local: () => ({ 'coptic-progress': 'preserved' }), cloud: async () => null,
+    upload: async () => { entered(); await wait; return { revision: 1, records: {} }; },
+    install: () => effects.push('install'), saveBase: () => effects.push('base'), rememberUser: () => effects.push('identity'),
+  });
+  const running = coordinator.request(controller.signal);
+  await started; enabled = false; controller.abort(); coordinator.cancel(); release(); await running;
+  assert.deepEqual(effects, []);
+});
+
+test('pending deletion fences cloud download installation and uploads at their shared boundary', async () => {
+  const { installCloudProgress, writeProgressSnapshot, saveSyncBase } = await loadTsModule('lib/progressSync.ts');
+  const local = storage(); const previous = globalThis.localStorage;
+  globalThis.localStorage = local;
+  try {
+    await createDeletionState(storage(), local).begin('user-a');
+    assert.throws(() => installCloudProgress({}), /deletion is pending/);
+    assert.throws(() => saveSyncBase('user-a', 1, {}), /deletion is pending/);
+    await assert.rejects(writeProgressSnapshot({ rpc() { throw new Error('Must not contact cloud'); } }, 0, {}), /deletion is pending/);
+  } finally { if (previous === undefined) delete globalThis.localStorage; else globalThis.localStorage = previous; }
+});

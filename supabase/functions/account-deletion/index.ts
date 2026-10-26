@@ -33,5 +33,8 @@ Deno.serve(createDeletionHandler({
   async claim(userId, hash) { return checked(await admin.rpc('claim_account_deletion', { p_user_id: userId, p_receipt_hash: hash })) === true; },
   async objects(userId) { return checked(await admin.rpc('account_deletion_objects', { p_user_id: userId })); },
   async removeObjects(bucket, paths) { checked(await admin.storage.from(bucket).remove(paths)); },
-  async deleteUser(userId) { checked(await admin.auth.admin.deleteUser(userId, false)); },
+  async deleteUser(userId) {
+    const { error } = await admin.auth.admin.deleteUser(userId, false);
+    if (error) throw new Error('Auth deletion failed');
+  },
 }, (Deno.env.get('ACCOUNT_DELETION_ALLOWED_ORIGINS') ?? 'capacitor://localhost').split(',').map(value => value.trim()).filter(Boolean)));

@@ -28,7 +28,13 @@ export default function DeleteAccount() {
     finally { setChecking(false); }
   }
 
-  useEffect(() => { if (configured) void readiness(); }, [configured]);
+  useEffect(() => {
+    if (!configured) return;
+    if (session?.user.id) void readiness();
+    else void getDeletionState().then(state => state.read()).then(value => setPending(Boolean(value)))
+      .catch(() => setError('Secure deletion status could not be read. Reopen the app and try again.'))
+      .finally(() => setChecking(false));
+  }, [configured, session?.user.id]);
   useEffect(() => {
     const finished = () => {
       setPending(false); setOpen(false);
@@ -79,10 +85,10 @@ export default function DeleteAccount() {
         <input value={confirmation} onChange={event => setConfirmation(event.target.value)} autoComplete="off" autoCapitalize="characters" spellCheck={false} required disabled={busy} />
       </label>
       <button type="submit" className={`${styles.button} ${styles.destructiveButton}`} disabled={busy || !available || !password || confirmation !== 'DELETE'}>{busy ? 'Checking deletion…' : 'Permanently Delete Account'}</button>
-      <button type="button" className={styles.linkButton} disabled={busy} onClick={() => { setOpen(false); setPassword(''); setConfirmation(''); }}>Cancel</button>
+      <button type="button" className={styles.linkButton} disabled={busy} onClick={() => { setOpen(false); setPassword(''); setConfirmation(''); }}>{pending ? 'Close confirmation' : 'Cancel'}</button>
     </form>}
     {pending && <>
-      <p className={styles.copy}>A deletion request needs confirmation. Cloud sync is paused. You can keep learning offline while resolving it.</p>
+      <p className={styles.copy}>A deletion request needs confirmation. Closing this screen does not cancel a submitted deletion. Cloud sync is paused. You can keep learning offline while resolving it.</p>
       <button type="button" className={styles.linkButton} disabled={busy} onClick={() => void act(true)}>Check deletion status</button>
     </>}
     {error && <p className={styles.alert} role="alert">{error}</p>}
