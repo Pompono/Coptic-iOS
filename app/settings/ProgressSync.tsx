@@ -349,7 +349,7 @@ export default function ProgressSync({ active = true }: { active?: boolean }) {
               ? 'This replaces progress on this device with the cloud copy. A recovery copy of this device’s progress will be saved first.'
               : 'Both copies changed since the last sync. Keeping one replaces the other copy. A recovery copy is saved before a cloud download.'}</p>
           <div className="settings-action-row settings-cloud-progress__actions">
-            {pending.kind !== 'upload' && <button type="button" className={comparison?.recommended === 'cloud' ? 'ui-primary' : 'ui-secondary'} disabled={busy} onClick={() => void choose('download')}>Use cloud progress on this device{comparison?.recommended === 'cloud' ? ' (Recommended)' : ''}</button>}
+            {pending.kind !== 'upload' && pending.cloud && <button type="button" className={comparison?.recommended === 'cloud' ? 'ui-primary' : 'ui-secondary'} disabled={busy} onClick={() => void choose('download')}>Use cloud progress on this device{comparison?.recommended === 'cloud' ? ' (Recommended)' : ''}</button>}
             {pending.kind !== 'download' && <button type="button" className={pending.kind !== 'conflict' || comparison?.recommended === 'device' ? 'ui-primary' : 'ui-secondary'} disabled={busy} onClick={() => void choose('upload')}>{pending.kind === 'conflict' ? `Replace cloud with this device${comparison?.recommended === 'device' ? ' (Recommended)' : ''}` : 'Upload this device’s progress'}</button>}
             <button type="button" className="ui-secondary" disabled={busy} onClick={() => { setPending(null); setMessage('No progress was changed. Sync is paused until you choose or review again.'); }}>Cancel</button>
           </div>

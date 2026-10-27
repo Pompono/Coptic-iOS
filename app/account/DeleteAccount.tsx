@@ -6,7 +6,7 @@ import { getDeletionState } from '@/lib/auth/client';
 import { checkAccountDeletion, deleteCurrentAccount, deletionRequest } from '@/lib/auth/deletion';
 import styles from './account.module.css';
 
-export default function DeleteAccount() {
+export default function DeleteAccount({ onConfirmationChange }: { onConfirmationChange(open: boolean): void }) {
   const { session, configured, recoveryPending } = useAuth();
   const [open, setOpen] = useState(false);
   const [available, setAvailable] = useState(false);
@@ -18,6 +18,12 @@ export default function DeleteAccount() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const inFlight = useRef(false);
+  const heading = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    onConfirmationChange(open);
+    if (open) heading.current?.focus();
+  }, [open, onConfirmationChange]);
 
   async function readiness() {
     setChecking(true);
@@ -75,7 +81,7 @@ export default function DeleteAccount() {
       {!available && !checking && <button type="button" className={styles.linkButton} onClick={() => void readiness()}>Check availability again</button>}
     </>}
     {open && session && <form className={styles.form} onSubmit={submit} aria-label="Confirm account deletion">
-      <h2>Delete your account permanently?</h2>
+      <h2 ref={heading} className={styles.sectionTitle} tabIndex={-1}>Delete your account permanently?</h2>
       <p className={styles.copy}>Your account will be permanently deleted. You will no longer be able to sign in with this account. Its cloud-synchronized progress will be deleted. Support cannot undo deletion.</p>
       <p className={styles.copy}>Your lessons, XP, vocabulary and reading progress on this device will stay. Progress may remain locally on other devices, but those devices can no longer synchronize through this account.</p>
       <label className={styles.field}>Current password

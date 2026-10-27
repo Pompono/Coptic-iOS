@@ -59,6 +59,16 @@ A separate consent marker survives deletion and sign-in. Automatic synchronizati
    ```
 
    Configuration intentionally makes the UI unavailable before enablement. Enabling on staging is required to test deletion; do not enable production until staging passes and the production inventory is reviewed. No automatic production deployment workflow is included. If disabling later, pending receipt status checks still work; destructive retries are paused.
+
+   Automatic PR IPA builds use the repository's existing public Auth configuration. They will show deletion as unavailable until that project's backend is enabled. For physical testing **against staging**, use the workflow's optional public configuration inputs; this does not change repository variables or deploy anything:
+
+   ```sh
+   gh workflow run build.yml --ref codex/secure-account-deletion \
+     -f test_supabase_url=https://<approved-staging-ref>.supabase.co \
+     -f test_supabase_publishable_key=<staging-public-publishable-key>
+   ```
+
+   Download the resulting run's `CoptLingo-unsigned-iphone-ipa` artifact. Never put a service-role/secret key into these public build inputs. Keep the existing native callback URLs allowlisted in staging too.
 6. Schedule a daily privileged maintenance query using the owner's approved scheduler:
 
    ```sql

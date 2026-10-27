@@ -96,6 +96,7 @@ try {
       await page.getByText('Your account and its cloud progress were permanently deleted.', { exact: false }).waitFor();
     }
     await page.getByRole('button', { name: 'Sign In', exact: true }).waitFor();
+    await page.getByLabel('Password', { exact: true }).waitFor();
     assert.equal(requests, 1, 'duplicate taps must send one request');
     assert.deepEqual(await page.evaluate(() => [localStorage.getItem('coptic-progress'), localStorage.getItem('coptic-progress-recovery:v1'), localStorage.getItem('coptic-progress-sync-last-user:v1')]), [progress, 'recovery preserved', null]);
     const before = uploads;

@@ -1,12 +1,21 @@
 name: Validate mobile app
 env:
   ONNXRUNTIME_NODE_INSTALL_CUDA: skip
-  NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL || 'https://vprlahihwqtkmhgxytiy.supabase.co' }}
-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+  NEXT_PUBLIC_SUPABASE_URL: ${{ inputs.test_supabase_url || vars.NEXT_PUBLIC_SUPABASE_URL || 'https://vprlahihwqtkmhgxytiy.supabase.co' }}
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ inputs.test_supabase_publishable_key || vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
 on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      test_supabase_url:
+        description: Optional approved staging Supabase URL for a disposable-account test IPA
+        required: false
+        type: string
+      test_supabase_publishable_key:
+        description: Staging PUBLIC publishable key only (never a service-role or secret key)
+        required: false
+        type: string
 # Push and pull_request events for the same branch share one validation run.
 concurrency:
   group: mobile-validation-${{ github.head_ref || github.ref_name }}
@@ -94,7 +103,8 @@ jobs:
         with:
           version: latest
       - name: Start disposable local Supabase (never linked to a remote project)
-        run: supabase start
+        # Supabase startup output contains local test credentials. Keep it out of CI logs.
+        run: supabase start > /tmp/coptic-supabase-start.log 2>&1 || { echo "Local Supabase startup failed; credential-bearing output was not logged."; exit 1; }
       - name: Allow isolated fixture uploads
         run: |
           psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' -v ON_ERROR_STOP=1 <<'SQL'
