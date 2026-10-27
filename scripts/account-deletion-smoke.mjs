@@ -23,7 +23,7 @@ const progress = JSON.stringify({ xp: 42, streak: 1, completedLessons: ['one'], 
 try {
   for (const scenario of ['success', 'lost-response', 'unavailable']) {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
-    let deleted = false, requests = 0, uploads = 0, userId = '00000000-0000-4000-8000-0000000000a1';
+    let deleted = false, requests = 0, uploads = 0, failUpload = false, userId = '00000000-0000-4000-8000-0000000000a1';
     const user = () => ({ id: userId, aud: 'authenticated', role: 'authenticated', email: 'disposable@example.test', email_confirmed_at: '2026-01-01T00:00:00Z', app_metadata: { provider: 'email' }, user_metadata: {}, created_at: '2026-01-01T00:00:00Z' });
     await context.route('**/*', async route => {
       const request = route.request(), url = request.url();
@@ -46,6 +46,7 @@ try {
       if (url.includes('/auth/v1/logout')) return json({});
       if (url.includes('/auth/v1/user')) return deleted ? json({ code: 'user_not_found', message: 'Deleted' }, 401) : json(user());
       if (url.includes('/rest/v1/rpc/save_progress_snapshot')) {
+        if (failUpload) return json({ code: '42501', message: 'Test upload failure' }, 403);
         uploads++; return json({ revision: 1, records: request.postDataJSON().p_records, updated_at: new Date().toISOString(), conflict: false });
       }
       if (url.includes('/rest/v1/progress_sync_snapshots')) return json(null);
@@ -106,6 +107,15 @@ try {
     await page.goto(`${base}/settings/progress/`);
     await page.getByText('This device contains progress retained from another account.', { exact: false }).waitFor();
     assert.equal(uploads, before, 'new account must not auto-upload retained learning');
+    failUpload = true;
+    await page.getByRole('button', { name: 'Replace cloud with this device', exact: true }).click();
+    await page.getByText('Cloud sync failed (42501)', { exact: false }).waitFor();
+    assert.equal(await page.evaluate(() => localStorage.getItem('coptic-progress-reuse-consent:v1')), 'required', 'failed transfer cannot authorize another account');
+    failUpload = false;
+    await page.getByRole('button', { name: 'Sync now', exact: true }).click();
+    await page.getByRole('button', { name: 'Replace cloud with this device', exact: true }).click();
+    await page.getByText('This device’s progress is synced to your account.', { exact: true }).waitFor();
+    assert.deepEqual(await page.evaluate(() => [localStorage.getItem('coptic-progress-reuse-consent:v1'), localStorage.getItem('coptic-progress-sync-last-user:v1')]), [null, userId]);
     await context.close();
   }
   console.log('Account deletion mobile smoke passed: confirmation, cancellation, duplicate taps, durable retry, restart, progress preservation, new-account consent and unavailable backend.');

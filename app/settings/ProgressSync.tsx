@@ -277,12 +277,13 @@ export default function ProgressSync({ active = true }: { active?: boolean }) {
         return;
       }
       if (controller.signal.aborted || deletionSyncBlocked()) return;
-      // Only this explicit choice releases the retained-progress consent barrier.
-      if (kind === 'upload' || cloud) localStorage.removeItem(PROGRESS_REUSE_CONSENT_KEY);
+      // Keep the barrier until this explicit choice has committed and the new
+      // account identity is saved. A failed transfer must not authorize a later account.
       if (kind === 'upload') {
         if (cloud && sameProgressRecords(local, cloud.records)) {
           saveSyncBase(userId, cloud.revision, cloud.records);
           localStorage.setItem(LAST_USER_KEY, userId);
+          localStorage.removeItem(PROGRESS_REUSE_CONSENT_KEY);
           setMessage('Your progress is already synced.');
           return;
         }
@@ -298,6 +299,7 @@ export default function ProgressSync({ active = true }: { active?: boolean }) {
           localStorage.setItem(PROGRESS_SYNC_OPT_IN_KEY, userId);
           localStorage.setItem(LAST_USER_KEY, userId);
           if (written.updatedAt) setLastSynced(written.updatedAt);
+          localStorage.removeItem(PROGRESS_REUSE_CONSENT_KEY);
           if (sameProgressRecords(makeBackup().records, local)) setMessage('This device’s progress is synced to your account.');
           else {
             setMessage('More progress changed during upload. The uploaded copy is safe; the newer local progress is still pending sync.');
@@ -317,6 +319,7 @@ export default function ProgressSync({ active = true }: { active?: boolean }) {
         saveSyncBase(userId, cloud.revision, cloud.records);
         localStorage.setItem(PROGRESS_SYNC_OPT_IN_KEY, userId);
         localStorage.setItem(LAST_USER_KEY, userId);
+        localStorage.removeItem(PROGRESS_REUSE_CONSENT_KEY);
         setMessage('Cloud progress downloaded. Your previous device copy is available in Recovery copy.');
       }
     } catch (failure) {

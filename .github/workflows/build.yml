@@ -136,7 +136,9 @@ jobs:
         env:
           COPTIC_BROWSER: webkit
       - run: node scripts/account-deletion-smoke.mjs
+        if: ${{ !cancelled() }}
       - run: node scripts/account-deletion-smoke.mjs
+        if: ${{ !cancelled() }}
         env:
           DELETION_BROWSER: webkit
       - run: npm run test:routes
