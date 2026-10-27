@@ -83,6 +83,12 @@ jobs:
         run: |
           psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/migrations/20261026000000_account_deletion.sql
           psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/tests/account_deletion.sql
+          # Verify the original staging shape still works, without retaining this application.
+          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -c 'begin' -f supabase/migrations/20261027000000_account_deletion_production_schema.sql -c "do \$\$ begin if not public.account_deletion_ready() then raise exception 'Original staging schema rejected'; end if; end \$\$;" -f supabase/tests/account_deletion.sql -c 'rollback'
+          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/tests/account_deletion_expanded_fixture.sql
+          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/migrations/20261027000000_account_deletion_production_schema.sql
+          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/tests/account_deletion_expanded.sql
+          python3 scripts/account-deletion-postgres-races.py
   deletion-function:
     runs-on: ubuntu-latest
     steps:
@@ -104,7 +110,10 @@ jobs:
           version: latest
       - name: Start disposable local Supabase (never linked to a remote project)
         # Supabase startup output contains local test credentials. Keep it out of CI logs.
-        run: supabase start > /tmp/coptic-supabase-start.log 2>&1 || { echo "Local Supabase startup failed; credential-bearing output was not logged."; exit 1; }
+        run: |
+          # Synthetic pre-existing production-shaped tables exist ONLY in this disposable runner.
+          cp supabase/tests/account_deletion_expanded_fixture.sql supabase/migrations/20261026120000_disposable_fixture.sql
+          supabase start > /tmp/coptic-supabase-start.log 2>&1 || { echo "Local Supabase startup failed; credential-bearing output was not logged."; exit 1; }
       - name: Allow isolated fixture uploads
         run: |
           psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' -v ON_ERROR_STOP=1 <<'SQL'

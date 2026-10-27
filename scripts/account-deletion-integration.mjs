@@ -21,6 +21,12 @@ try {
     if (letter === 'a') accounts.token = signed.data.access_token;
   }
   const [a, b] = accounts;
+  const personalTables = ['reviews', 'streaks', 'user_progress', 'xp_events'];
+  for (const table of personalTables) {
+    assert.equal((await request(`/rest/v1/${table}`, { method: 'POST', body: [
+      { user_id: a, lesson_id: 1, payload: 'a' }, { user_id: b, lesson_id: 1, payload: 'b' },
+    ] })).status, 201);
+  }
   const receipt = 'cd'.repeat(32);
   const endpoint = '/functions/v1/account-deletion';
   assert.equal((await request(endpoint, { method: 'POST', body: { action: 'ready' } })).data.state, 'available');
@@ -37,6 +43,16 @@ try {
   assert.equal((await request(`/auth/v1/admin/users/${a}`)).status, 404);
   assert.equal((await request(`/auth/v1/admin/users/${b}`)).status, 200);
   assert.deepEqual((await request(`/rest/v1/progress_sync_snapshots?user_id=eq.${a}`)).data, []);
+  for (const table of personalTables) {
+    assert.deepEqual((await request(`/rest/v1/${table}?user_id=eq.${a}`)).data, []);
+    assert.equal((await request(`/rest/v1/${table}?user_id=eq.${b}`)).data.length, 1);
+    assert.ok((await request(`/rest/v1/${table}`, { method: 'POST', token: accounts.token,
+      body: { user_id: a, lesson_id: 1, payload: 'stale' } })).status >= 400);
+  }
+  assert.ok((await request('/rest/v1/rpc/fixture_write_review', { method: 'POST', body: { p_user_id: a } })).status >= 400);
+  for (const table of ['courses', 'lessons', 'questions']) {
+    assert.equal((await request(`/rest/v1/${table}`)).data.length, 1, `${table} shared content preserved`);
+  }
   assert.deepEqual((await request('/rest/v1/rpc/account_deletion_objects', { method: 'POST', body: { p_user_id: a } })).data, []);
   assert.ok((await request('/rest/v1/rpc/save_progress_snapshot', { method: 'POST', token: accounts.token, body: { p_expected_revision: 0, p_records: {} } })).status >= 400);
   assert.ok((await request(`/storage/v1/object/${bucket}/late.json`, { method: 'POST', token: accounts.token, raw: '{}' })).status >= 400);
