@@ -107,6 +107,8 @@ end $$;
 revoke all on function public.account_deletion_object_guard() from public, anon, authenticated;
 create trigger account_deletion_object_guard before insert or update on storage.objects
 for each row execute function public.account_deletion_object_guard();
+create trigger account_deletion_bucket_owner_guard before insert or update on storage.buckets
+for each row execute function public.account_deletion_object_guard();
 
 -- Last transactional guard against a concurrently created object slipping
 -- between the Edge Function inventory and Auth's administrative delete call.

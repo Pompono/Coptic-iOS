@@ -24,6 +24,14 @@ select public.claim_account_deletion('00000000-0000-4000-8000-0000000000a1', rep
 do $$ begin
   if public.claim_account_deletion('00000000-0000-4000-8000-0000000000a1', repeat('a',64)) then raise exception 'Duplicate lease granted'; end if;
   begin
+    insert into storage.objects(bucket_id, name, owner_id) values ('test', 'late', '00000000-0000-4000-8000-0000000000a1');
+    raise exception 'Pending account can still create owned objects';
+  exception when insufficient_privilege then null; end;
+  begin
+    insert into storage.buckets(id, owner_id) values ('late', '00000000-0000-4000-8000-0000000000a1');
+    raise exception 'Pending account can still create owned buckets';
+  exception when insufficient_privilege then null; end;
+  begin
     update public.progress_sync_snapshots set revision = 2 where user_id = '00000000-0000-4000-8000-0000000000a1';
     raise exception 'Pending account can still upload';
   exception when insufficient_privilege then null; end;
@@ -38,5 +46,9 @@ do $$ begin
     raise exception 'Stale upload recreated deleted account data';
   exception when foreign_key_violation then null; end;
   if public.account_allows_storage() then raise exception 'Deleted JWT still allowed storage'; end if;
+  begin
+    insert into storage.buckets(id, owner_id) values ('orphan', '00000000-0000-4000-8000-0000000000a1');
+    raise exception 'Deleted account can still create owned buckets';
+  exception when insufficient_privilege then null; end;
 end $$;
 rollback;
