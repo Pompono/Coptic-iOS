@@ -1,7 +1,7 @@
 -- Separate forward hardening; compatible with or without account-deletion PR #15.
 -- No data, RLS policies, existing functions, managed schemas or service grants change.
 -- One statement: unsafe inheritance/ownership or remaining effective privileges
--- abort every revoke/default-ACL change atomically. Do not repair roles implicitly.
+-- abort every existing-table revoke atomically. Do not repair roles implicitly.
 do $hardening$
 declare t text; r text; c text; permission text; relation_id oid;
 begin
@@ -36,14 +36,4 @@ begin
       end loop;
     end loop;
   end loop;
-  -- Defaults are specific to the creating role. Global and schema-specific ACLs
-  -- are additive, so both must be cleared. Existing objects are unaffected.
-  -- PostgreSQL's built-in PUBLIC EXECUTE is global: changing it also changes the
-  -- default for future postgres-created functions outside public (review gate).
-  execute 'alter default privileges for role postgres revoke all on tables from public, anon, authenticated';
-  execute 'alter default privileges for role postgres in schema public revoke all on tables from public, anon, authenticated';
-  execute 'alter default privileges for role postgres revoke all on sequences from public, anon, authenticated';
-  execute 'alter default privileges for role postgres in schema public revoke all on sequences from public, anon, authenticated';
-  execute 'alter default privileges for role postgres revoke execute on functions from public, anon, authenticated';
-  execute 'alter default privileges for role postgres in schema public revoke execute on functions from public, anon, authenticated';
 end $hardening$;

@@ -44,6 +44,8 @@ do $$ begin
 end $$;
 insert into public.xp_events(user_id,amount,reason) values ('00000000-0000-4000-8000-0000000000e6',1,'probe');
 reset role;
+-- Narrow migration intentionally preserves defaults, including unsafe defaults
+-- deferred for separate managed-platform review. Assert no incidental change.
 create table public.hardening_future_table(id int);
 create sequence public.hardening_future_sequence;
 create function public.hardening_future_function() returns int language sql as 'select 1';
@@ -52,14 +54,14 @@ create function hardening_other_schema.future_function() returns int language sq
 do $$ declare r text; p text; begin
   foreach r in array array['anon','authenticated'] loop
     foreach p in array array['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER'] loop
-      if has_table_privilege(r,'public.hardening_future_table',p) then raise exception 'Future table grant leaked'; end if;
+      if not has_table_privilege(r,'public.hardening_future_table',p) then raise exception 'Existing future table default changed'; end if;
     end loop;
     foreach p in array array['SELECT','UPDATE','USAGE'] loop
-      if has_sequence_privilege(r,'public.hardening_future_sequence',p) then raise exception 'Future sequence grant leaked'; end if;
+      if not has_sequence_privilege(r,'public.hardening_future_sequence',p) then raise exception 'Existing future sequence default changed'; end if;
     end loop;
-    if has_function_privilege(r,'public.hardening_future_function()','EXECUTE')
-      or has_function_privilege(r,'hardening_other_schema.future_function()','EXECUTE') then
-      raise exception 'Future function grant leaked'; end if;
+    if not has_function_privilege(r,'public.hardening_future_function()','EXECUTE')
+      or not has_function_privilege(r,'hardening_other_schema.future_function()','EXECUTE') then
+      raise exception 'Existing future function default changed'; end if;
   end loop;
   if not has_table_privilege('service_role','public.hardening_future_table','SELECT')
     or not has_function_privilege('service_role','public.hardening_future_function()','EXECUTE') then

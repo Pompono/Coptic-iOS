@@ -1,7 +1,7 @@
 # Proposed application database privilege hardening
 
 Status: proposed, not deployed. Separate from account-deletion PR #15 because this
-changes general client access and postgres default ACLs. It can be reviewed and
+changes privileges on seven existing application tables only. It can be reviewed and
 applied independently; no earlier migration is rewritten. No live Supabase project
 was accessed. Source: owner's private 20,297-byte public-schema export, SHA-256
 `e037c1e8d6dcd572d4c4b731f059dc7e49e0a317c9f6340732a0025c69ea02f2`.
@@ -36,18 +36,18 @@ operations; deployment still requires confirming no client-role DDL tooling need
 
 ## Defaults and role inheritance
 
-For **postgres-created future objects**, remove PUBLIC/anon/authenticated default
-table and sequence privileges, and function EXECUTE, at global scope and in public.
-Global and schema-specific defaults add together; revoking only public-schema defaults
-does not cancel PostgreSQL's built-in global PUBLIC EXECUTE. Existing objects and
-service_role defaults remain unchanged. New client-facing objects must explicitly
-grant their intended access in their creating migration.
+**No default privileges change in the deployable migration.** Existing and future
+function EXECUTE permissions, table defaults and sequence defaults remain identical.
+The broader SQL is retained only in `docs/proposals/postgres-default-privileges.sql`,
+outside `supabase/migrations` and outside all replay execution paths. It is not part
+of this rollout and needs a separate approval/migration after managed Auth, Storage,
+extensions and future non-public function compatibility is verified.
 
-The global change also affects future postgres-created objects in other schemas.
-This requires owner review of managed Supabase updates/extensions and any deployment
-scripts depending on implicit grants. Do not replace it with a schema-only function
-revoke and claim that future functions are private. Other creator roles and defaults
-are outside this export and must be inventoried before deployment.
+That deferred proposal removes client/PUBLIC defaults globally and in public for
+postgres-created objects. PostgreSQL global and schema-specific defaults are additive;
+a schema-only revoke cannot cancel built-in global PUBLIC EXECUTE. This global effect
+is precisely why the proposal is deferred. Current broad defaults therefore remain a
+known risk for future objects; authors should review explicit grants in new migrations.
 
 The export does not include role definitions/memberships. The migration refuses to
 proceed if anon/authenticated are superusers, BYPASSRLS, CREATEROLE, CREATEDB,
@@ -56,8 +56,7 @@ permit SET ROLE). It does not revoke membership automatically. After reductions 
 checks effective table and column privileges; an unexpected remaining privilege
 aborts the entire statement. Membership of the gateway/authenticator **in** a client
 role is distinct from the client role itself inheriting another role, and is not
-removed. Role login attributes, schema CREATE permissions and other creator roles
-still need the deployment owner's read-only review.
+removed. The read-only checks below distinguish these directions explicitly.
 
 ## Content access and function audit
 
@@ -103,9 +102,9 @@ reconstructed schema and the private dump is never uploaded to CI.
 Tests cover exact table privilege matrices, separately granted column ACLs,
 anonymous/authenticated TRUNCATE rejection, preserved DELETE grants and unchanged
 RLS denial of row deletion, retained owner operations,
-snapshot read/RPC, future table/sequence/function grants, service defaults,
+snapshot read/RPC, unchanged future table/sequence/function grants and service defaults,
 membership rejection, rollback after a late-table incompatibility, idempotent reapplication, and unchanged
-existing function definitions/grants, RLS policies and constraints. The optional
+existing function definitions/grants, RLS policies, constraints and the full default-ACL catalog. The optional
 PR #15 path also runs populated production-shaped cascades/shared-content checks,
 stale-user/ownership/privileged-write fences and administrative permission tests.
 
@@ -115,23 +114,43 @@ results, not production/staging deployment or managed Auth HTTP end-to-end evide
 Use `supabase/tests/hardening_inventory.sql` for the owner's separate read-only
 metadata review; it is not executed against a live project by these tests.
 
-## Deployment gates and questions
+## Minimum read-only checks for the narrower migration
 
-1. Inventory older clients, website, dashboards, imports and external services.
-   Existing DML is preserved until this is complete; do not further reduce it or
-   add shared SELECT policies based on repository evidence alone. Verify that no
-   client-role schema tooling depends on REFERENCES/TRIGGER. The owner has explicitly
-   marked these dependencies unverified.
-2. Review actual role attributes/memberships, schema CREATE rights, effective column
-   grants and default ACLs for **every** creating role. The public dump cannot prove
-   absence of inherited privileges. An unexpected role shape intentionally blocks
-   this migration rather than guessing a safe repair.
-3. Approve the global postgres default-function change after verifying managed
-   updates and future non-public functions explicitly grant required execution.
-4. Recheck drift since the export and test with matching isolated managed Auth,
-   Storage and gateway versions. Database replay does not exercise Auth HTTP flows.
-5. Account deletion still separately requires PR #15's non-public dependency,
-   external worker/integration, retention and disposable-device acceptance gates.
+Run `supabase/tests/hardening_preflight.sql` through an owner-approved read-only
+connection and retain the output privately. No production connection is made by this PR.
+
+1. Confirm all seven exact target names still resolve to ordinary postgres-owned,
+   RLS-enabled tables. The migration permits absent tables for staging compatibility;
+   production approval must explicitly confirm all seven are present.
+2. Confirm anon/authenticated exist, have no superuser/BYPASSRLS/CREATEROLE/CREATEDB/
+   REPLICATION flags and are not members of another role. Inspect inbound memberships
+   too to identify who can assume these roles; those are not automatically rejected.
+   The migration does not silently alter memberships or role attributes.
+3. Capture raw table/column ACLs and effective privileges for anon/authenticated and
+   service_role. Review PUBLIC grants: revoking PUBLIC schema privileges can also
+   affect other roles relying on those grants. Confirm the intended revoked privilege
+   sources are direct/PUBLIC and there are no inherited or column-level bypasses.
+4. Capture baseline SELECT/INSERT/UPDATE/DELETE grants, owner RLS policies, snapshot
+   RPC owner/search path/EXECUTE ACL and default ACLs for a before/after comparison.
+   These are preservation checks, not a prerequisite to redesign defaults or managed
+   functions. Other schemas' function bodies and managed extension compatibility do
+   not block this table-only change merely because the deferred proposal needs them.
+5. Identify any event triggers on DDL/grant/revoke operations and review their enabled
+   definitions privately before approval; metadata changes could invoke deployed
+   automation absent from the schema export. Check active locks/long transactions
+   on target tables when selecting the execution window.
+
+Metadata cannot prove that an external process never uses TRUNCATE or creates FKs/
+triggers under a client role. Obtain the owner's confirmation that such schema/admin
+operations are not required by client-role tooling. Older-client/website/backend
+**DML** dependencies remain unverified but their permissions are preserved; completing
+that broad inventory is required before any further DML reduction or shared-content
+policy change, not before approving an unchanged DML grant set.
+
+The deferred defaults proposal separately needs all creator-role default ACLs and
+managed Auth/Storage/extension/future-function compatibility review. Account deletion
+still has PR #15's independent deployment and acceptance gates. Approval of this
+narrower migration does not approve that feature or the deferred proposal.
 
 Owner approval and a separate deployment operation are required. Do not deploy,
 merge or enable deletion on the strength of this proposal alone. If rollback is

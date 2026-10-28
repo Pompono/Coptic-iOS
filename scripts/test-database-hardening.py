@@ -29,7 +29,7 @@ def main():
             '20261026000000_account_deletion.sql', '20261027000000_account_deletion_production_schema.sql',
             '20261027120000_account_deletion_required_ownership.sql']]
     migration = ROOT/'supabase/migrations/20261028190000_application_least_privilege.sql'
-    tests = [ROOT/'supabase/tests/application_least_privilege.sql']
+    tests = [ROOT/'supabase/tests/hardening_preflight.sql', ROOT/'supabase/tests/application_least_privilege.sql']
     if args.deletion_source:
         tests += [args.deletion_source/'supabase/tests'/name for name in [
             'account_deletion_production_replay.sql', 'account_deletion_permissions.sql', 'account_deletion.sql']]
@@ -72,7 +72,8 @@ def main():
           'functions',(select json_agg(x order by oid) from (select oid,proacl,pg_get_functiondef(oid) as definition
             from pg_proc where pronamespace in ('public'::regnamespace,'auth'::regnamespace,'storage'::regnamespace)) x),
           'policies',(select json_agg(x order by oid) from pg_policy x),
-          'constraints',(select json_agg(x order by oid) from pg_constraint x))"""
+          'constraints',(select json_agg(x order by oid) from pg_constraint x),
+          'defaults',(select json_agg(x order by oid) from pg_default_acl x))"""
         def invariants():
             return command(['docker','exec',container,'psql','-XqAt','-U','postgres','-c',invariant_query]).stdout
         before = invariants()
@@ -93,8 +94,8 @@ def main():
         # Column ACLs are independent from table ACLs: ensure they cannot survive.
         sql(b'grant select (title) on public.courses to authenticated; grant references (key) on public.reviews to authenticated;')
         sql(data[migration])
-        sql(data[migration])  # idempotent, including default privilege changes
-        if before != invariants(): raise RuntimeError('Existing function definitions/grants, policies or constraints changed')
+        sql(data[migration])  # idempotent; defaults must remain unchanged
+        if before != invariants(): raise RuntimeError('Existing function definitions/grants, policies, constraints or default ACLs changed')
         for path in deferred: sql(data[path])
         for path in tests: sql(data[path])
         report['status'] = 'passed'
