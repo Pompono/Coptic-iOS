@@ -63,3 +63,6 @@ ios/App/DerivedData/
 
 # Local experimental adapter weights and reports
 /.model-adaptation/
+
+/.private-schema-audit/
+/production-schema.sql
