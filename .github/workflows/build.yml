@@ -1,17 +1,45 @@
 name: Validate mobile app
 env:
   ONNXRUNTIME_NODE_INSTALL_CUDA: skip
-  NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL || 'https://vprlahihwqtkmhgxytiy.supabase.co' }}
-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+  NEXT_PUBLIC_SUPABASE_URL: ${{ inputs.test_supabase_url || vars.NEXT_PUBLIC_SUPABASE_URL || 'https://vprlahihwqtkmhgxytiy.supabase.co' }}
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ inputs.test_supabase_publishable_key || vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
 on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      test_supabase_url:
+        description: Optional approved staging Supabase URL for a disposable-account test IPA
+        required: false
+        type: string
+      test_supabase_publishable_key:
+        description: Staging PUBLIC publishable key only (never a service-role or secret key)
+        required: false
+        type: string
 # Push and pull_request events for the same branch share one validation run.
 concurrency:
   group: mobile-validation-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 jobs:
+  schema-replay-harness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Harness validation only. No production schema export is in this repo.
+      - run: >-
+          python3 scripts/account-deletion-schema-replay.py --synthetic
+          --schema supabase/tests/account_deletion_expanded_fixture.sql
+          --test supabase/tests/account_deletion_nullable_after.sql
+          --test supabase/tests/account_deletion_expanded.sql
+          --test supabase/tests/account_deletion_permissions.sql
+          --test supabase/tests/account_deletion_rls.sql
+      - name: Show synthetic harness diagnostics on failure
+        if: failure()
+        # This job accepts only checked-in synthetic inputs, never private DDL.
+        run: |
+          for file in .private-schema-audit/*/failure.log; do
+            if [ -f "$file" ]; then cat "$file"; fi
+          done
   progress-sync-postgres:
     runs-on: ubuntu-latest
     services:
@@ -38,6 +66,12 @@ jobs:
           psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 <<'SQL'
           CREATE ROLE anon NOLOGIN;
           CREATE ROLE authenticated NOLOGIN;
+          CREATE ROLE service_role NOLOGIN BYPASSRLS;
+          CREATE SCHEMA storage;
+          CREATE TABLE storage.objects (bucket_id text, name text, owner uuid, owner_id text);
+          CREATE TABLE storage.buckets (id text, owner uuid, owner_id text);
+          ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+          ALTER TABLE storage.buckets ENABLE ROW LEVEL SECURITY;
           CREATE SCHEMA auth;
           CREATE TABLE auth.users (id uuid PRIMARY KEY);
           CREATE FUNCTION auth.uid() RETURNS uuid
@@ -62,6 +96,75 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/tests/progress_sync_rpc.sql
+      - name: Apply and test account deletion guards in disposable PostgreSQL only
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/migrations/20261026000000_account_deletion.sql
+          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/tests/account_deletion.sql
+          # Verify the original staging shape still works, without retaining this application.
+          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -c 'begin' -f supabase/migrations/20261027000000_account_deletion_production_schema.sql -f supabase/migrations/20261027120000_account_deletion_required_ownership.sql -c "do \$\$ begin if not public.account_deletion_ready() then raise exception 'Original staging schema rejected'; end if; end \$\$;" -f supabase/tests/account_deletion.sql -c 'rollback'
+          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/tests/account_deletion_expanded_fixture.sql
+          # Model a stale inventory without modifying any live data.
+          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -c "insert into public.xp_events(payload) values ('preexisting-unowned')"
+          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/migrations/20261027000000_account_deletion_production_schema.sql
+          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/tests/account_deletion_nullable_before.sql
+          if psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/migrations/20261027120000_account_deletion_required_ownership.sql; then
+            echo "Unsafe migration accepted pre-existing unowned data"; exit 1
+          fi
+          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/tests/account_deletion_nullable_rejected.sql
+          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/migrations/20261027120000_account_deletion_required_ownership.sql
+          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/tests/account_deletion_nullable_after.sql
+          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/tests/account_deletion_expanded.sql
+          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/tests/account_deletion_permissions.sql
+          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/tests/account_deletion_rls.sql
+          python3 scripts/account-deletion-postgres-races.py
+  deletion-function:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno check --config supabase/functions/deno.json supabase/functions/account-deletion/index.ts
+  deletion-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Start disposable local Supabase (never linked to a remote project)
+        # Supabase startup output contains local test credentials. Keep it out of CI logs.
+        run: |
+          # Synthetic pre-existing production-shaped tables exist ONLY in this disposable runner.
+          cp supabase/tests/account_deletion_expanded_fixture.sql supabase/migrations/20261026120000_disposable_fixture.sql
+          supabase start > /tmp/coptic-supabase-start.log 2>&1 || { echo "Local Supabase startup failed; credential-bearing output was not logged."; exit 1; }
+      - name: Allow isolated fixture uploads
+        run: |
+          psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' -v ON_ERROR_STOP=1 -f supabase/tests/account_deletion_permissions.sql
+          psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' -v ON_ERROR_STOP=1 <<'SQL'
+          create policy disposable_test_upload on storage.objects for insert to authenticated with check (owner_id = auth.uid()::text);
+          SQL
+      - name: Serve deletion function locally and test disposable users only
+        run: |
+          supabase status -o env > /tmp/coptic-local-supabase.env
+          printf 'ACCOUNT_DELETION_ENABLED=true\nACCOUNT_DELETION_ALLOWED_ORIGINS=capacitor://localhost\n' > /tmp/coptic-deletion-function.env
+          supabase functions serve account-deletion --env-file /tmp/coptic-deletion-function.env > /tmp/coptic-deletion-function.log 2>&1 &
+          set -a
+          source /tmp/coptic-local-supabase.env
+          set +a
+          for i in $(seq 1 30); do
+            if curl --silent --fail "$API_URL/functions/v1/account-deletion" -H 'Content-Type: application/json' -d '{"action":"ready"}' > /dev/null; then break; fi
+            sleep 2
+          done
+          node scripts/account-deletion-integration.mjs
+      - if: always()
+        run: supabase stop --no-backup
   web:
     runs-on: ubuntu-latest
     steps:
@@ -79,6 +182,15 @@ jobs:
       - run: npm run test:translation-assets
       - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:mobile
+      - run: npm run test:mobile
+        env:
+          COPTIC_BROWSER: webkit
+      - run: node scripts/account-deletion-smoke.mjs
+        if: ${{ !cancelled() }}
+      - run: node scripts/account-deletion-smoke.mjs
+        if: ${{ !cancelled() }}
+        env:
+          DELETION_BROWSER: webkit
       - run: npm run test:routes
         env:
           ROUTE_ARTIFACTS: .codex-temp/route-preparation/chromium

@@ -128,6 +128,7 @@ input[type=checkbox] { accent-color:var(--teal); }
 .dictionary-entry-card .rounded-full { border:0!important; background:transparent!important; padding:0 8px 0 0!important; font-size:.75rem; color:var(--text-muted); }
 .dictionary-entry-card .coptic-text.text-2xl { font-size:1.875rem; }
 .dictionary-entry-card ul { line-height:1.6; font-size:1rem; }
+.dictionary-entry-card li { overflow-wrap:anywhere; }
 .dictionary-entry-card .mt-3 { margin-top:8px; }.dictionary-entry-card .mt-4 { margin-top:10px; }
 .dictionary-entry-card .flex>div { min-width:0; overflow-wrap:anywhere; }.dictionary-entry-card .coptic-text { overflow-wrap:anywhere; }.dictionary-entry-card .flex { flex-wrap:wrap; }
 .dictionary-detail .dictionary-entry-card { padding:20px; border-radius:20px; border:0; box-shadow:var(--surface-shadow); }

@@ -21,6 +21,9 @@
 *.pem
 .npm-cache/
 .codex-temp/
+# Private schema-only audit exports and local diagnostics (never publish dumps).
+/production-schema.sql
+/.private-schema-audit/
 tmp_*
 
 # debug

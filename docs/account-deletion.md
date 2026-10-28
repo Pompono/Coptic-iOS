@@ -1,0 +1,177 @@
+# Phase 3A account deletion
+
+## Deployment-readiness audit — 2026-10-28
+
+**Production deployment is not yet cleared.** The owner reports all five migrations applied to isolated CoptLingo Staging (`neqpcwxlayczgoqnpwyt`), `account_deletion_ready() = true`, and Delete Account available in the physical iPhone app. No live project was accessed or changed during this review. Availability and readiness do not establish that staging contains all production table definitions, or that populated production-shaped cascade tests passed.
+
+The owner supplied a private **20,297-byte actual public-schema export** on October 28. SHA-256: `e037c1e8d6dcd572d4c4b731f059dc7e49e0a317c9f6340732a0025c69ea02f2`. It was read directly from the owner's audit directory and imported unchanged into disposable PostgreSQL 16 with `--network none`. The dump is not committed. Raw exports and local diagnostics are ignored by Git (`production-schema.sql`, `.private-schema-audit/`) and must not be published.
+
+**Actual-export results:** all five migrations apply successfully; readiness is true after the NOT NULL migration. Production-column tests cover all eight original tables, cascading deletion across the five personal tables, preservation of shared courses/lessons/questions and another user's records, owner RLS, privileged pending writes, reassignment in both directions, stale JWTs, independent NOT NULL enforcement, and atomic rollback when an unowned xp_events row makes the second ownership alteration fail. Separate real PostgreSQL sessions test write-before-claim and claim-before-snapshot-RPC races. Existing permissions/search-path, receipt and account-deletion regressions also pass. The original application constraints are checked for preservation, rather than replaced with fixture definitions.
+
+**Concrete grant finding — deployment remains blocked:** the export grants `ALL` on seven application tables (all except snapshots) to both `anon` and `authenticated`. This includes `TRUNCATE`, which RLS does not govern. A rolled-back isolated probe confirms `SET ROLE anon; TRUNCATE public.courses CASCADE` succeeds and removes disposable shared content. This is a database-role privilege finding; it does not demonstrate that PostgREST exposes a direct TRUNCATE endpoint. Review and remove unnecessary TRUNCATE/REFERENCES/TRIGGER privileges in an owner-approved forward migration and audit any SQL/RPC execution surface before release. This audit leaves the five applied migrations and existing policies unchanged.
+
+The export also gives postgres-created future public functions EXECUTE grants to anon/authenticated/service_role, and future tables broad grants. The deletion migration's explicit revokes successfully protect its current administrative functions and receipt table despite these defaults. New functions/tables must not rely on default privileges for confidentiality. The snapshot RPC is postgres-owned, SECURITY DEFINER, has an empty search path, and is granted to authenticated and service_role but not PUBLIC/anon. Shared content has RLS enabled and **no SELECT policies in this export**; clients cannot read these rows through ordinary owner-bypassing-free queries. Confirm whether that is intentional for the deployed application's content source.
+
+| Area | Repository/isolated evidence | Remaining release gate |
+| --- | --- | --- |
+| Function grants and search paths | Actual public ACL/default-grant replay and current function search-path/permission regressions pass; broad TRUNCATE/default grants reproduced separately. | Resolve broad grants; verify deployed role memberships, other schemas and any drift. `CREATE OR REPLACE` can retain extra existing grants. |
+| Migration compatibility | All five ordered migrations and ownership rollback pass against the unchanged actual public export. | Export is schema-only: current null-owner counts, lock contention, role membership and managed schema differences still require owner verification. |
+| Shared/personal data | Actual required columns, cascades, other-user isolation and shared retention pass in isolated PostgreSQL. | Non-public/transitive dependencies and external effects are outside this public-only export. |
+| Non-public schemas and managed tables | Direct managed dependencies are `auth.users`, `auth.uid()`, Storage ownership metadata and API deletion. Real local Supabase tests supplement minimal PostgreSQL fixtures. | Owner evidence for non-public objects, views/materialized views, Auth hooks and managed-platform version/permissions. Readiness's public-table allowlist does not inspect all schemas or external effects. |
+| Scheduled/external activity | No account-writing worker, cron definition or external account integration found in tracked app/backend/workflow code. Inventory SQL now discovers extension, foreign-server, publication/subscription and scheduler surfaces without printing connection strings/job bodies. | Owner-confirmed inventory of off-repository jobs, older clients, external services, replication/import roles and their deletion behavior. No finding in Git proves absence in deployment. |
+| Retention | Completed hashed receipts have a documented 30-day purge procedure; pending receipts are kept for recovery. Local data preservation is explicit. | Actual provider backup/log retention, legal holds/privacy disclosures, approved purge scheduling and pending-request monitoring. No purge scheduler was deployed. |
+
+### Reproducible private schema replay
+
+`scripts/account-deletion-schema-replay.py` accepts a **provided** application schema-only SQL export and reviewed test SQL. It starts a disposable PostgreSQL 16 container with `--network none`, no published port, no host bind mount, and a temporary database directory. It never uses Supabase CLI linking, a database URL, or live credentials. SQL is sent only to `psql` inside that container, which is removed in `finally`. Input SHA-256 hashes and the actual Docker image ID are saved in an ignored private report directory; SQL failure output stays in private local diagnostics. Docker may download the PostgreSQL image; the database container itself cannot reach either live project.
+
+Reproduce with the private export (Docker required):
+
+```sh
+python3 scripts/account-deletion-schema-replay.py \
+  --schema .private-schema-audit/production-schema.sql \
+  --production-checks \
+  --test supabase/tests/account_deletion_production_replay.sql \
+  --test supabase/tests/account_deletion_permissions.sql \
+  --test supabase/tests/account_deletion.sql \
+  --test supabase/tests/account_deletion_production_grant_audit.sql
+```
+
+The production replay SQL inserts only disposable records using the inspected required columns. The grant-audit test is a **diagnostic reproduction of unsafe privileges**: its passing result means those findings still exist, not that deployment is safe. Review any replacement export for schema-only scope, functions, dependencies and secrets before running; never import production records. Preserve production DDL rather than removing constraints or policies to make a test pass. Unsupported extensions or managed-platform dependencies must be documented and reproduced with the matching isolated platform, not silently stubbed away.
+
+The runner bootstraps explicitly labeled minimal Auth/Storage fixtures, imports the supplied application schema, applies all five repository migrations in order, and executes the supplied SQL tests. Docker is now available locally and was used for this actual-export replay. It complements, rather than replaces, real local Supabase integration. Its CI self-test uses `--synthetic`; private-export results are local evidence and the dump is never uploaded to CI. Missing input fails before infrastructure starts. No public-schema dependency was missing from this replay; managed Auth/Storage internals, platform versions, role memberships and non-public objects were not included in the export and remain separate release gates.
+
+The actual export already contains the snapshot table/RPC, so this replay also covers the existing-snapshot baseline. All 22 original public constraints remain unchanged after migration and tests. The private report records input hashes and the PostgreSQL image ID. Full managed Supabase replay with this public schema and the deployed Auth/Storage versions remains outstanding; previous synthetic Supabase integration success is not a substitute. Resolve the concrete grant finding through a separate reviewed change, then repeat the actual-export tests against the hardened schema before any release approval.
+
+## Pre-implementation audit (2026-10-26)
+
+Base: `origin/main` at `156a98b`. Repository inspected independently; existing untracked recording documents are unrelated and preserved.
+
+- `app/account/page.tsx` supports email/password registration, sign-in, email OTP verification and PKCE password recovery. No social identity provider or subscription integration is implemented.
+- `lib/auth/client.ts` creates a persistent Supabase client with a publishable key. `storage.ts` uses the native SecureAuthStorage Keychain plugin on iOS, localStorage on web. Native foreground/background lifecycle manages refresh. AuthProvider restores via getSession, listens for auth events and completes callbacks. These asynchronous entry points currently have no deletion fence.
+- The account UI's session is cached state, not sufficient server proof. The deletion backend must call Auth getUser with the bearer token and verify the current password against the server-derived email, comparing the returned UUID with the verified bearer identity.
+- All tracked migrations and application/backend Supabase call sites were reviewed. The only application table is `public.progress_sync_snapshots`, whose primary key references `auth.users(id) ON DELETE CASCADE`. Reads are owner-only RLS; writes use the owner-derived `save_progress_snapshot` security-definer RPC. No profile table, Storage buckets, Storage API calls, uploaded avatars, billing records or external account resources are defined in this repository. Display name and email live in Supabase Auth metadata/user records.
+- This is a repository audit, **not a live database inventory**. The deployed schema, Storage resources, external integrations and retention settings are unverified. Deployment must include a live inventory and must stop if unhandled account resources exist.
+- The exported Next.js app has no trusted server runtime. `backend/` contains translation routes, no Supabase administrative deployment. Supabase Edge Functions fit the existing Auth/database boundary; no existing functions or deployment pipeline were found.
+- Automatic sync and the Settings sync panel both perform asynchronous downloads/uploads. Abort alone does not retract a request already accepted by the server. The FK prevents snapshots from being recreated after Auth deletion; a server deletion-pending guard will additionally block writes while cleanup runs. Both client sync paths need cancellation plus durable blocking across restarts.
+- Ordinary lesson records, XP/streaks, practice skills, vocabulary and reader data are local and account-independent. Progress transaction/recovery journals must remain intact. Cloud baselines and the last-user/opt-in markers contain account identity and should be removed after confirmed deletion. Clearing them without a separate consent barrier would otherwise auto-upload retained records to a later new account.
+- Existing GitHub Actions runs Node/type/lint/build, PostgreSQL fixtures, browser tests, Capacitor sync, macOS simulator startup and unsigned arm64 IPA packaging. This Windows workspace cannot run Xcode; those checks must run in Actions. No production deletion or deployment is authorized.
+
+## Design chosen before implementation
+
+Use one `account-deletion` Edge Function. A destructive request requires a live verified bearer identity plus current password and an exact confirmation value. No target UUID is accepted. A random 256-bit receipt is saved in secure auth storage before sending; only its SHA-256 hash is stored server-side. Receipt-only status requests can report the outcome after credentials cease working, but cannot delete anything. A receipt row's nullable FK is atomically cleared by Auth hard deletion, providing durable evidence even when the response is lost. Pending requests pause sync; failed cleanup is retryable. Completed receipts retain only a random hash and timestamp, with a documented purge procedure.
+
+The UI remains unavailable until a backend readiness probe succeeds. Production rollout remains blocked on live resource/retention review and disposable-account end-to-end verification.
+
+## Owner-reported production inventory and compatibility review (2026-10-27)
+
+The owner supplied read-only findings for project `vprlahihwqtkmhgxytiy`: public tables `courses`, `lessons`, `progress_sync_snapshots`, `questions`, `reviews`, `streaks`, `user_progress`, `xp_events`; all observed `user_id` foreign keys reference `auth.users(id) ON DELETE CASCADE`; Storage has **zero buckets**. The owner also reports successful staging deletion and offline-progress protection tests. Codex has not connected to production or independently inspected that project's schema. This updates the repository-only audit above; it does not establish full production compatibility.
+
+Forward migration `20261027000000_account_deletion_production_schema.sql` preserves the already-applied October 26 migration. It admits exactly these eight table names plus the private deletion receipt table. Unknown public tables and owned Storage buckets still block readiness. The additional tables are optional so the original staging schema remains supported; tables created later need a separately reviewed migration to install their guards.
+
+- `courses`, `lessons`, `questions` are provisionally classified as shared learning content, preserved on deletion. Readiness rejects direct Auth foreign keys and recognizable account/owner/email/creator fields on them. Confirm they contain no personal text/JSON, indirect ownership, or user-linked attachments before release; names alone cannot establish this.
+- `reviews`, `streaks`, `user_progress`, `xp_events` are provisionally classified as personal rows. Each present table must have a non-null UUID `user_id`, a validated, non-deferrable single-column cascading FK to `auth.users(id)`, enabled RLS, and the new guard trigger/restrictive policy. Additional recognizable ownership fields or other Auth FKs block readiness. The later owner findings below confirm UUID ownership, nullability and RLS, but FK validation/deferrability and full column definitions still require verification. This compatibility migration does not rewrite their schema, foreign keys, existing grants or policies to make them pass.
+- New row triggers serialize writes with deletion claims, verify the Auth row still exists, and reject pending owners, including both old/new owners on reassignment. They protect privileged RPC/service writes that bypass RLS. Restrictive authenticated policies block pending/deleted JWT access without granting any new access. Shared content and local app/session/progress code are unchanged.
+
+**Remaining production blockers:** use the expanded `supabase/tests/inventory.sql` and the updated findings below to complete private read-only review of table columns/constraints, transitive dependencies, non-public tables, views/materialized views, function grants/search paths, scheduled workers, replication/import roles and external webhooks. The owner has now ruled out custom triggers on the seven inspected application tables and Auth, and identified the only public RPC. Recheck for drift before deployment, including `progress_sync_snapshots` and other schemas not covered by that seven-table report. No service should disable guards or use replica mode to bypass them. Stale tokens can still reach external services: those entry points need existing-user/pending checks if they expose data or cause effects outside the guarded rows. Do not invent replacements for unknown external functions or writers.
+
+Fixtures model the reported names, shared lesson dependencies and direct cascading ownership, **not** an authoritative production schema dump. PostgreSQL tests cover original staging readiness, expanded readiness, unknown-table rejection, invalid FK/ownership/disabled-guard/RLS rejection, privileged and SECURITY DEFINER writes, pending JWT access, reassignment, stale writes, cascade isolation and shared-content retention. CI additionally runs actual concurrent write/claim transactions in both orders, including a privileged RPC waiting on an uncommitted deletion claim. The loopback Supabase integration also checks all four personal tables and a privileged fixture RPC after actual Auth deletion. Passing these tests does not waive the read-only review above.
+
+## Owner-verified nullable ownership findings and follow-up
+
+The owner supplied further read-only production findings for `vprlahihwqtkmhgxytiy`: all four personal tables have RLS enabled with owner policies using `user_id = auth.uid()`; no custom triggers exist on the seven inspected application tables or Auth; the only public RPC is `save_progress_snapshot(bigint, jsonb)`, owned by postgres and SECURITY DEFINER, deriving identity from `auth.uid()`, validating progress JSON, and writing exclusively to `progress_sync_snapshots`. `reviews.user_id` and `xp_events.user_id` are nullable UUIDs and both tables have zero rows at inspection; `streaks.user_id` and `user_progress.user_id` are already NOT NULL UUIDs. The eight-table inventory, cascading observed user FKs and zero Storage buckets remain as reported. These are owner-verified findings, not a new production connection by Codex.
+
+Repository inspection found **no application insertion/update paths into `reviews` or `xp_events`**. `app/`, `lib/` and `backend/` use local learning records; cloud reads target `progress_sync_snapshots` and writes use `save_progress_snapshot` in `lib/progressSync.ts`. Other `reviews` references are local vocabulary counts or test fixtures. The repository RPC definition agrees with the reported identity derivation and snapshot-only writes. Neither the repository nor empty tables proves that an external client, scheduled job or older app never writes these tables.
+
+Forward migration `20261027120000_account_deletion_required_ownership.sql` changes **only** `reviews.user_id` and `xp_events.user_id` to NOT NULL when those tables exist. It preserves previous migrations, all other columns/constraints/indexes, policies, grants and data. Missing tables are skipped for the original staging installation. It rejects non-ordinary tables or non-UUID/missing ownership columns, takes exclusive locks in a fixed order with a five-second lock timeout, and checks for unowned rows under those locks. Both changes are atomic: any null owner, schema mismatch or lock timeout aborts the statement without deleting, assigning or repairing rows. If an inventory becomes stale and null rows appear, the owner must investigate their provenance; do not backfill guessed users or delete rows to force readiness. Lock acquisition requires an owner-approved maintenance window; retry only after resolving contention.
+
+The existing row guard already rejects null/omitted owners, ownership erasure and privileged writes for pending/deleted users. NOT NULL adds an independent database constraint; readiness remains false until ownership is required. Tests now begin with exactly the reported nullability split and empty tables. Separate disposable tests inject an unowned sentinel to verify rollback of **both** column changes and preservation of that row, then remove only the test fixture and apply successfully. Tests cover service-role and authenticated null/omitted inserts and owner-nulling updates, SECURITY DEFINER null-owner writes, constraint protection with the guard deliberately disabled in a rolled-back test, cascades, pending fences, concurrent writes and original staging compatibility. The extra fixture RPC is a test adversary, not a claim that it exists in production.
+
+**Still required before production:** verify current row counts/null counts and complete column/default/constraint definitions (including FK validation, deferrability, all ownership paths and transitive dependencies); confirm shared content contains no personal data and check non-public schemas/snapshot triggers; review effective EXECUTE grants/default privileges, memberships and search path for `save_progress_snapshot` and the new admin helpers; inventory external integrations, Auth hooks outside database triggers, scheduled workers/cron, older clients, replication/import processes and their role/trigger behavior; confirm provider backup/log retention. Obtain read-only evidence that external writers always provide a real owner and stop work for pending/deleted accounts. None of these unknowns is resolved by zero rows or the absence of custom triggers. Reproduce the reviewed schema without production data in isolated staging, run the full migration chain and disposable acceptance tests, and obtain separate production rollout approval. No live migrations, deployment, enablement or production-data changes were performed in this review.
+
+## Endpoint, security and interruption recovery
+
+`POST https://<project-ref>.supabase.co/functions/v1/account-deletion` accepts only `action`, `receipt`, `password`, and `confirmation`. `delete` requires a live bearer token validated with `auth.getUser(token)`, current password checked using a separate nonpersisting Auth client, matching identity, and `confirmation: "DELETE"`. The password never enters local storage, logs or a receipt. Temporary verification sessions are signed out. Password failures inherit Supabase Auth rate limits; monitor those limits during staging and configure project abuse protection as needed.
+
+`ready` is a non-sensitive capability probe. `status` requires the unpredictable receipt capability (256 random bits); it returns only `not_started`, `processing`, `retry`, or `deleted`, never identity. It cannot invoke deletion. Gateway JWT checking is disabled **only for this function**, because status must work after the account/token is gone; the handler explicitly verifies every destructive request. Missing/forged/expired JWTs are rejected. Unknown fields, including every caller-supplied target ID, are rejected. Only configured origins receive CORS access. CORS is not an authentication mechanism. Requests without Origin still need the same authentication and verification.
+
+Receipt hashes live in an RLS-protected table with no client grants. The service-only claim RPC serializes claims per user and grants a two-minute lease. A repeated tap cannot start another request on-device, and concurrent server requests share the lease. Fresh authentication permits a new receipt after a lost-device lease expires; all receipts for that account finalize when Auth deletes it. Status never retries a destructive operation automatically. A timeout keeps the receipt and sync fence; the user checks status and explicitly retries with their password if needed. There is no success message for sign-out alone or an unconfirmed outcome.
+
+Storage objects are enumerated by `owner_id` and legacy `owner`, in batches, and removed using the Storage API, including nested paths. Metadata rows are never deleted directly. Auth is hard-deleted with `admin.deleteUser(id, false)` only after objects are gone; cloud snapshots and compatible personal application rows cascade. Any failure preserves the pending receipt for retry. Unexpected public tables or user-owned buckets fail readiness rather than silently leaving data. Owned buckets are not created by this app; if found, the owner must extend the audited cleanup before enabling deletion. Non-public application tables, service-owned objects linked by path/metadata, hooks and external systems require the deployment inventory review below.
+
+Database guards block snapshot writes while deletion is pending. Restrictive Storage policies block access for pending/deleted users without granting new privileges. Owned-object and owned-bucket writes take an Auth-row lock; an Auth deletion trigger refuses remaining owned objects/buckets. These guards close the already-in-flight Storage write window. The snapshot FK prevents late RPC writes from resurrecting deleted progress even while an old JWT remains cryptographically valid. No existing RLS policy is weakened.
+
+## Local data and session lifecycle
+
+The native receipt uses existing Keychain storage; browser previews use the existing browser auth-storage adapter. A durable non-identifying local marker fences sync before any deletion request is sent. Both sync paths receive cancellation; core snapshot installation/baseline functions also refuse work while fenced. AuthProvider filters late callback, restoration and refresh results. An auth-storage wrapper refuses deleted-account session persistence; a durable SHA-256 UUID fingerprint prevents stale credentials from reconnecting after restart. No raw UUID remains in this local revocation list.
+
+After backend-confirmed deletion, revoke the identity locally, stop refresh, sign out locally, clear password-recovery authorization and account-specific sync baseline/last-user/opt-in identifiers. Cleanup errors leave the receipt available for another status/cleanup attempt. The receipt is removed only after cleanup completes. Ordinary progress and all progress recovery/transaction journals are preserved byte-for-byte. Cloud recovery copies remain available only through existing explicit recovery controls; deletion never automatically restores one. Theme, font, callback URLs and bundle identifier are unchanged.
+
+A separate consent marker survives deletion and sign-in. Automatic synchronization stays off until the user chooses in Settings → Progress whether to upload retained device progress to the new account or use that account's cloud copy. This is not automatic account migration.
+
+## Owner-approved deployment (not performed by Codex)
+
+1. Have the owner review `supabase/tests/inventory.sql` against staging and the intended production project **read-only**, including the specific blockers above. The reported production application inventory is the eight tables above, with zero buckets; the original staging shape may contain only `progress_sync_snapshots`. Resolve every discrepancy before proceeding. Keep function definitions private. The runtime readiness check is a fail-safe, not a substitute for this review.
+2. Confirm provider backup/log/audit retention and any legal holds. This feature removes live Auth/application data and owned Storage objects. It does **not** promise immediate erasure from infrastructure backups/logs or remote device caches. No application-specific legal retention requirement is defined in the repository. Document actual provider retention periods for the chosen plan in the privacy policy before release. Never log deletion request bodies or credentials in custom monitoring.
+3. Use an isolated staging Supabase project first. Review migration history: preserve `20261026000000_account_deletion.sql` and `20261027000000_account_deletion_production_schema.sql` unchanged. Apply only unapplied forward migrations in order, including `20261027120000_account_deletion_required_ownership.sql`; if compatibility is already applied, only the ownership migration remains. A fresh environment applies all tracked migrations in order. First reproduce reviewed production definitions in isolation without production user data, including the two nullable empty tables, then apply the forward migrations and repeat disposable deletion, null/omitted-owner rejection, stale-token/RPC, shared-content, cross-user and offline-progress tests. Do not deploy the synthetic CI fixture as production DDL. Verify trigger permissions and compatibility on the platform version. A false readiness result must be investigated, never bypassed by broadening the allowlist or weakening constraints.
+4. Required server environment names: built-in `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`; custom `ACCOUNT_DELETION_ENABLED` (default off), `ACCOUNT_DELETION_ALLOWED_ORIGINS` (default `capacitor://localhost`). Add exact trusted HTTPS preview origins only if used; for local development add `http://localhost:3000` or the exact development origin. Never use `*` or a `NEXT_PUBLIC_` name for a privileged key. The app needs only its existing public URL/publishable key.
+5. Owner commands, substituting the explicitly approved **staging** reference first:
+
+   ```sh
+   supabase link --project-ref <approved-project-ref>
+   supabase migration list
+   supabase db push --dry-run
+   supabase db push
+   supabase secrets set ACCOUNT_DELETION_ALLOWED_ORIGINS=capacitor://localhost ACCOUNT_DELETION_ENABLED=false
+   supabase functions deploy account-deletion
+   # Only after inventory, deployment and disposable verification are approved:
+   supabase secrets set ACCOUNT_DELETION_ENABLED=true
+   ```
+
+   These are owner-executed steps after separate approval, not commands run during this review. Verify the dry-run includes only intended unapplied migrations; stop on history drift. Disable deletion on the approved staging project before migration if already enabled, then re-enable there for testing. Configuration intentionally makes the UI unavailable before enablement. Do not enable production until the detailed inventory/RPC review and production-shaped staging tests pass and the owner separately approves production deployment. No automatic production deployment workflow is included. If disabling later, pending receipt status checks still work; destructive retries are paused.
+
+   Automatic PR IPA builds use the repository's existing public Auth configuration. They will show deletion as unavailable until that project's backend is enabled. For physical testing **against staging**, use the workflow's optional public configuration inputs; this does not change repository variables or deploy anything:
+
+   ```sh
+   gh workflow run build.yml --ref codex/secure-account-deletion \
+     -f test_supabase_url=https://<approved-staging-ref>.supabase.co \
+     -f test_supabase_publishable_key=<staging-public-publishable-key>
+   ```
+
+   Download the resulting run's `CoptLingo-unsigned-iphone-ipa` artifact. Never put a service-role/secret key into these public build inputs. Keep the existing native callback URLs allowlisted in staging too.
+6. Schedule a daily privileged maintenance query using the owner's approved scheduler:
+
+   ```sql
+   delete from public.account_deletion_requests
+   where user_id is null and completed_at < now() - interval '30 days';
+   ```
+
+   Completed receipts retain only a capability hash and timestamps, with no user link; retain them for 30 days for interrupted-device recovery. Do not purge pending requests until resolved: they are the server sync fence. Monitor pending requests older than one day and investigate failures without recording credentials. The local revocation fingerprint stays on the device to reject stale credentials. An offline device with an unresolved receipt older than the server retention period needs owner-assisted outcome verification; it must not guess success or silently resume synchronization.
+
+## Repeatable tests and release gates
+
+- `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`.
+- `deno check --config supabase/functions/deno.json supabase/functions/account-deletion/index.ts` checks the deployable Deno entry point independently of the exported Next.js app and its Node dependency tree.
+- Node tests exercise the actual request handler with fake backends, including normal user A attempting to delete B, receipt replay, lease duplicates, failed verification, missing/expired/forged auth, cleanup failures, and response loss after commit. Local state tests exercise preserved records/journals, durable revocation, restart and late credential writes.
+- CI's `progress-sync-postgres` job creates disposable PostgreSQL roles/Auth/Storage fixtures, applies all migrations and runs `supabase/tests/account_deletion.sql`. Never run destructive fixture SQL in a deployed project.
+- CI's `deletion-integration` starts an unlinked local Supabase Docker stack, serves the real Edge Function, and runs `scripts/account-deletion-integration.mjs`. The script refuses all URLs except loopback port 54321, creates disposable accounts and objects, and verifies actual hard deletion, object cleanup, snapshot cascade, stale JWT rejection and other-user isolation. It never reads production credentials.
+- `node scripts/account-deletion-smoke.mjs`, with `DELETION_BROWSER=webkit` for WebKit, blocks all external requests and mocks Auth/Edge/REST. It exercises discoverability, cancel, final confirmation, duplicate taps, unavailable backend, lost response/restart, local retention and new-account consent.
+- Existing mobile, Settings navigation, route-preparation and backup smoke tests remain in Actions. macOS Actions performs Capacitor sync, simulator build/startup and unsigned IPA packaging. No physical iPhone or production end-to-end verification is implied by CI success.
+
+## Physical iPhone acceptance checklist (disposable account only)
+
+- Install the new unsigned artifact using the owner's signing process. Check bundle ID `com.pompono.coptic`, normal sign-in, verification, password recovery and Settings swipe/back navigation.
+- In the approved staging project, create a disposable account; complete lessons, accumulate XP, save vocabulary and reader progress, and sync. Record local values and recoverable backup availability.
+- Find Delete Account near the bottom of Account. Verify copy, keyboard accessibility, large text, light/dark styles, Cancel and disabled final action until both fields are filled. Verify a wrong password fails without claiming deletion.
+- Delete with correct password and confirmation. Verify the actual Auth user, snapshot and any test-owned Storage objects are absent, while a second disposable user's records remain. Verify sign-in with the deleted credentials fails.
+- Check local progress, recovery copies, theme/font and offline learning. Force quit/restart and verify signed-out state and no sync requests for the deleted account.
+- Interrupt connectivity during deletion. Confirm no premature success; reconnect, use Check deletion status, and confirm cleanup without another unintended deletion. Repeat with app termination during the request.
+- Sign in to a new disposable account. Verify retained progress does not upload until the explicit Settings → Progress choice. Test the cloud-copy and device-copy choices separately.
+- On a second device with an old session, verify late uploads fail and local progress stays available offline. Confirm no text claims remote local-data erasure.
+
+## References
+
+- [Apple: Offering account deletion in your app](https://developer.apple.com/support/offering-account-deletion-in-your-app/)
+- [Supabase: Managing user data and deletion](https://supabase.com/docs/guides/auth/managing-user-data)
+- [Supabase: Storage ownership](https://supabase.com/docs/guides/storage/security/ownership)
+- [Supabase: Securing Edge Functions](https://supabase.com/docs/guides/functions/auth)

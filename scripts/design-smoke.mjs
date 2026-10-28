@@ -92,7 +92,10 @@ export async function checkDesign(browser,base){
     await page.setViewportSize({width:360,height:640});
     for(const size of [24,40]){
      await page.evaluate(({theme,size})=>{document.documentElement.dataset.theme=theme;document.documentElement.style.fontSize=size+'px';document.documentElement.dataset.largeText=size>24?'true':'false';},{theme,size});
-     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),theme+route+' fits a small phone at '+size+'px type');
+     const overflow = await page.evaluate(() => ({ width: innerWidth, scroll: document.documentElement.scrollWidth,
+       elements: [...document.querySelectorAll('body *')].filter(element => element.getBoundingClientRect().right > innerWidth + 1)
+         .slice(-12).map(element => ({ tag: element.tagName, className: element.className, right: element.getBoundingClientRect().right, text: element.textContent?.slice(0, 60) })) }));
+     assert.ok(overflow.scroll<=overflow.width+1,theme+route+' fits a small phone at '+size+'px type: '+JSON.stringify(overflow));
     }
    }
    await page.goto(base+'/learn/'+first.id+'/play/lesson-1-a-o-d/');await page.waitForLoadState('networkidle');

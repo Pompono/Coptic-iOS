@@ -6,6 +6,7 @@ import PageHeader, { PageBackLink } from '../PageHeader';
 import { useAuth } from '../AuthProvider';
 import { MINIMUM_PASSWORD_LENGTH } from '@/lib/auth/service';
 import styles from './account.module.css';
+import DeleteAccount from './DeleteAccount';
 
 type Mode = 'sign-in' | 'create' | 'forgot' | 'verification' | 'reset' | 'settings';
 
@@ -23,6 +24,14 @@ export default function AccountPage() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [resendSeconds, setResendSeconds] = useState(0);
+  const [confirmingDeletion, setConfirmingDeletion] = useState(false);
+
+  useEffect(() => {
+    const deleted = () => { setMode('sign-in'); setPassword(''); setConfirmPassword(''); setVerificationToken(''); setEmail(''); };
+    window.addEventListener('coptic-account-deleted', deleted);
+    window.addEventListener('coptic-account-deletion-finished', deleted);
+    return () => { window.removeEventListener('coptic-account-deleted', deleted); window.removeEventListener('coptic-account-deletion-finished', deleted); };
+  }, []);
 
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get('mode');
@@ -33,6 +42,7 @@ export default function AccountPage() {
       setMode('settings');
     }
     else if (requested === 'sign-in') setMode('sign-in');
+    else if (!session) setMode(current => current === 'settings' ? 'sign-in' : current);
   }, [recoveryPending, session]);
 
   useEffect(() => {
@@ -146,7 +156,7 @@ export default function AccountPage() {
   return <main className={`app-page settings-page settings-subpage ${styles.page}`}>
     <PageBackLink href="/settings/">Settings</PageBackLink>
     <PageHeader title="Account" icon="settings" />
-    <section className={styles.card}>
+    <section className={styles.card} hidden={confirmingDeletion} style={confirmingDeletion ? { display: 'none' } : undefined}>
       {!configured ? <>
         <p className={styles.copy}>Account access is unavailable in this build.</p>
       </> : loading ? <p className={styles.status} role="status">Checking account…</p> : session && mode !== 'reset' && mode !== 'forgot' ? <>
@@ -228,5 +238,6 @@ export default function AccountPage() {
       {message && <p className={styles.alert} role="status">{message}</p>}
       {configured && error && /offline|connection|service could not be reached/iu.test(error) && <button className={styles.linkButton} type="button" disabled={loading} onClick={() => void retrySession()}>Retry session check</button>}
     </section>
+    <DeleteAccount onConfirmationChange={setConfirmingDeletion} />
   </main>;
 }

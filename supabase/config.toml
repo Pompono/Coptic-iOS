@@ -1,0 +1,6 @@
+project_id = "coptlingo-account-deletion"
+
+[functions.account-deletion]
+# Status must work after the JWT/account is gone. All destructive requests are
+# explicitly validated with Auth getUser AND a fresh password in the handler.
+verify_jwt = false
