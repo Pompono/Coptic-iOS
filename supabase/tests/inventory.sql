@@ -30,3 +30,14 @@ select c.oid::regclass as relation, c.relkind, c.relrowsecurity, c.relforcerowse
 from pg_class c join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public' and c.relkind in ('r', 'p', 'v', 'm', 'f') order by 1;
 select schemaname, viewname, definition from pg_views where schemaname = 'public';
+-- Effective grants include PUBLIC/default ACLs and inherited memberships.
+select p.oid::regprocedure as function_name, r.rolname,
+  has_function_privilege(r.oid, p.oid, 'EXECUTE') as can_execute
+from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+cross join pg_roles r
+where n.nspname = 'public' and p.prokind = 'f'
+  and r.rolname in ('anon', 'authenticated', 'service_role') order by 1,2;
+select pg_get_userbyid(roleid) as granted_role, pg_get_userbyid(member) as member_role, admin_option
+from pg_auth_members order by 1,2;
+select pg_get_userbyid(defaclrole) as owner, defaclnamespace::regnamespace as schema,
+  defaclobjtype, defaclacl from pg_default_acl order by 1,2,3;

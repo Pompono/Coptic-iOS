@@ -27,6 +27,24 @@ try {
       { user_id: a, lesson_id: 1, payload: 'a' }, { user_id: b, lesson_id: 1, payload: 'b' },
     ] })).status, 201);
   }
+  // Authenticated and service-role requests cannot create an unowned row or
+  // detach a row from its cascade path. The fixture starts with nullable UUIDs
+  // before the required-ownership forward migration runs during stack startup.
+  for (const table of ['reviews', 'xp_events']) {
+    for (const token of [accounts.token, admin]) {
+      for (const body of [{ user_id: null, payload: 'null owner' }, { payload: 'omitted owner' }]) {
+        const rejected = await request(`/rest/v1/${table}`, { method: 'POST', token, body });
+        assert.equal(rejected.data.code, '42501');
+      }
+      const rejected = await request(`/rest/v1/${table}?user_id=eq.${a}`, {
+        method: 'PATCH', token, body: { user_id: null },
+      });
+      assert.equal(rejected.data.code, '42501');
+    }
+  }
+  assert.equal((await request('/rest/v1/rpc/fixture_write_review', {
+    method: 'POST', body: { p_user_id: null },
+  })).data.code, '42501');
   const receipt = 'cd'.repeat(32);
   const endpoint = '/functions/v1/account-deletion';
   assert.equal((await request(endpoint, { method: 'POST', body: { action: 'ready' } })).data.state, 'available');

@@ -84,9 +84,18 @@ jobs:
           psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/migrations/20261026000000_account_deletion.sql
           psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/tests/account_deletion.sql
           # Verify the original staging shape still works, without retaining this application.
-          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -c 'begin' -f supabase/migrations/20261027000000_account_deletion_production_schema.sql -c "do \$\$ begin if not public.account_deletion_ready() then raise exception 'Original staging schema rejected'; end if; end \$\$;" -f supabase/tests/account_deletion.sql -c 'rollback'
+          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -c 'begin' -f supabase/migrations/20261027000000_account_deletion_production_schema.sql -f supabase/migrations/20261027120000_account_deletion_required_ownership.sql -c "do \$\$ begin if not public.account_deletion_ready() then raise exception 'Original staging schema rejected'; end if; end \$\$;" -f supabase/tests/account_deletion.sql -c 'rollback'
           psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/tests/account_deletion_expanded_fixture.sql
+          # Model a stale inventory without modifying any live data.
+          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -c "insert into public.xp_events(payload) values ('preexisting-unowned')"
           psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/migrations/20261027000000_account_deletion_production_schema.sql
+          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/tests/account_deletion_nullable_before.sql
+          if psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/migrations/20261027120000_account_deletion_required_ownership.sql; then
+            echo "Unsafe migration accepted pre-existing unowned data"; exit 1
+          fi
+          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/tests/account_deletion_nullable_rejected.sql
+          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/migrations/20261027120000_account_deletion_required_ownership.sql
+          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/tests/account_deletion_nullable_after.sql
           psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/tests/account_deletion_expanded.sql
           python3 scripts/account-deletion-postgres-races.py
   deletion-function:

@@ -8,8 +8,11 @@ insert into public.lessons values (1, 1);
 insert into public.questions values (1, 1);
 do $$ declare t text; begin
   foreach t in array array['reviews', 'streaks', 'user_progress', 'xp_events'] loop
-    execute format('create table public.%I (user_id uuid not null references auth.users(id) on delete cascade,
-      lesson_id bigint references public.lessons, payload text, primary key (user_id))', t);
+    -- Match reported nullable owners exactly; other columns remain synthetic.
+    execute format('create table public.%I (user_id uuid %s references auth.users(id) on delete cascade,
+      lesson_id bigint references public.lessons, payload text, %s (user_id))', t,
+      case when t in ('reviews', 'xp_events') then '' else 'not null' end,
+      case when t in ('reviews', 'xp_events') then 'unique' else 'primary key' end);
     execute format('alter table public.%I enable row level security', t);
     execute format('create policy fixture_owner on public.%I for all to authenticated
       using (user_id = auth.uid()) with check (user_id = auth.uid())', t);
