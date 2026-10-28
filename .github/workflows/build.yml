@@ -21,6 +21,18 @@ concurrency:
   group: mobile-validation-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 jobs:
+  schema-replay-harness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Harness validation only. No production schema export is in this repo.
+      - run: >-
+          python3 scripts/account-deletion-schema-replay.py --synthetic
+          --schema supabase/tests/account_deletion_expanded_fixture.sql
+          --test supabase/tests/account_deletion_nullable_after.sql
+          --test supabase/tests/account_deletion_expanded.sql
+          --test supabase/tests/account_deletion_permissions.sql
+          --test supabase/tests/account_deletion_rls.sql
   progress-sync-postgres:
     runs-on: ubuntu-latest
     services:
@@ -97,6 +109,8 @@ jobs:
           psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/migrations/20261027120000_account_deletion_required_ownership.sql
           psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/tests/account_deletion_nullable_after.sql
           psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/tests/account_deletion_expanded.sql
+          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/tests/account_deletion_permissions.sql
+          psql "postgresql://postgres@localhost:5432/coptic_progress_test" -v ON_ERROR_STOP=1 -f supabase/tests/account_deletion_rls.sql
           python3 scripts/account-deletion-postgres-races.py
   deletion-function:
     runs-on: ubuntu-latest
@@ -125,6 +139,7 @@ jobs:
           supabase start > /tmp/coptic-supabase-start.log 2>&1 || { echo "Local Supabase startup failed; credential-bearing output was not logged."; exit 1; }
       - name: Allow isolated fixture uploads
         run: |
+          psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' -v ON_ERROR_STOP=1 -f supabase/tests/account_deletion_permissions.sql
           psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' -v ON_ERROR_STOP=1 <<'SQL'
           create policy disposable_test_upload on storage.objects for insert to authenticated with check (owner_id = auth.uid()::text);
           SQL

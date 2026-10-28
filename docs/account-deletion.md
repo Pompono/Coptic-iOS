@@ -1,5 +1,39 @@
 # Phase 3A account deletion
 
+## Deployment-readiness audit — 2026-10-28
+
+**Production deployment is not yet cleared.** The owner reports all five migrations applied to isolated CoptLingo Staging (`neqpcwxlayczgoqnpwyt`), `account_deletion_ready() = true`, and Delete Account available in the physical iPhone app. No live project was accessed or changed during this review. Availability and readiness do not establish that staging contains all production table definitions, or that populated production-shaped cascade tests passed.
+
+The workspace and PR currently contain the owner's inventory summaries and synthetic test fixtures, **not the actual collected production DDL**. An exact-schema replay remains blocked until the private schema-only export is supplied. Do not label a reconstructed fixture as an audited production export. Raw exports and local diagnostics are ignored by Git (`production-schema.sql`, `.private-schema-audit/`) and must not be published.
+
+| Area | Repository/isolated evidence | Remaining release gate |
+| --- | --- | --- |
+| Function grants and search paths | All repository SECURITY DEFINER functions use an empty search path and qualified app/Auth/Storage relations. Tests check known client/PUBLIC ACLs, receipt access, snapshot write restrictions, temporary relation shadowing and stale JWT writes. | Actual effective ACLs, custom role memberships/default grants and function definitions from the private export. `CREATE OR REPLACE` can retain extra existing grants. |
+| Migration compatibility | Five ordered migrations pass original and synthetic expanded schema tests; nullable-owner rollback and both write/claim race orders are tested. | Replay the actual DDL, defaults, keys, FK validation/deferrability, RLS expressions, and required columns. The first migration's `CREATE TABLE IF NOT EXISTS` does not reconcile an incompatible existing snapshot table. |
+| Shared/personal data | Synthetic cascade/isolation tests and loopback Supabase integration pass; owner reports no custom triggers on seven application tables/Auth. | Seed every personal table and shared dependency using actual required columns; verify shared content and other users unchanged, including non-public/transitive dependencies. |
+| Non-public schemas and managed tables | Direct managed dependencies are `auth.users`, `auth.uid()`, Storage ownership metadata and API deletion. Real local Supabase tests supplement minimal PostgreSQL fixtures. | Owner evidence for non-public objects, views/materialized views, Auth hooks and managed-platform version/permissions. Readiness's public-table allowlist does not inspect all schemas or external effects. |
+| Scheduled/external activity | No account-writing worker, cron definition or external account integration found in tracked app/backend/workflow code. Inventory SQL now discovers extension, foreign-server, publication/subscription and scheduler surfaces without printing connection strings/job bodies. | Owner-confirmed inventory of off-repository jobs, older clients, external services, replication/import roles and their deletion behavior. No finding in Git proves absence in deployment. |
+| Retention | Completed hashed receipts have a documented 30-day purge procedure; pending receipts are kept for recovery. Local data preservation is explicit. | Actual provider backup/log retention, legal holds/privacy disclosures, approved purge scheduling and pending-request monitoring. No purge scheduler was deployed. |
+
+### Reproducible private schema replay
+
+`scripts/account-deletion-schema-replay.py` accepts a **provided** application schema-only SQL export and reviewed test SQL. It starts a disposable PostgreSQL 16 container with `--network none`, no published port, no host bind mount, and a temporary database directory. It never uses Supabase CLI linking, a database URL, or live credentials. SQL is sent only to `psql` inside that container, which is removed in `finally`. Input SHA-256 hashes and the actual Docker image ID are saved in an ignored private report directory; SQL failure output stays in private local diagnostics. Docker may download the PostgreSQL image; the database container itself cannot reach either live project.
+
+Example **after the export is supplied and production-specific seed/assertion SQL has been authored from it**:
+
+```sh
+python3 scripts/account-deletion-schema-replay.py \
+  --schema .private-schema-audit/production-schema.sql \
+  --test .private-schema-audit/production-cascade-assertions.sql \
+  --test supabase/tests/account_deletion_permissions.sql
+```
+
+The first test file above is a required future adapter, **not an existing/passing production test**. It must insert disposable Auth users and valid shared/personal records using actual constraints, then assert cascades, shared content preservation, other-user isolation, owner reassignment, RLS and stale-user behavior. Review the export for schema-only scope, functions, dependencies and secrets before running; never import production records. Preserve production DDL rather than removing constraints or policies to make a test pass. Unsupported extensions or managed-platform dependencies must be documented and reproduced with the matching isolated platform, not silently stubbed away.
+
+The runner bootstraps explicitly labeled minimal Auth/Storage fixtures, imports the supplied application schema, applies all five repository migrations in order, and executes the supplied SQL tests. It complements, rather than replaces, the real local Supabase and multi-session race jobs. Its CI self-test uses `--synthetic` and the existing fixture; this validates the harness but is **not production-schema evidence**. Docker is required; no Docker/psql executable was found in the current Windows workspace, so the native-container harness is verified in CI. Local embedded PostgreSQL checks continue to validate the synthetic tests only. Missing input fails before infrastructure starts.
+
+Once private DDL arrives, record its provenance/digest, produce the actual seed/assertion adapter, replay the full sequence plus an already-existing-snapshot baseline, reproduce rollback on incompatible/null data and concurrent writes against those definitions, and repeat the local Supabase tests. These exact-schema tasks remain open. Do not merge or deploy on the strength of the synthetic CI results alone.
+
 ## Pre-implementation audit (2026-10-26)
 
 Base: `origin/main` at `156a98b`. Repository inspected independently; existing untracked recording documents are unrelated and preserved.

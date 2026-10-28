@@ -5,7 +5,7 @@ where schemaname not in ('pg_catalog', 'information_schema') order by 1,2;
 select conrelid::regclass as dependent_table, confrelid::regclass as referenced_table,
   convalidated, condeferrable, pg_get_constraintdef(oid) as definition
 from pg_constraint where contype = 'f' order by 1,2;
-select table_schema, table_name, column_name, data_type, is_nullable from information_schema.columns
+select table_schema, table_name, column_name, data_type, is_nullable, column_default, is_generated, identity_generation from information_schema.columns
 where table_schema = 'public' or column_name ~* '(user|owner|email|account|customer|profile|identity|created_by|updated_by)' order by 1,2,3;
 select id, public, owner_id from storage.buckets;
 select bucket_id, owner_id, count(*) from storage.objects group by 1,2;
@@ -41,3 +41,27 @@ select pg_get_userbyid(roleid) as granted_role, pg_get_userbyid(member) as membe
 from pg_auth_members order by 1,2;
 select pg_get_userbyid(defaclrole) as owner, defaclnamespace::regnamespace as schema,
   defaclobjtype, defaclacl from pg_default_acl order by 1,2,3;
+select conrelid::regclass as relation, contype, convalidated, condeferrable,
+  pg_get_constraintdef(oid) as definition from pg_constraint
+where connamespace not in ('pg_catalog'::regnamespace, 'information_schema'::regnamespace)
+order by 1,2;
+-- Discover integration surfaces without exposing connection strings/job bodies.
+-- Presence/absence is not evidence that all off-platform workers were inventoried.
+select e.extname, e.extversion, n.nspname from pg_extension e
+join pg_namespace n on n.oid = e.extnamespace order by 1;
+select srvname, srvtype, srvversion from pg_foreign_server order by 1;
+select c.oid::regclass as relation, s.srvname from pg_foreign_table f
+join pg_class c on c.oid = f.ftrelid join pg_foreign_server s on s.oid = f.ftserver order by 1;
+select pubname, puballtables, pubinsert, pubupdate, pubdelete, pubtruncate from pg_publication order by 1;
+select pubname, schemaname, tablename from pg_publication_tables order by 1,2,3;
+select subname, subenabled from pg_subscription order by 1;
+do $$ declare jobs bigint; begin
+  if to_regclass('cron.job') is null then
+    raise notice 'pg_cron catalog absent; external schedulers remain unverified';
+  else
+    execute 'select count(*) from cron.job' into jobs;
+    raise notice 'pg_cron jobs: %. Review their definitions privately; this report omits job commands.', jobs;
+  end if;
+exception when insufficient_privilege then
+  raise notice 'Scheduler catalog access denied: job inventory UNKNOWN, not empty';
+end $$;
