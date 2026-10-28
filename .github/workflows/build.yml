@@ -33,6 +33,13 @@ jobs:
           --test supabase/tests/account_deletion_expanded.sql
           --test supabase/tests/account_deletion_permissions.sql
           --test supabase/tests/account_deletion_rls.sql
+      - name: Show synthetic harness diagnostics on failure
+        if: failure()
+        # This job accepts only checked-in synthetic inputs, never private DDL.
+        run: |
+          for file in .private-schema-audit/*/failure.log; do
+            if [ -f "$file" ]; then cat "$file"; fi
+          done
   progress-sync-postgres:
     runs-on: ubuntu-latest
     services:

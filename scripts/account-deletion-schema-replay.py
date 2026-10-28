@@ -63,7 +63,9 @@ def main():
             raise RuntimeError("Docker returned an invalid container identifier")
         manifest["image_id"] = command(["docker", "inspect", "--format", "{{.Image}}", container]).stdout.decode().strip()
         deadline = time.monotonic() + 90
-        while command(["docker", "exec", container, "pg_isready", "-U", "postgres"], check=False).returncode:
+        # The image's initdb server accepts Unix sockets before initialization
+        # finishes. Only the final server listens on container-local TCP.
+        while command(["docker", "exec", container, "pg_isready", "-h", "127.0.0.1", "-U", "postgres"], check=False).returncode:
             if time.monotonic() >= deadline:
                 raise RuntimeError("Disposable PostgreSQL did not become ready")
             time.sleep(0.5)
