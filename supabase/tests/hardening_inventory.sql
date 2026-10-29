@@ -10,7 +10,7 @@ select defaclrole::regrole, defaclnamespace, defaclobjtype, defaclacl
 select n.nspname,c.relname,c.relowner::regrole,c.relrowsecurity,c.relacl,r.rolname,p.permission,
   has_table_privilege(r.oid,c.oid,p.permission) as allowed
 from pg_class c join pg_namespace n on n.oid=c.relnamespace
-cross join pg_roles r cross join unnest(array['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER']) p(permission)
+cross join pg_roles r cross join unnest((array['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER'] || case when current_setting('server_version_num')::int >= 170000 then array['MAINTAIN'] else array[]::text[] end)) p(permission)
 where n.nspname='public' and c.relkind in ('r','p','v','m','f')
   and r.rolname in ('anon','authenticated','service_role') order by 1,2,6,7;
 select attrelid::regclass,attname,attacl from pg_attribute

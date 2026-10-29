@@ -1,4 +1,4 @@
-"""Private actual-schema replay in PostgreSQL 16 with Docker --network none.
+"""Private actual-schema replay in version-selected PostgreSQL with Docker --network none.
 
 No live URL, mounts, host ports or credentials. Optional --deletion-source points
 to a LOCAL checkout of PR #15, never a deployed database. Export is not copied.
@@ -20,7 +20,10 @@ def main():
     parser.add_argument('--schema', required=True, type=Path)
     parser.add_argument('--deletion-source', type=Path)
     parser.add_argument('--hardening-first', action='store_true', help='Apply optional PR #15 migrations after hardening')
+    parser.add_argument('--postgres-version', default='17.6', help='Official PostgreSQL image version, e.g. 17 or 17.6')
     args = parser.parse_args()
+    if not re.fullmatch(r'(16|17)(\.[0-9]+)?', args.postgres_version):
+        parser.error('Use an explicit supported PostgreSQL 16/17 version')
     paths = [ROOT/'supabase/tests/hardening_platform.sql', args.schema]
     paths += sorted((ROOT/'supabase/migrations').glob('20261019*.sql'))
     paths += sorted((ROOT/'supabase/migrations').glob('20261020*.sql'))
@@ -58,7 +61,7 @@ def main():
         container = command(['docker', 'run', '-d', '--network', 'none', '--cap-drop', 'ALL',
             '--cap-add', 'CHOWN', '--cap-add', 'DAC_OVERRIDE', '--cap-add', 'FOWNER', '--cap-add', 'SETGID',
             '--cap-add', 'SETUID', '--security-opt', 'no-new-privileges', '--tmpfs', '/var/lib/postgresql/data',
-            '-e', 'POSTGRES_HOST_AUTH_METHOD=trust', 'postgres:16']).stdout.decode().strip()
+            '-e', 'POSTGRES_HOST_AUTH_METHOD=trust', 'postgres:'+args.postgres_version]).stdout.decode().strip()
         if not re.fullmatch('[0-9a-f]{64}', container):
             container = None
             raise RuntimeError('Invalid container ID')
@@ -67,6 +70,8 @@ def main():
         while command(['docker','exec',container,'pg_isready','-h','127.0.0.1','-U','postgres'],check=False).returncode:
             if time.monotonic()>deadline: raise RuntimeError('PostgreSQL startup timeout')
             time.sleep(.5)
+        report['server_version'] = command(['docker','exec',container,'psql','-XqAt','-U','postgres','-c',
+            "select version() || ' / server_version_num=' || current_setting('server_version_num')"]).stdout.decode().strip()
         for path in paths: sql(data[path])
         invariant_query = """select json_build_object(
           'functions',(select json_agg(x order by oid) from (select oid,proacl,pg_get_functiondef(oid) as definition

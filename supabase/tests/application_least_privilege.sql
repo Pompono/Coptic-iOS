@@ -2,7 +2,7 @@
 begin;
 do $$ declare t text; p text; r text; begin
   foreach t in array array['courses','lessons','questions','reviews','streaks','user_progress','xp_events'] loop
-    foreach p in array array['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER'] loop
+    foreach p in array (array['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER'] || case when current_setting('server_version_num')::int >= 170000 then array['MAINTAIN'] else array[]::text[] end) loop
       if not has_table_privilege('service_role',format('public.%I',t),p) then raise exception 'Service access changed'; end if;
       foreach r in array array['anon','authenticated'] loop
         if has_table_privilege(r,format('public.%I',t),p) is distinct from (p in ('SELECT','INSERT','UPDATE','DELETE')) then
@@ -15,6 +15,23 @@ do $$ declare t text; p text; r text; begin
     or not has_function_privilege('authenticated','public.save_progress_snapshot(bigint,jsonb)','EXECUTE')
     or not has_function_privilege('service_role','public.save_progress_snapshot(bigint,jsonb)','EXECUTE') then
     raise exception 'Existing snapshot grants changed'; end if;
+end $$;
+-- REINDEX gives an error (unlike VACUUM/ANALYZE warning-and-skip behavior).
+-- Prove both client roles lose maintenance while service_role retains it.
+do $$ declare r text; begin
+  if current_setting('server_version_num')::int >= 170000 then
+    foreach r in array array['anon','authenticated'] loop
+      execute format('set local role %I',r);
+      begin
+        execute 'reindex table public.courses';
+        raise exception 'Client REINDEX unexpectedly succeeded';
+      exception when insufficient_privilege then null; end;
+      reset role;
+    end loop;
+    set local role service_role;
+    execute 'reindex table public.courses';
+    reset role;
+  end if;
 end $$;
 set local role anon;
 do $$ begin
@@ -53,7 +70,7 @@ create schema hardening_other_schema;
 create function hardening_other_schema.future_function() returns int language sql as 'select 1';
 do $$ declare r text; p text; begin
   foreach r in array array['anon','authenticated'] loop
-    foreach p in array array['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER'] loop
+    foreach p in array (array['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER'] || case when current_setting('server_version_num')::int >= 170000 then array['MAINTAIN'] else array[]::text[] end) loop
       if not has_table_privilege(r,'public.hardening_future_table',p) then raise exception 'Existing future table default changed'; end if;
     end loop;
     foreach p in array array['SELECT','UPDATE','USAGE'] loop

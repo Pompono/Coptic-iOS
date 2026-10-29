@@ -1,6 +1,7 @@
 -- Owner-run read-only metadata review for the EXISTING-TABLE migration only.
 -- Never run this file automatically against a live project. Keep results private.
 begin read only;
+select version(), current_setting('server_version_num') as server_version_num;
 with targets(name) as (values ('courses'),('lessons'),('questions'),('reviews'),
   ('streaks'),('user_progress'),('xp_events'))
 select t.name,c.oid::regclass as relation,c.relkind,c.relowner::regrole as owner,
@@ -18,7 +19,7 @@ where roleid in (select oid from pg_roles where rolname in ('anon','authenticate
 
 select c.oid::regclass,r.rolname,p.permission,has_table_privilege(r.oid,c.oid,p.permission) as allowed
 from pg_class c join pg_namespace n on n.oid=c.relnamespace cross join pg_roles r
-cross join unnest(array['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER']) p(permission)
+cross join unnest((array['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER'] || case when current_setting('server_version_num')::int >= 170000 then array['MAINTAIN'] else array[]::text[] end)) p(permission)
 where n.nspname='public' and c.relname in ('courses','lessons','questions','reviews',
   'streaks','user_progress','xp_events','progress_sync_snapshots')
   and r.rolname in ('anon','authenticated','service_role') order by 1,2,3;

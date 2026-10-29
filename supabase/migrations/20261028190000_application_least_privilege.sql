@@ -23,12 +23,17 @@ begin
     end if;
     -- Preserve existing DML until older clients/website/external writers are audited.
     execute format('revoke truncate, references, trigger on table public.%I from public, anon, authenticated',t);
+    -- MAINTAIN was introduced in PostgreSQL 17; dynamic SQL keeps PG16 replay valid.
+    if current_setting('server_version_num')::int >= 170000 then
+      execute format('revoke maintain on table public.%I from public, anon, authenticated',t);
+    end if;
     -- Table revokes do not remove independently granted column privileges.
     for c in select attname from pg_attribute where attrelid=relation_id and attnum>0 and not attisdropped loop
       execute format('revoke references (%I) on table public.%I from public, anon, authenticated',c,t);
     end loop;
     foreach r in array array['anon','authenticated'] loop
-      foreach permission in array array['TRUNCATE','REFERENCES','TRIGGER'] loop
+      foreach permission in array (array['TRUNCATE','REFERENCES','TRIGGER'] || case when current_setting('server_version_num')::int >= 170000
+        then array['MAINTAIN'] else array[]::text[] end) loop
         if has_table_privilege(r,relation_id,permission) then raise exception 'Remaining effective % on % for %',permission,t,r; end if;
         if permission='REFERENCES' and has_any_column_privilege(r,relation_id,permission) then
           raise exception 'Remaining column % on % for %',permission,t,r;
