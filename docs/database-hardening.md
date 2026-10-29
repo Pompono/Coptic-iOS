@@ -1,5 +1,9 @@
 # Proposed application database privilege hardening
 
+Latest: [October 29 read-only staging findings and validation procedure](staging-hardening-validation.md).
+Staging has **zero of the seven target tables**: applying this migration there
+would not validate privilege reduction. No staging migration was applied.
+
 Status: proposed, not deployed. Separate from account-deletion PR #15 because this
 changes privileges on seven existing application tables only. It can be reviewed and
 applied independently; no earlier migration is rewritten. No live Supabase project
@@ -158,7 +162,7 @@ needed, restore only specifically reviewed grants from a private pre-deployment 
 snapshot; do not blindly restore the unsafe ALL grants/defaults.
 
 
-## MAINTAIN follow-up — October 29
+## MAINTAIN follow-up â€” October 29
 
 The owner's complete audit reports 21 explicit role/table grant combinations: all
 seven tables grant all eight privileges, including MAINTAIN, to anon, authenticated
